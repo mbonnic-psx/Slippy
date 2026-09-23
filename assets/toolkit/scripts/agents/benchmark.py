@@ -22,7 +22,8 @@ converge pass; how many times converge ran; a stage re-entered after implementat
 `git diff`. What nothing on disk can supply is passed to `end` as `key=value`: `gaps=N`, `findings=N`,
 `seams=N`, `mutation_score=…` copied from the tool's line, `verify_failures=N`, `outcome=accepted|behaviour|implementation`,
 `delegate=<boundary>` and `cycle=<unit>` for how an implement entry was delegated and driven with `split=N` for
-how many groups its delegate fanned out into, and `model=` or `agent=` only where no transcript could say. A number that was not read is not written.
+how many groups its delegate fanned out into, `red=observed|not-observed` for what a delegate on another harness
+showed of its RED, and `model=` or `agent=` only where no transcript could say. A number that was not read is not written.
 """
 
 from __future__ import annotations
@@ -62,7 +63,7 @@ OUTCOMES = ("accepted", "behaviour", "implementation")
 # closed is the shape of a slice that converged, so the third is the first that is worth reading about.
 REPEATED = 3
 COUNTS = ("gaps", "findings", "seams", "verify_failures", "split")
-WORDS = ("mutation_score", "outcome", "model", "agent", "note", "delegate", "cycle", "driver")
+WORDS = ("mutation_score", "outcome", "model", "agent", "note", "delegate", "cycle", "driver", "red")
 COMMENT = (
     "What each stage of /drive cost this slice and how well it did, one entry per stage run, appended by "
     "scripts/agents/benchmark.py at the stage's start and end. Tokens come from the harness's own transcript or are "

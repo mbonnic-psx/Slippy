@@ -218,17 +218,24 @@ question back here rather than answering it.
 
 **A line may name another harness** — `implement: local → opencode:ollama/qwen-coder-32k — …`. No sub-agent of
 this harness can start that, so the stage runs through `python3 scripts/agents/delegate.py <stage> --brief <file>
---allow <path> … --verify "<the stage's scoped test command>"`. Write the brief to a file — the task, its
-contract and the map, exactly as for any delegate — and give one `--allow` per manifest entry, a directory
-ending in `/`. Run it in the background where this harness can, since it may take many minutes, and alone: it
+--allow <path> … --verify "<scoped tests> && <scoped lint and format check>"`. Write the brief to a file — the
+task, its contract and the map, exactly as for any delegate — and give one `--allow` per manifest entry, a
+directory ending in `/`. The verify command is the stage's quickest relevant tests and the lint and format check
+the service's gate runs, both scoped to the manifest's files: a model that is not this one slips on style as
+well as behaviour, and a slip caught here is undone now rather than found at the push. Run it in the background where this harness can, since it may take many minutes, and alone: it
 reads every change in the tree while it runs as the delegate's, so never beside a concurrent sibling or a second
 one. It holds the write scope itself, after the run, because the other harness may not: a run that wrote
 outside its manifest, changed nothing, failed its verify command, exited non-zero or ran out of time is undone,
 commits included, to exactly where it started. Its last line is `delegate: done — …`, which is the stage line,
 or `delegate: failed — …`, which names the fallback: rerun the stage there as an ordinary delegation and say both
 (`drive-implement · model: opencode:ollama/qwen-coder-32k failed (wrote outside its manifest), rerun on sonnet ·
-delegated, fresh context`) — how often the first half happens is what the mapping is measured by. Only a stage
-whose type may run any command is ever sent there; `models.py --check` refuses a table that would send another.
+delegated, fresh context`) — how often the first half happens is what the mapping is measured by. A run that
+is kept is not taken at its word on RED: read its log, whose path is on that last line, for a failing run of the
+new tests before the passing one, and add `RED observed` or `RED not observed` to the stage line and
+`red=observed` or `red=not-observed` to its benchmark entry. It is recorded, not enforced — a log shows what
+was printed, not the order the work was done in — so the count is a measure of the mapping, never a reason to
+undo a run whose tests pass. Only a stage whose type may run any command is ever sent there; `models.py --check`
+refuses a table that would send another.
 
 A stage is not always one delegate. Before delegating implementation, read `tasks.md` for its `[P]` markers and
 its *Parallel opportunities* section: the tasks command writes both, and they are the plan for what may run

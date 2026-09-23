@@ -136,3 +136,27 @@ class DelegateTest(FactoryTestCase):
             self.assertIn("`tasks` does not map to another harness here", unrouted.stderr)
             self.assertIn(".specify/delegations/", (repo / ".gitignore").read_text())
             self.assertTrue(json.loads((repo / ".specify/models.json").read_text())["fallbacks"])
+
+    def test_drive_checks_style_with_the_tests_and_records_red_without_enforcing_it(self) -> None:
+        """A model that is not the host's slips on style as well as behaviour, so the verify command `/drive` hands
+        a delegation is the scoped tests and the scoped lint and format check. Whether a kept run showed its tests
+        failing before they passed is read from its log and recorded, on the stage line and in the benchmark,
+        but never undoes a green run: a log shows what was printed, not the order the work was done in."""
+        with tempfile.TemporaryDirectory() as directory:
+            repo = self.generate(directory, "red", "standard", "python")
+            drive = (repo / "commands/drive.md").read_text()
+            section = drive.split("**A line may name another harness**")[1].split("A stage is not always one")[0]
+            self.assertIn('--verify "<scoped tests> && <scoped lint and format check>"', section)
+            self.assertIn("a slip caught here is undone now rather than found at the push", section)
+            self.assertIn("add `RED observed` or `RED not observed` to the stage line", section)
+            self.assertIn("It is recorded, not enforced", section)
+            feature = repo / "specs/001-red/slices/S1"
+            feature.mkdir(parents=True)
+            bench = ["python3", "scripts/agents/benchmark.py"]
+            subprocess.run([*bench, "start", str(feature), "implement"], cwd=repo, check=True, capture_output=True)
+            ended = subprocess.run([*bench, "end", str(feature), "implement", "red=not-observed",
+                                    "model=opencode:ollama/qwen3-coder-30b-32k"], cwd=repo, text=True,
+                                   capture_output=True)
+            self.assertEqual(ended.returncode, 0, ended.stderr)
+            record = json.loads((feature / "benchmark.json").read_text())
+            self.assertEqual(record["stages"][-1]["signals"]["red"], "not-observed")

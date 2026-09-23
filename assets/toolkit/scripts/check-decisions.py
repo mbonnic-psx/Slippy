@@ -8,18 +8,22 @@ fixed shape — `commands/cruise.md` shows it, and `.specify/product-owner.md` r
 gate on that shape: an entry with a field missing is a decision nobody can audit, a `Written to` path that is
 not in the tree is a decision that was never applied, and evidence that does not exist is no evidence.
 
-What is held, one finding per line:
+What is held, one finding per line (the adversary log's row per finished slice included, because `/adversary` says
+an unwritten row is a pass that has to be run again, and until now nothing noticed one):
 
 - a decision entry is `## D<n> — <question>` followed by the fixed fields in order: **Stage** (with Slice, When,
   Iteration), **Question**, **Options**, **Decision**, **Why**, **Decided by**, **Confidence** (with Would
   reverse if), **Written to**, **Status**;
 - entries are numbered contiguously from `D1`, in order;
-- **Decided by** is `host (stage recommendation)`, `host (standing decision D<m>)`, `drive-skipper (<model>)`
-  or `human`; **Status** is `standing`, `overridden by D<m>` or `overridden by human <date>`;
+- **Decided by** is `host (stage recommendation)`, `host (standing decision D<m>)`, `drive-skipper (<model>)`,
+  `drive-bosun` — with or without its `(<model>)` — or `human`; **Status** is `standing`, `overridden by D<m>` or `overridden by human <date>`;
 - every **Written to** path exists in the repository, and a path still carrying `<placeholders>` is a finding;
 - a demo entry is `## <instant> — <verdict> · iteration <n> · drive-hand (<model>)`, its verdict one of
   `accepted`, `behaviour`, `implementation`, followed by **Started with**, **Driven through**, **Examples**,
-  **Evidence**, **Feedback**; every **Evidence** path exists, beside the log or from the root, or is `none`.
+  **Evidence**, **Feedback**; every **Evidence** path exists, beside the log or from the root, or is `none`;
+- every slice the ladder calls done — a row in `specs/<feature>/slices/README.md`, or `status: implemented` in
+  `docs/event-model/model.yaml` — has a `## <slice-id> · …` row in `specs/<feature>/adversary-log.md`: the attack,
+  or the recorded skip, that `/adversary` writes after every acceptance.
 
 A project with no record anywhere passes and says so: the gate runs in `make verify` from the first commit.
 """
@@ -42,6 +46,7 @@ ROOT = project_root(Path(__file__).resolve(), 1)
 SPECS = ROOT / "specs"
 DECISIONS = "decisions.md"
 DEMO_LOG = "demo-log.md"
+ADVERSARY_LOG = "adversary-log.md"
 # The fields of one decision entry, in order, as the bold label each line opens with.
 DECISION_FIELDS = ("Stage", "Question", "Options", "Decision", "Why", "Decided by", "Confidence", "Written to",
                    "Status")
@@ -49,7 +54,10 @@ DEMO_FIELDS = ("Started with", "Driven through", "Examples", "Evidence", "Feedba
 VERDICTS = ("accepted", "behaviour", "implementation")
 DECISION_HEADING = re.compile(r"^## D(\d+) — (.+)$")
 DEMO_HEADING = re.compile(r"^## (\S+) — (\w+) · iteration (\d+) · drive-hand \((.+)\)$")
-DECIDED_BY = re.compile(r"^(host \(stage recommendation\)|host \(standing decision D\d+\)|drive-skipper \(.+\)|human)$")
+# The bosun's entries name the type alone or with the model, because the command tells it `Decided by: drive-bosun`
+# and the skipper's habit of naming its model is one it may share.
+DECIDED_BY = re.compile(r"^(host \(stage recommendation\)|host \(standing decision D\d+\)|drive-skipper \(.+\)|"
+                        r"drive-bosun( \(.+\))?|human)$")
 STATUS = re.compile(r"^(standing|overridden by D\d+|overridden by human \S+)$")
 FIELD = re.compile(r"^- \*\*([^*]+):\*\* ?(.*)$")
 PLACEHOLDER = re.compile(r"<[^>]*>")
@@ -111,7 +119,8 @@ def check_decisions(path: Path) -> list[str]:
             findings.append(f"{where}: D{number}'s fields are out of order; the shape is {', '.join(DECISION_FIELDS)}")
         if not DECIDED_BY.match(fields["Decided by"]):
             findings.append(f"{where}: D{number} `Decided by` is {fields['Decided by']!r}; it is host (stage "
-                            "recommendation), host (standing decision D<m>), drive-skipper (<model>) or human")
+                            "recommendation), host (standing decision D<m>), drive-skipper (<model>), drive-bosun "
+                            "or human")
         if not STATUS.match(fields["Status"]):
             findings.append(f"{where}: D{number} `Status` is {fields['Status']!r}; it is standing, overridden by "
                             "D<m> or overridden by human <date>")
@@ -140,13 +149,49 @@ def check_demo_log(path: Path) -> list[str]:
     return findings
 
 
+def done_slices(feature: Path) -> set[str]:
+    """The slices this feature has finished, as the ladder marks them (`commands/drive.md`, *Ready-set selection*)."""
+    done: set[str] = set()
+    register = feature / "slices/README.md"
+    if register.is_file():
+        for line in register.read_text().splitlines():
+            if line.strip().startswith("|"):
+                first = line.strip().strip("|").split("|")[0].strip().strip("`")
+                found = re.match(r"([A-Za-z]+\d+)\b", first)
+                if found:
+                    done.add(found.group(1))
+    model = ROOT / "docs/event-model/model.yaml"
+    if model.is_file():
+        for block in re.split(r"^\s*- id:\s*", model.read_text(), flags=re.M)[1:]:
+            ident = block.split("\n", 1)[0].strip().strip("'\"")
+            if ident and re.search(r"^\s*status:\s*implemented\s*$", block, re.M):
+                done.add(ident)
+    return done
+
+
+def check_adversary_rows() -> list[str]:
+    """A finished slice with no row in the adversary log was never attacked and never recorded as skipped."""
+    findings: list[str] = []
+    for feature in sorted(SPECS.iterdir()) if SPECS.is_dir() else []:
+        done = done_slices(feature) if (feature / "slices").is_dir() else set()
+        if not done:
+            continue
+        log = feature / ADVERSARY_LOG
+        rows = set(re.findall(r"^## (\S+) · ", log.read_text(), re.M)) if log.is_file() else set()
+        for ident in sorted(done - rows):
+            findings.append(f"{log.relative_to(ROOT).as_posix()}: no row for {ident}, which is done — `/adversary` runs "
+                            "after every acceptance and records the attack or the skip; an unwritten row is a pass "
+                            "that has to be run again")
+    return findings
+
+
 def main() -> int:
     decisions = sorted(SPECS.glob(f"*/{DECISIONS}")) if SPECS.is_dir() else []
     logs = sorted(SPECS.glob(f"*/slices/*/{DEMO_LOG}")) if SPECS.is_dir() else []
-    if not decisions and not logs:
+    findings: list[str] = check_adversary_rows()
+    if not decisions and not logs and not findings:
         print("check-decisions: no decisions.md or demo-log.md under specs/ — nothing recorded yet")
         return 0
-    findings: list[str] = []
     for path in decisions:
         findings += check_decisions(path)
     for path in logs:
@@ -160,7 +205,7 @@ def main() -> int:
     counted = sum(len(entries(p.read_text(), DECISION_HEADING)) for p in decisions)
     demos = sum(len(entries(p.read_text(), DEMO_HEADING)) for p in logs)
     print(f"check-decisions: {counted} decision(s) in {len(decisions)} file(s), {demos} demo(s) in {len(logs)} log(s), "
-          "every field present and every path in the tree")
+          "every field present and every path in the tree, every done slice in the adversary log")
     return 0
 
 

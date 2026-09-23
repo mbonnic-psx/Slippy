@@ -9,7 +9,7 @@ in one small file and re-reads it, and the harnesses that can run a command afte
 """
 from __future__ import annotations
 
-from .cruise_agents import BROWSER, HAND, SKIPPER
+from .cruise_agents import BOSUN, BROWSER, HAND, SKIPPER
 
 CHECKPOINT = "specs/cruise-checkpoint.md"
 STOP_FILE = ".specify/cruise.stop"
@@ -17,14 +17,31 @@ STOP_FILE = ".specify/cruise.stop"
 # message a harness's after-response hook kept for a stop hook whose event does not carry it.
 RUNNER_PID = ".specify/cruise.pid"
 RUNNER_LOG = ".specify/cruise-run.log"
+# The harness's raw event stream the feed in the run log was rendered from, and how far the watch seat has read.
+RUNNER_STREAM = ".specify/cruise-stream.jsonl"
+WATCH_CURSOR = ".specify/cruise-watch.cursor"
 LAST_RESPONSE = ".specify/cruise-last-response.txt"
+# What a person queued for the run through `tell`, until an iteration takes it; and what an iteration was given,
+# until the runner writes it into that iteration's log entry.
+INBOX = ".specify/cruise-inbox.jsonl"
+TOLD = ".specify/cruise-told.jsonl"
+# The rule that makes a decision entry also an ADR, stated once for the command and read by its tests. `{REPORT}`
+# is `cruise_stops.REPORT`, which the command substitutes.
+ADR_RULE = """\
+**A decision that outlives its slice is also an ADR.** Ask the `architecture-decisions` skill's one question
+of every entry, host-decided or skipper-decided: would reversing it cost a migration rather than a refactor —
+an event's schema or name, stream identity, tenancy, the store, personal data, identity, a new dependency, a
+published contract? Where it would, write `docs/adr/NNNN-<title>.md` in Nygard's five sections at `Proposed` —
+the run never accepts its own architecture decision — with the next unused number, allocated here the way
+`D<n>` is, and name it in the entry's `Written to` beside the artifact. The entry is the log of what was
+decided; the ADR is where the next slice looks for why, and `{REPORT}` lists every ADR still `Proposed`."""
 DECISION_ENTRY = f"""## D<n> — <the question, in one line>
 - **Stage:** <stage> · **Slice:** <id> · **When:** <ISO instant> · **Iteration:** <n>
 - **Question:** <as the stage raised it>
 - **Options:** <each, marking the one the stage recommended>
 - **Decision:** <one>
 - **Why:** <in the actor's terms>
-- **Decided by:** host (stage recommendation) | host (standing decision D<m>) | {SKIPPER} (<model>) | human
+- **Decided by:** host (stage recommendation) | host (standing decision D<m>) | {SKIPPER} (<model>) | {BOSUN} | human
 - **Confidence:** high | medium | low · **Would reverse if:** <the one condition>
 - **Written to:** <the artifact paths the answer went into>
 - **Status:** standing | overridden by D<m> | overridden by human <date>"""

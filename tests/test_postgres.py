@@ -23,7 +23,7 @@ import time
 import unittest
 from pathlib import Path
 
-from support import FactoryTestCase, backends_under_test, default_gateways
+from support import FactoryTestCase, backends_under_test, default_gateways, targeting
 
 from slipwai.catalog import axis_default
 from slipwai.images import MIGRATIONS_IN_PRODUCTION, POSTGRES_SSLMODE
@@ -56,7 +56,7 @@ class ManagedPostgresTest(FactoryTestCase):
         would be a setting with nothing behind it, and this asserts its absence on purpose.
         """
         with tempfile.TemporaryDirectory() as directory:
-            for backend in backends_under_test():
+            for backend in targeting("aws", backends_under_test()):
                 with self.subTest(backend=backend):
                     repo = self.generate_aws(directory, f"tls-{backend}", backend)
                     environment = self.environment_of(repo)

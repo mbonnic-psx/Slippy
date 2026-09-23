@@ -6,14 +6,14 @@ from __future__ import annotations
 
 from ...services import App, families_of, services_of
 from ...tooling import verify_dispatcher, verify_path
-from . import go, java_quarkus, java_spring, python, typescript
+from . import go, java_quarkus, java_spring, python, rust, typescript
 
-# Keyed by backend, not by module name: a backend named for the framework that owns its startup
-# carries a hyphen, and a hyphen cannot appear in a Python module name.
+# Keyed by backend, not module name: a backend named for its framework carries a hyphen, which a module cannot.
 BACKENDS = {
     "typescript": typescript,
     "python": python,
     "go": go,
+    "rust": rust,
     "java-quarkus": java_quarkus,
     "java-spring": java_spring,
 }

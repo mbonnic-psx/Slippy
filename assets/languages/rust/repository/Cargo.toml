@@ -1,0 +1,21 @@
+# The Cargo workspace: every Rust service in this repository is a member, and they share one `Cargo.lock` and
+# one `target/`. A new service or a shared crate under `packages/` is one more line in `members`.
+[workspace]
+resolver = "3"
+members = [
+__MEMBERS__
+]
+
+# What every member inherits, so one edition and one minimum Rust version hold across the repository.
+[workspace.package]
+edition = "2024"
+rust-version = "1.98"
+
+# The lints every member opts into with `[lints] workspace = true`. The gate runs clippy with `-D warnings`,
+# so anything set to warn here fails `make lint`; `unsafe_code` is refused outright because nothing a
+# service in this template does needs it, and code that does should say so in its own crate.
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }

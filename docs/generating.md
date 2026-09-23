@@ -41,7 +41,7 @@ Production target:
   azure — Azure — one Container App per app deployed by revision behind the environment's own ingress and managed certificate, PostgreSQL Flexible Server, Entra ID and Static Web Apps, provisioned by OpenTofu and deployed by the trunk pipeline
   existing — Existing — this project deploys to infrastructure it does not own: whatever runs it is described in `docs/deployment.md` and provisioned by nobody here; `make verify` is the gate and nothing is deployed by the factory (experimental, with brownfield adoption)
 Choose (none/aws/azure/existing) [none]:
-Language (typescript/python/go/java) [typescript]:
+Language (typescript/python/go/rust/java) [typescript]:
 Service name [service]:
 Frontend (none/react-vite) [react-vite]:
 Browser app name [web]:
@@ -88,12 +88,12 @@ named when they are added, by `add-service` and `add-frontend`.
 
 **Where a language has more than one framework, the language question is followed by a framework one.**
 Java is the one that does, so answering `java` above adds a second question and the pair resolves to a
-single backend. TypeScript, Python and Go each have one member, so the question is not asked for them —
+single backend. TypeScript, Python, Go and Rust each have one member, so the question is not asked for them —
 the same rule the axes follow: something with one answer is not a choice, and offering it teaches the
 reader that it is.
 
 ```text
-Language (typescript/python/go/java) [typescript]: java
+Language (typescript/python/go/rust/java) [typescript]: java
 
 Application framework:
   quarkus — Java — Quarkus owns startup (Agroal, Flyway, SmallRye Health, OIDC); Maven, Checkstyle/PMD/SpotBugs, JUnit 5

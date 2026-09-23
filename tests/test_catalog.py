@@ -31,6 +31,12 @@ TRANSPORTS = {
     "java-quarkus": "quarkus-rest",
     "java-spring": "spring-web",
 }
+# Backends that answer no axis yet, stated rather than skipped: Rust's walking skeleton landed before its
+# adapters, so every axis falls back to its no-infrastructure answer for it. `docs/axes.md` carries its row of
+# dashes, and the tests below assert that state for it rather than the full coverage the others have. A backend
+# leaves this set in the commit that adds it to an axis's options.
+AXIS_FREE = {"rust"}
+ANSWERING = [backend for backend in CATALOG["backends"] if backend not in AXIS_FREE]
 
 
 def without_java() -> dict:
@@ -92,13 +98,16 @@ class CatalogTest(FactoryTestCase):
         """A default is a recommendation, and the one this factory makes is a real event store and the HTTP
         transport the chosen backend actually has. The identity provider stays absent: Keycloak is scaffolded
         without its flow, so defaulting to it would hand every project a placeholder to finish."""
-        for language in CATALOG["backends"]:
+        for language in ANSWERING:
             self.assertEqual(axis_default("event-store", language, "none"), "postgres", language)
             self.assertEqual(axis_default("auth", language, "none"), "none", language)
+        for language in AXIS_FREE:
+            # Nothing to recommend but the answer that needs no infrastructure: the in-memory store is `always`.
+            self.assertEqual(axis_default("event-store", language, "none"), "memory", language)
         # The transport default is per backend because the options are: Fastify is not something a Go
         # project can be given, so one flat answer would refuse to generate on two backends out of three.
         self.assertEqual(
-            {language: axis_default("http", language, "none") for language in CATALOG["backends"]},
+            {language: axis_default("http", language, "none") for language in ANSWERING},
             TRANSPORTS,
         )
 
@@ -204,8 +213,12 @@ class CatalogTest(FactoryTestCase):
             )
 
     def test_the_axes_are_asked_only_where_there_is_a_choice(self) -> None:
-        for language in CATALOG["backends"]:
-            # Every backend can be given every event store, and each has exactly one transport.
+        for language in AXIS_FREE:
+            # Asked nothing: with one answer or none, an axis is not a question (`axis_applies`).
+            for axis in ("event-store", "http", "auth", "users"):
+                self.assertFalse(axis_applies(axis, "event-modelling", language, "none"), (language, axis))
+        for language in ANSWERING:
+            # Every other backend can be given every event store, and each has exactly one transport.
             self.assertTrue(axis_applies("event-store", "event-modelling", language, "none"), language)
             self.assertEqual(
                 axis_options("event-store", language, "none"), ["memory", "sqlite", "postgres"], language
@@ -238,7 +251,7 @@ class CatalogTest(FactoryTestCase):
         ):
             validate_catalog(CATALOG)
 
-        with patch.object(PRUNER, "LANGUAGES", (*PRUNER.LANGUAGES, "rust")), self.assertRaisesRegex(
+        with patch.object(PRUNER, "LANGUAGES", (*PRUNER.LANGUAGES, "zig")), self.assertRaisesRegex(
             ValueError, "disagree about the language families"
         ):
             validate_catalog(CATALOG)

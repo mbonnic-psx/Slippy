@@ -18,7 +18,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-from support import FactoryTestCase
+from support import FactoryTestCase, offering, targeting
 
 from slipwai.assets import PRUNER, ROOT
 from slipwai.catalog import (
@@ -78,7 +78,10 @@ class TargetsTest(FactoryTestCase):
         self.assertEqual(list(CATALOG["targets"]), ["none", "aws", "azure", "existing"])
         self.assertEqual(CATALOG["default"]["target"], "none")
         for target in ("aws", "azure", "existing"):
-            self.assertEqual(offered_backends(CATALOG, target), list(CATALOG["backends"]), target)
+            self.assertEqual(offered_backends(CATALOG, target), targeting(target), target)
+        # Every backend but Rust, whose images arrive with its deploy targets: the catalog, not this test, is
+        # what says so, and `targeting` reads it.
+        self.assertEqual(targeting("aws"), [b for b in CATALOG["backends"] if b != "rust"])
         self.assertEqual([name for name in CATALOG["targets"] if managed(CATALOG, name)], ["aws", "azure"])
         # What the design keeps off both clouds: the file store dies with the task, and Keycloak is the
         # local stand-in rather than something a project runs in production. Each cloud's own identity
@@ -167,7 +170,7 @@ class TargetsTest(FactoryTestCase):
                 validate_catalog(catalog)
 
     def test_an_option_is_offered_per_target_the_way_it_is_offered_per_backend(self) -> None:
-        for backend in CATALOG["backends"]:
+        for backend in offering("event-store"):
             self.assertEqual(axis_options("event-store", backend, "none"), ["memory", "sqlite", "postgres"])
             self.assertEqual(axis_options("event-store", backend, "aws"), ["memory", "postgres"], backend)
             self.assertEqual(axis_options("auth", backend, "none"), ["none", "keycloak"])

@@ -21,7 +21,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from support import FactoryTestCase, backends_under_test, commit_all
+from support import FactoryTestCase, backends_under_test, commit_all, targeting
 
 from slipwai.assets import LANGUAGE_ROOT, asset_tree
 from slipwai.catalog import CATALOG, axis_default
@@ -65,6 +65,9 @@ class FlagReaderTest(FactoryTestCase):
                 self.assertTrue(committed, f"{backend} has no committed flag reader")
                 self.assertIn(reader.source, committed, f"{backend}'s FLAG_READERS row names no committed source")
                 self.assertIn(reader.tests, committed, f"{backend}'s FLAG_READERS row names no committed test")
+                # Generated only under a target that deploys, so only for a backend that can be given one.
+                if backend not in targeting("aws"):
+                    continue
                 name = f"flagged-{backend}"
                 repo = self.generate(
                     directory, name, "event-modelling", backend, "none", target="aws",

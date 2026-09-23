@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 
 from slipwai.assets import ROOT
-from slipwai.catalog import CATALOG
+from slipwai.catalog import CATALOG, axis_options
 from slipwai.scaffold import NO_MAINTENANCE
 
 
@@ -30,6 +30,40 @@ def backends_under_test() -> list[str]:
     if unknown:
         raise ValueError(f"FACTORY_BACKENDS names backends the catalog does not have: {', '.join(unknown)}")
     return [name for name in CATALOG["backends"] if name in names]
+
+
+def offering(axis: str, option: str | None = None, backends: list[str] | None = None) -> list[str]:
+    """The backends that can be given this axis at all — or, with `option`, that one answer — in catalog order.
+
+    For a test that holds every backend answering an axis to something, asked of the catalog rather than
+    assumed: a backend added before its adapters answers none, and a loop over every backend would then test
+    what that backend deliberately does not have yet.
+    """
+    return [
+        backend for backend in (backends if backends is not None else list(CATALOG["backends"]))
+        if (option in axis_options(axis, backend, "none") if option else len(axis_options(axis, backend, "none")) > 1)
+    ]
+
+
+def offered(axis: str, backend: str, wanted: str, target: str = "none") -> str:
+    """`wanted` where this backend can be given it under this target, else the axis's default for the backend.
+
+    For a test that answers every axis as fully as it can per backend: "as fully as it can" is a question for
+    the catalog, since a backend added before its adapters can be given nothing yet.
+    """
+    if wanted in axis_options(axis, backend, target):
+        return wanted
+    from slipwai.catalog import axis_default
+
+    return axis_default(axis, backend, target)
+
+
+def targeting(target: str, backends: list[str] | None = None) -> list[str]:
+    """The backends this target is offered for, in catalog order (`targets` on each backend in the catalog)."""
+    return [
+        backend for backend in (backends if backends is not None else list(CATALOG["backends"]))
+        if target in CATALOG["backends"][backend].get("targets", [])
+    ]
 
 
 def default_gateways() -> list[str]:

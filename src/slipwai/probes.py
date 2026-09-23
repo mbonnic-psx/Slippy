@@ -37,6 +37,7 @@ READY_PATHS = {
     "typescript": "/ready",
     "python": "/ready",
     "go": "/ready",
+    "rust": "/ready",
     "java-quarkus": HEALTH_PATH,
     "java-spring": HEALTH_PATH,
 }
@@ -51,6 +52,7 @@ HEALTH_BODIES = {
     "typescript": '{"status":"ok"}',
     "python": '{"status":"ok"}',
     "go": '{"status":"ok"}',
+    "rust": '{"status":"ok"}',
     "java-quarkus": '{"status":"UP","checks":[...]}',
     # Actuator's, and shorter than its sibling's for a reason worth stating: MicroProfile Health always
     # reports the per-check breakdown, while Actuator hides it unless `show-details` says otherwise — and

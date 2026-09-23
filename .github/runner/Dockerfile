@@ -24,6 +24,15 @@ ARG NODE_VERSION
 ARG NODE_SHA256
 ARG GO_VERSION
 ARG GO_SHA256
+ARG RUSTUP_VERSION
+ARG RUSTUP_SHA256
+ARG RUST_VERSION
+ARG CARGO_LLVM_COV_VERSION
+ARG CARGO_LLVM_COV_SHA256
+ARG CARGO_DENY_VERSION
+ARG CARGO_DENY_SHA256
+ARG CARGO_MUTANTS_VERSION
+ARG CARGO_MUTANTS_SHA256
 ARG JAVA_VERSION
 ARG JAVA_RELEASE
 ARG JAVA_ARCHIVE
@@ -41,7 +50,9 @@ SHELL ["/bin/bash", "-o", "pipefail", "-e", "-u", "-c"]
 # that downloads whatever "" resolves to. Fail here instead, naming the way in.
 RUN for name in PYTHON_VERSION PYTHON_BUILD PYTHON_SHA256 NODE_VERSION NODE_SHA256 GO_VERSION GO_SHA256 \
                 JAVA_VERSION JAVA_RELEASE JAVA_ARCHIVE JAVA_SHA256 TOFU_VERSION TOFU_SHA256 \
-                KO_VERSION KO_SHA256 PACK_VERSION PACK_SHA256; do \
+                KO_VERSION KO_SHA256 PACK_VERSION PACK_SHA256 RUSTUP_VERSION RUSTUP_SHA256 RUST_VERSION \
+                CARGO_LLVM_COV_VERSION CARGO_LLVM_COV_SHA256 CARGO_DENY_VERSION CARGO_DENY_SHA256 \
+                CARGO_MUTANTS_VERSION CARGO_MUTANTS_SHA256; do \
       if [ -z "${!name:-}" ]; then \
         echo "build-arg $name is empty — build with .github/runner/build.sh, which reads versions.env" >&2; \
         exit 1; \
@@ -85,6 +96,36 @@ RUN /usr/local/libexec/fetch.sh \
  && tar -xzf /tmp/go.tar.gz -C /usr/local \
  && rm /tmp/go.tar.gz
 
+# rustup, installing the pinned release with the components the Rust gate runs, into /opt so every job user
+# shares it. A generated project's `rust-toolchain.toml` names the same release, so rustup finds it installed.
+ENV RUSTUP_HOME=/opt/rustup CARGO_HOME=/opt/cargo
+RUN /usr/local/libexec/fetch.sh \
+      "https://static.rust-lang.org/rustup/archive/${RUSTUP_VERSION}/x86_64-unknown-linux-gnu/rustup-init" \
+      "${RUSTUP_SHA256}" /tmp/rustup-init \
+ && chmod +x /tmp/rustup-init \
+ && /tmp/rustup-init -y --no-modify-path --profile minimal --default-toolchain "${RUST_VERSION}" \
+      --component clippy --component rustfmt --component llvm-tools-preview \
+ && rm /tmp/rustup-init \
+ && chmod -R a+rwX /opt/rustup /opt/cargo
+
+# The Rust gate's three tools beyond the toolchain: coverage (`make test`), the advisory audit (`make audit`)
+# and mutation testing (`make mutation`).
+RUN /usr/local/libexec/fetch.sh \
+      "https://github.com/taiki-e/cargo-llvm-cov/releases/download/v${CARGO_LLVM_COV_VERSION}/cargo-llvm-cov-x86_64-unknown-linux-gnu.tar.gz" \
+      "${CARGO_LLVM_COV_SHA256}" /tmp/llvm-cov.tar.gz \
+ && tar -xzf /tmp/llvm-cov.tar.gz -C /opt/cargo/bin cargo-llvm-cov \
+ && rm /tmp/llvm-cov.tar.gz \
+ && /usr/local/libexec/fetch.sh \
+      "https://github.com/EmbarkStudios/cargo-deny/releases/download/${CARGO_DENY_VERSION}/cargo-deny-${CARGO_DENY_VERSION}-x86_64-unknown-linux-musl.tar.gz" \
+      "${CARGO_DENY_SHA256}" /tmp/deny.tar.gz \
+ && tar -xzf /tmp/deny.tar.gz -C /opt/cargo/bin --strip-components=1 "cargo-deny-${CARGO_DENY_VERSION}-x86_64-unknown-linux-musl/cargo-deny" \
+ && rm /tmp/deny.tar.gz \
+ && /usr/local/libexec/fetch.sh \
+      "https://github.com/sourcefrog/cargo-mutants/releases/download/v${CARGO_MUTANTS_VERSION}/cargo-mutants-x86_64-unknown-linux-gnu.tar.gz" \
+      "${CARGO_MUTANTS_SHA256}" /tmp/mutants.tar.gz \
+ && tar -xzf /tmp/mutants.tar.gz -C /opt/cargo/bin cargo-mutants \
+ && rm /tmp/mutants.tar.gz
+
 # A JDK is all this is for: a generated Java project drives its build through the `./mvnw` it commits, which
 # fetches the Maven its `maven-wrapper.properties` pins.
 RUN /usr/local/libexec/fetch.sh \
@@ -122,7 +163,7 @@ RUN /usr/local/libexec/fetch.sh \
 # has to be set here — and ahead of the base image's own entries, which is what makes the node above win
 # over the one the base image bundles.
 ENV JAVA_HOME=/opt/java
-ENV PATH=/opt/python/bin:/opt/node/bin:/usr/local/go/bin:/opt/java/bin:${PATH}
+ENV PATH=/opt/python/bin:/opt/node/bin:/usr/local/go/bin:/opt/cargo/bin:/opt/java/bin:${PATH}
 
 # `scripts/verify` installs the pinned ruff and mypy into an ignored `.python-tools` on first use, and the
 # executable and wheel builds do the same with their own requirements — into the checkout, which is fresh

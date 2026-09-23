@@ -128,6 +128,14 @@
         "azure"
       ]
     },
+    "rust": {
+      "family": "rust",
+      "label": "Rust — Cargo workspace, rustfmt, clippy, `cargo test` with cargo-llvm-cov",
+      "targets": [
+        "none",
+        "existing"
+      ]
+    },
     "java-quarkus": {
       "family": "java",
       "framework": "quarkus",

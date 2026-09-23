@@ -27,6 +27,8 @@ RENAMED = {
     "typescript": {"package.json"},
     "python": {"pyproject.toml", "src/delivery_starter/__init__.py", "tests/test_health.py"},
     "go": set(),
+    # The manifest names the package, and `src/lib.rs` is given its module list per selection.
+    "rust": {"Cargo.toml", "src/lib.rs"},
     # Every Java file names its package, so all of them are rewritten; the pom carries the artifact id and
     # the analysed package, and `application.properties` is cut down by the pruner on the way out. The
     # family's own tree — the wrapper, the analyser configurations — carries no project name and so is

@@ -5,7 +5,7 @@ import json
 import subprocess
 import tempfile
 
-from support import FactoryTestCase
+from support import FactoryTestCase, offering
 
 from slipwai.catalog import CATALOG, axis_default
 from slipwai.selection import resolve_selection
@@ -113,7 +113,7 @@ class AxesTest(FactoryTestCase):
             # map here is a sweep that silently skips every backend added after it was written — the last
             # one named three backends and covered neither Java one.
             transports = {
-                backend: axis_default("http", backend, "none") for backend in CATALOG["backends"]
+                backend: axis_default("http", backend, "none") for backend in offering("http")
             }
             for language, transport in transports.items():
                 for other, wrong in transports.items():

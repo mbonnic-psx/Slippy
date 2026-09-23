@@ -1,0 +1,7 @@
+# cargo-deny's configuration, read by `make audit` (`cargo deny check advisories`) from this service's
+# directory. The advisory database is RustSec's; a yanked crate in the lock fails the audit as a vulnerable one
+# does, because a yank is its author saying not to use that version. The licence, ban and source checks are
+# cargo-deny's other commands and are not run by the gate; configure them here when a project wants them.
+[advisories]
+version = 2
+yanked = "deny"

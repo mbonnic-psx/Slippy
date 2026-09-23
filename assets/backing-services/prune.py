@@ -67,7 +67,7 @@ FEATURES = (
 # whose members disagreed about something a no-op could not cover would rekey the table that differs to
 # `project.json`'s `backend`, which the factory already writes beside `language`; nothing needs that yet.
 # The factory asserts this tuple against its catalog.
-LANGUAGES = ("typescript", "python", "go", "java")
+LANGUAGES = ("typescript", "python", "go", "rust", "java")
 
 # The axes, and which features each answer keeps. An option is offerable in a given project only when every
 # feature it needs is still on disk, which is what makes "you may drop to memory, you may not upgrade to
@@ -427,6 +427,8 @@ MARKED_FILES_BY_LANGUAGE: dict[str, tuple[str, ...]] = {
     # Globs because a Python service's package directory is named after the project.
     "python": ("src/*/settings.py", "src/*/main.py"),
     "go": ("config/config.go", "cmd/serve/main.go"),
+    # Rust answers no axis yet, so nothing it generates carries a region to prune.
+    "rust": (),
     # Java's per-feature dependencies live in marked regions of the pom rather than in PACKAGE_EDITS
     # below, and `application.properties` carries the configuration that reads them. Both are XML- and
     # properties-comment marked, so one mechanism removes a dependency and its configuration together.
@@ -739,6 +741,8 @@ PACKAGE_EDITS: dict[str, dict[str, dict[str, tuple[str, ...]]]] = {
         "keycloak": {"packages": (), "scripts": ()},
         "users-keycloak": {"packages": (), "scripts": ()},
     },
+    # Rust answers no axis yet: no feature adds a crate, so there is nothing to remove from a manifest.
+    "rust": {},
     "go": {
         "postgres": {"packages": ("github.com/jackc/pgx/v5",), "scripts": ()},
         "sqlite": {"packages": ("modernc.org/sqlite",), "scripts": ()},

@@ -20,9 +20,9 @@ CATALOG = json.loads((ROOT / "catalog.json").read_text())
 def validate_catalog(catalog: dict) -> None:
     if catalog.get("schemaVersion") != 8:
         raise ValueError("catalog schemaVersion must be 8")
-    expected_backends = {"typescript", "python", "go", "java-quarkus", "java-spring"}
+    expected_backends = {"typescript", "python", "go", "rust", "java-quarkus", "java-spring"}
     if set(catalog["backends"]) != expected_backends:
-        raise ValueError("catalog must define exactly the five supported backends")
+        raise ValueError("catalog must define exactly the six supported backends")
     validate_backends(catalog)
     # The pruner runs inside a generated project and reads `project.json`'s `language` — which is the
     # family, not the backend — so its own list has to be the catalog's families rather than its backends.

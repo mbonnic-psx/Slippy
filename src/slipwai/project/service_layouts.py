@@ -343,6 +343,7 @@ WRITE_SIDE_FILES: dict[str, dict[str, dict[str, str]]] = {
             "CustomerIdentityTest.java": "../java/tests/users_oidc_keycloak_test.java",
         },
     },
+    "rust": {},  # no axis offered for Rust yet; its adapters land here with the options that name it
 }
 
 #: What `backing_services.py` reads: every file a feature owns, whichever side of the log it is on.

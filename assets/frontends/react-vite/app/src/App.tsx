@@ -70,6 +70,10 @@ export function App() {
                 no API to show. */}
             <Route path="/" element={<Home />} />
             {/* backing-service:__TRANSPORT__:end */}
+            {/* Whatever no route above claims — and, in a project with no transport, everything: there is
+                no API to show yet, and saying so beats an empty page. It also keeps this table non-empty
+                whichever routes a project has, so pruning the transport leaves code that still lints. */}
+            <Route path="*" element={<p className="muted">Nothing here yet.</p>} />
           </Routes>
         ) : (
           <p role="status" className="muted">

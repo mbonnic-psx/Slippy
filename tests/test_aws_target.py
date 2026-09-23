@@ -13,10 +13,10 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from support import FactoryTestCase, commit_all
+from support import FactoryTestCase, commit_all, targeting
 
 from slipwai.assets import ROOT
-from slipwai.catalog import CATALOG, axis_default
+from slipwai.catalog import axis_default
 from slipwai.images import IMAGE_BUILDERS
 
 # What each backend's `make build` reaches for, and how its migrations run once it is an image — asserted by
@@ -234,7 +234,7 @@ class AwsTargetTest(FactoryTestCase):
 
     def test_each_backend_builds_its_image_its_own_way_and_migrates_in_its_own_shape(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            for backend in CATALOG["backends"]:
+            for backend in targeting("aws"):
                 with self.subTest(backend=backend):
                     repo = self.generate_aws(directory, f"image-{backend}", backend, "none")
                     makefile = (repo / "Makefile").read_text()

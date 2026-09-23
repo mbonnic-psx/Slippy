@@ -21,7 +21,7 @@ import re
 import tempfile
 from pathlib import Path
 
-from support import FactoryTestCase, backends_under_test
+from support import FactoryTestCase, backends_under_test, offered
 
 from slipwai.catalog import CATALOG, axis_default
 
@@ -63,6 +63,9 @@ def combinations() -> list[tuple[str, str, str, str, str]]:
         transport = axis_default("http", backend, "none")
         for profile in CATALOG["profiles"]:
             stores = ("memory", "sqlite", "postgres") if profile == "event-modelling" else ("memory",)
+            # Only the stores this backend can be given: one added before its adapters has the in-memory
+            # answer alone, which every backend ships.
+            stores = tuple(dict.fromkeys(offered("event-store", backend, store) for store in stores))
             for store in stores:
                 chosen.append((profile, backend, store, transport, "react-vite"))
                 chosen.append((profile, backend, store, "none", "none"))
@@ -79,8 +82,8 @@ class StaleReferenceTest(FactoryTestCase):
                 event_store=store,
                 http=transport,
                 # Sign-in needs the transport to reach it, and a customer login needs a browser app.
-                auth="keycloak" if transport != "none" else "none",
-                users="keycloak" if frontend != "none" else "none",
+                auth=offered("auth", backend, "keycloak") if transport != "none" else "none",
+                users=offered("users", backend, "keycloak") if frontend != "none" else "none",
             )))
         return repos
 

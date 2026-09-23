@@ -174,7 +174,7 @@ src/slipwai/
 │   ├── production.py    the Makefile's build/push/smoke/deploy/rollback section
 │   ├── adopted.py       what an adopted repository takes from the factory, and the pages and blocks that explain it
 │   ├── deploy_workflow.py  its deploy pipeline
-│   └── languages/       one module per backend: typescript, python, go, java_quarkus,
+│   └── languages/       one module per backend: typescript, python, go, rust, java_quarkus,
 │                        java_spring — each reads its walking skeleton from
 │                        assets/languages/<backend>/app/, plus java.py for what the two
 │                        Java backends share and assets/languages/java/build/ for the
@@ -251,7 +251,7 @@ persists, because a project's log is the one thing no version of this factory ca
 
 No starter copy is committed anywhere: `assets/toolkit/` and its overlays are the single source, so a
 change there reaches every combination the moment it is generated. To inspect the current output of all
-ten foundations, materialize them into the ignored `build/` directory:
+twelve foundations, materialize them into the ignored `build/` directory:
 
 ```sh
 make starters

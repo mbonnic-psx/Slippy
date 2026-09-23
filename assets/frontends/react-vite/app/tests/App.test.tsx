@@ -27,8 +27,8 @@ describe('App', () => {
     // here, and the whole claim is that this is what was painted before they did.
     expect(screen.getByRole('status')).toHaveTextContent('Loading');
   });
-
   // backing-service:__TRANSPORT__:begin
+
   it('shows the route once this bundle has been handed its flags', async () => {
     renderApp();
 

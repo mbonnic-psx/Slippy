@@ -39,6 +39,10 @@ version_of() { command -v "$1" >/dev/null 2>&1 && shift && "$@" 2>&1 || true; }
 python_actual=$(version_of python3 python3 --version | awk '{print $2}')
 node_actual=$(version_of node node --version | tr -d 'v')
 go_actual=$(version_of go go version | awk '{print $3}' | sed 's/^go//')
+rust_actual=$(version_of rustc rustc --version | awk '{print $2}')
+llvm_cov_actual=$(version_of cargo-llvm-cov cargo llvm-cov --version | awk '{print $2}')
+deny_actual=$(version_of cargo-deny cargo deny --version | awk '{print $2}')
+mutants_actual=$(version_of cargo-mutants cargo mutants --version | awk '{print $2}')
 # `java -version` writes to stderr and quotes the version: openjdk version "25.0.4.1" 2026-10-21
 java_actual=$(version_of java java -version | awk -F'"' '/version/ {print $2; exit}')
 tofu_actual=$(version_of tofu tofu version | awk 'NR==1 {print $2}' | tr -d 'v')
@@ -49,6 +53,10 @@ echo "toolchains provided by the job image:"
 expect python3 "$PYTHON_VERSION" "$python_actual"
 expect node "$NODE_VERSION" "$node_actual"
 expect go "$GO_VERSION" "$go_actual"
+expect rustc "$RUST_VERSION" "$rust_actual"
+expect llvm-cov "$CARGO_LLVM_COV_VERSION" "$llvm_cov_actual"
+expect deny "$CARGO_DENY_VERSION" "$deny_actual"
+expect mutants "$CARGO_MUTANTS_VERSION" "$mutants_actual"
 expect java "$JAVA_VERSION" "$java_actual"
 expect tofu "$TOFU_VERSION" "$tofu_actual"
 expect ko "$KO_VERSION" "$ko_actual"

@@ -361,7 +361,7 @@ Beyond the profile, each role is a separate question, answered independently:
 |---|---|---|
 | Foundation | `--profile` | `standard`, `event-modelling` |
 | Production target | `--target` | `none`, `aws`, `azure`, `existing` (experimental) |
-| Backend language | `--language` | `typescript`, `python`, `go`, `java` |
+| Backend language | `--language` | `typescript`, `python`, `go`, `rust`, `java` |
 | Framework, where a language offers more than one | `--framework` | `quarkus`, `spring-boot` (or name the pair at once: `--backend java-spring`) |
 | Frontend | `--frontend` | `none`, `react-vite` |
 | Event store | `--event-store` | `memory`, `sqlite`, `postgres` |

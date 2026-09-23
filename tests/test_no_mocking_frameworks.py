@@ -16,7 +16,7 @@ import re
 import tempfile
 from pathlib import Path
 
-from support import FactoryTestCase, backends_under_test
+from support import FactoryTestCase, backends_under_test, offered
 
 from slipwai.catalog import CATALOG, axis_default
 
@@ -69,10 +69,11 @@ class NoMockingFrameworkTest(FactoryTestCase):
                             profile,
                             backend,
                             frontend,
-                            event_store="postgres" if profile == "event-modelling" else "memory",
+                            event_store=offered("event-store", backend, "postgres")
+                            if profile == "event-modelling" else "memory",
                             http=axis_default("http", backend, "none"),
-                            auth="keycloak",
-                            users="keycloak" if frontend != "none" else "none",
+                            auth=offered("auth", backend, "keycloak"),
+                            users=offered("users", backend, "keycloak") if frontend != "none" else "none",
                         )
                         for path in sorted(repo.rglob("*")):
                             if not path.is_file() or "/.git/" in path.as_posix():

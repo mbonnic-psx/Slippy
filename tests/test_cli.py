@@ -216,7 +216,7 @@ class CliTest(FactoryTestCase):
                 # like neither. The production target comes between the foundation and the language, and a
                 # destination the catalog does not offer is refused like any other answer.
                 input=(
-                    f"Bad Name\ninteractive-go-product\nmaybe\nno\nmars\n\nrust\ngo\nBad_Name\ncore\n\nBad Context\n\n"
+                    f"Bad Name\ninteractive-go-product\nmaybe\nno\nmars\n\ncobol\ngo\nBad_Name\ncore\n\nBad Context\n\n"
                     f"angular\nreact-vite\ncore\nteller\n\n\n\n{directory}\n"
                 ),
                 text=True,

@@ -69,6 +69,10 @@ def toolchain_setup(family: str, services: list[App]) -> str:
         + ") }}\n",
         # One Go version for the workspace, read from the first Go service's module; `go.work` pins the rest.
         "go": f"      - uses: actions/setup-go@v7\n        with:\n          go-version-file: {services[0].path}/go.mod\n",
+        # The toolchain `rust-toolchain.toml` pins, which this action reads, and the Cargo caches beside it; then
+        # the gate's two tools that are not part of the toolchain, as prebuilt binaries rather than compiled.
+        "rust": "      - uses: actions-rust-lang/setup-rust-toolchain@v1\n"
+        "      - uses: taiki-e/install-action@v2\n        with:\n          tool: cargo-llvm-cov,cargo-deny\n",
         "java": (
             "      - uses: actions/setup-java@v5\n        with:\n          distribution: temurin\n"
             "          java-version: '25'\n          cache: maven\n"

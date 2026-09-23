@@ -427,8 +427,9 @@ MARKED_FILES_BY_LANGUAGE: dict[str, tuple[str, ...]] = {
     # Globs because a Python service's package directory is named after the project.
     "python": ("src/*/settings.py", "src/*/main.py"),
     "go": ("config/config.go", "cmd/serve/main.go"),
-    # Rust answers no axis yet, so nothing it generates carries a region to prune.
-    "rust": (),
+    # The manifest holds each store's `sqlx` in its region, and the driven adapters' module list declares
+    # each store's two adapters in theirs.
+    "rust": ("Cargo.toml", "src/adapters/driven/mod.rs"),
     # Java's per-feature dependencies live in marked regions of the pom rather than in PACKAGE_EDITS
     # below, and `application.properties` carries the configuration that reads them. Both are XML- and
     # properties-comment marked, so one mechanism removes a dependency and its configuration together.
@@ -456,6 +457,10 @@ OWNED_FILES: dict[str, dict[str, tuple[str, ...]]] = {
         "go": (
             "adapters/driven/eventstoresqlite",
             "adapters/driven/checkpointstoresqlite",
+        ),
+        "rust": (
+            "src/adapters/driven/event_store_sqlite.rs",
+            "src/adapters/driven/checkpoint_store_sqlite.rs",
         ),
         "java": (
             "src/main/java/com/example/*/adapters/driven/eventstoresqlite",
@@ -486,6 +491,16 @@ OWNED_FILES: dict[str, dict[str, tuple[str, ...]]] = {
             "migrations/004_event_tags.sql",
             "tests/integration/test_event_store_postgres.py",
             "tests/integration/test_checkpoint_store_postgres.py",
+        ),
+        "rust": (
+            "src/adapters/driven/event_store_postgres.rs",
+            "src/adapters/driven/checkpoint_store_postgres.rs",
+            "src/bin/migrate.rs",
+            "build.rs",
+            "migrations/001_events.sql",
+            "migrations/002_events_append_only.sql",
+            "migrations/003_projection_checkpoints.sql",
+            "migrations/004_event_tags.sql",
         ),
         "go": (
             "adapters/driven/eventstorepostgres",
@@ -741,8 +756,12 @@ PACKAGE_EDITS: dict[str, dict[str, dict[str, tuple[str, ...]]]] = {
         "keycloak": {"packages": (), "scripts": ()},
         "users-keycloak": {"packages": (), "scripts": ()},
     },
-    # Rust answers no axis yet: no feature adds a crate, so there is nothing to remove from a manifest.
-    "rust": {},
+    # The manifest's own region already took `sqlx` out; naming it is what tells the pruner the lock has to
+    # follow, which `cargo` does from the lock it already has.
+    "rust": {
+        "sqlite": {"packages": ("sqlx",), "scripts": ()},
+        "postgres": {"packages": ("sqlx",), "scripts": ()},
+    },
     "go": {
         "postgres": {"packages": ("github.com/jackc/pgx/v5",), "scripts": ()},
         "sqlite": {"packages": ("modernc.org/sqlite",), "scripts": ()},
@@ -1173,6 +1192,29 @@ def _uninstall_python(root: Path, service: str, packages: tuple[str, ...], log) 
         )
 
 
+def _relock_rust(root: Path, packages: tuple[str, ...], log) -> None:
+    """Let the workspace lock follow a manifest whose store region was cut.
+
+    The region is gone already — stripping markers did that — so what is left is the lock, which `--locked`
+    holds to the manifests. `cargo metadata` resolves from the lock it has and writes it back without the
+    crates nothing names any more, which needs no network: removing a crate never has to fetch one.
+    """
+    if not packages or not (root / "Cargo.lock").is_file():
+        return
+    if shutil.which("cargo") is None:
+        log("  cargo not found. Run `cargo metadata --format-version 1` yourself so Cargo.lock stops naming "
+            f"{', '.join(packages)}")
+        return
+    result = subprocess.run(
+        ["cargo", "metadata", "--format-version", "1"], cwd=root, capture_output=True, text=True
+    )
+    if result.returncode == 0:
+        log(f"  Cargo.lock — dropped what only {', '.join(packages)} needed")
+    else:
+        log("  `cargo metadata` failed; run it yourself so Cargo.lock follows the manifest:\n"
+            f"    {result.stderr.strip().splitlines()[-1] if result.stderr.strip() else 'no stderr'}")
+
+
 def _uninstall_go(root: Path, service_path: str, packages: tuple[str, ...], log) -> None:
     """Let the module graph follow the imports.
 
@@ -1228,6 +1270,8 @@ def _apply_package_edits(root: Path, services: list[tuple[str, str]], dropped: s
             _uninstall_python(root, service, packages, log)
         elif language == "go":
             _uninstall_go(root, service, packages, log)
+        elif language == "rust":
+            _relock_rust(root, packages, log)
     # A browser app is TypeScript whatever its service is written in, so its manifest is edited npm's way.
     web_packages: tuple[str, ...] = ()
     for feature in sorted(dropped):

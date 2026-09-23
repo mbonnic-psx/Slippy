@@ -16,6 +16,8 @@ adapter here instead of being written four times.
 """
 from __future__ import annotations
 
+from .rust_layouts import RUST_READ_SIDE
+
 #: Where the two ports sit in Maven's layout: under the application layer, which owns them.
 JAVA_PORTS = "src/main/java/com/example/deliverystarter/application/ports"
 
@@ -239,7 +241,7 @@ READ_SIDE_FILES: dict[str, dict[str, dict[str, str]]] = {
             "migrations/004_event_tags.sql": "../sql/004_event_tags.sql",
         },
     },
-    "rust": {},
+    "rust": RUST_READ_SIDE,
 }
 
 

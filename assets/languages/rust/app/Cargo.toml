@@ -7,5 +7,10 @@ edition.workspace = true
 rust-version.workspace = true
 publish = false
 
+# What this service depends on follows from what it was generated with; a store's crate sits in that
+# store's marked region, so `./init --event-store` takes it out with the adapter.
+[dependencies]
+__DEPENDENCIES__
+
 [lints]
 workspace = true

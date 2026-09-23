@@ -38,6 +38,9 @@ AGENT = "drive-"
 # so resolving one for the delegate itself would pick a model for fourteen stages at once. It inherits, and the
 # projection says which of the two reasons it carries no model.
 NO_STAGE = "none"
+# Where `scripts/agents/delegate.py` keeps what another harness printed while it ran a stage: a log of one run,
+# read when the run failed and never a record, so ignored.
+DELEGATION_LOGS = ".specify/delegations/"
 
 
 @dataclass(frozen=True)
@@ -213,6 +216,20 @@ cannot be compared with one that did not. Nothing about what a stage produces ch
 artifacts, gates and stops are the same — and a sub-agent that meets a product decision hands the
 question back here rather than answering it.
 
+**A line may name another harness** — `implement: local → opencode:ollama/qwen-coder-32k — …`. No sub-agent of
+this harness can start that, so the stage runs through `python3 scripts/agents/delegate.py <stage> --brief <file>
+--allow <path> … --verify "<the stage's scoped test command>"`. Write the brief to a file — the task, its
+contract and the map, exactly as for any delegate — and give one `--allow` per manifest entry, a directory
+ending in `/`. Run it in the background where this harness can, since it may take many minutes, and alone: it
+reads every change in the tree while it runs as the delegate's, so never beside a concurrent sibling or a second
+one. It holds the write scope itself, after the run, because the other harness may not: a run that wrote
+outside its manifest, changed nothing, failed its verify command, exited non-zero or ran out of time is undone,
+commits included, to exactly where it started. Its last line is `delegate: done — …`, which is the stage line,
+or `delegate: failed — …`, which names the fallback: rerun the stage there as an ordinary delegation and say both
+(`drive-implement · model: opencode:ollama/qwen-coder-32k failed (wrote outside its manifest), rerun on sonnet ·
+delegated, fresh context`) — how often the first half happens is what the mapping is measured by. Only a stage
+whose type may run any command is ever sent there; `models.py --check` refuses a table that would send another.
+
 A stage is not always one delegate. Before delegating implementation, read `tasks.md` for its `[P]` markers and
 its *Parallel opportunities* section: the tasks command writes both, and they are the plan for what may run
 alongside what — written by one half of this workflow to be read here, not decoration. Every unchecked `[P]`
@@ -286,6 +303,11 @@ Each argument is one of two edits, and the first thing to decide is which one th
 - `harness.role=identifier` changes what a role runs on — `claude.fast=haiku`, or `claude.skipper=opus` to
   put a bigger model on `/cruise`'s product decisions than on driving. `host` is the model running `/drive`;
   `null` is no identifier mapped, which the line before each stage then says.
+- `harness.role=<other harness>:<model>` sends a role's stages to another harness entirely —
+  `claude.local=opencode:ollama/qwen-coder-32k`, a local model through opencode — run by
+  `scripts/agents/delegate.py`, which undoes a run that fails. Give it a role of its own (`implement=local`),
+  since only stages whose type may run any command may go there, and say what a failed run reruns on with
+  `fallbacks.<role>=<role>` (`fallbacks.local=fast`); with none, it reruns on the host model.
 
 Pass them through exactly as given:
 

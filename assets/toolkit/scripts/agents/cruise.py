@@ -369,17 +369,33 @@ def iterate(template: str, prompt: str, environment: dict[str, str], iteration: 
     command = template.replace("{prompt}", shlex.quote(prompt))
     environment = {**environment, RUNNER_VARIABLE: "1", ITERATION_VARIABLE: str(iteration)}
     last = None
+    # Its own process group, so ending it ends the harness and everything the harness started, not only the
+    # shell `shell=True` puts in front of it — a harness outliving its runner goes on spending.
     with subprocess.Popen(command, shell=True, cwd=ROOT, text=True, stdout=subprocess.PIPE,
-                          stderr=subprocess.STDOUT, env=environment) as process:
+                          stderr=subprocess.STDOUT, env=environment, start_new_session=True) as process:
         CURRENT = process
         assert process.stdout is not None
-        for line in process.stdout:
-            sys.stdout.write(line)
-            sys.stdout.flush()
-            if LAST_LINE.match(line):
-                last = line.strip()
+        try:
+            for line in process.stdout:
+                sys.stdout.write(line)
+                sys.stdout.flush()
+                if LAST_LINE.match(line):
+                    last = line.strip()
+        except BaseException:
+            # `stop --now` (SIGTERM, raised as SystemExit by `terminated`) or Ctrl-C on a foreground run, which
+            # no longer reaches a session in its own group: end the whole group before waiting on it.
+            end_iteration(process)
+            raise
     CURRENT = None
     return last
+
+
+def end_iteration(process: subprocess.Popen[str]) -> None:
+    """End an iteration's process group: the shell, the harness, and whatever the harness started."""
+    try:
+        os.killpg(process.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        pass
 
 
 def resume() -> None:
@@ -556,8 +572,8 @@ def running_pid() -> tuple[int, str] | None:
 
 def terminated(_signal: int, _frame: object) -> None:
     """A SIGTERM to the runner ends the iteration under way with it, so `stop --now` leaves no orphan session."""
-    if CURRENT is not None and CURRENT.poll() is None:
-        CURRENT.terminate()
+    if CURRENT is not None:
+        end_iteration(CURRENT)
     raise SystemExit(128 + signal.SIGTERM)
 
 

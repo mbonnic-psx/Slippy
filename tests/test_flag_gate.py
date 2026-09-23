@@ -65,14 +65,11 @@ class FlagReaderTest(FactoryTestCase):
                 self.assertTrue(committed, f"{backend} has no committed flag reader")
                 self.assertIn(reader.source, committed, f"{backend}'s FLAG_READERS row names no committed source")
                 self.assertIn(reader.tests, committed, f"{backend}'s FLAG_READERS row names no committed test")
-                # Generated only under a target that deploys, so only for a backend that can be given one.
-                if backend not in targeting("aws"):
+                if backend not in targeting("aws"):  # emitted only under a target that deploys
                     continue
                 name = f"flagged-{backend}"
-                repo = self.generate(
-                    directory, name, "event-modelling", backend, "none", target="aws",
-                    http=axis_default("http", backend, "aws"),
-                )
+                repo = self.generate(directory, name, "event-modelling", backend, "none",
+                                     target="aws", http=axis_default("http", backend, "aws"))
                 for relative in (reader.source, reader.tests):
                     # The same rename every other file in the service gets: a Python package named after
                     # the project, a Java package segment. Spelled here the way the skeleton suite spells

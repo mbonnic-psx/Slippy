@@ -16,6 +16,7 @@ answer different questions — what a project writes its log with, and what it m
 from __future__ import annotations
 
 from .read_side_layouts import JAVA_PORTS, with_read_side
+from .rust_layouts import RUST_WRITE_SIDE
 
 WRITE_SIDE_FILES: dict[str, dict[str, dict[str, str]]] = {
     "typescript": {
@@ -155,8 +156,7 @@ WRITE_SIDE_FILES: dict[str, dict[str, dict[str, str]]] = {
             # `cmd/serve` is the one package in the service that has no test.
             "config/config.go": "config.go",
             "config/config_test.go": "config_test.go",
-            # The SDK's wiring, under the transport for the same reason: a span per request is the
-            # one thing only a transport can produce.
+            # The SDK's wiring, under the transport: a span per request is what only a transport produces.
             "observability/tracing.go": "tracing.go",
             "observability/tracing_test.go": "tracing_test.go",
             "cmd/serve/main.go": "serve_main.go",
@@ -343,7 +343,7 @@ WRITE_SIDE_FILES: dict[str, dict[str, dict[str, str]]] = {
             "CustomerIdentityTest.java": "../java/tests/users_oidc_keycloak_test.java",
         },
     },
-    "rust": {},  # no axis offered for Rust yet; its adapters land here with the options that name it
+    "rust": RUST_WRITE_SIDE,
 }
 
 #: What `backing_services.py` reads: every file a feature owns, whichever side of the log it is on.

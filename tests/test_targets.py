@@ -79,9 +79,7 @@ class TargetsTest(FactoryTestCase):
         self.assertEqual(CATALOG["default"]["target"], "none")
         for target in ("aws", "azure", "existing"):
             self.assertEqual(offered_backends(CATALOG, target), targeting(target), target)
-        # Every backend but Rust, whose images arrive with its deploy targets: the catalog, not this test, is
-        # what says so, and `targeting` reads it.
-        self.assertEqual(targeting("aws"), [b for b in CATALOG["backends"] if b != "rust"])
+        self.assertEqual(targeting("aws"), [b for b in CATALOG["backends"] if b != "rust"], "Rust's images come later")
         self.assertEqual([name for name in CATALOG["targets"] if managed(CATALOG, name)], ["aws", "azure"])
         # What the design keeps off both clouds: the file store dies with the task, and Keycloak is the
         # local stand-in rather than something a project runs in production. Each cloud's own identity
@@ -173,15 +171,15 @@ class TargetsTest(FactoryTestCase):
         for backend in offering("event-store"):
             self.assertEqual(axis_options("event-store", backend, "none"), ["memory", "sqlite", "postgres"])
             self.assertEqual(axis_options("event-store", backend, "aws"), ["memory", "postgres"], backend)
+            self.assertTrue(axis_applies("event-store", "event-modelling", backend, "aws"))
+        for backend in offering("auth"):
             self.assertEqual(axis_options("auth", backend, "none"), ["none", "keycloak"])
             self.assertEqual(axis_options("auth", backend, "aws"), ["none", "cognito", "auth0"], backend)
             self.assertEqual(axis_options("users", backend, "aws"), ["none", "cognito", "auth0"], backend)
-            self.assertTrue(axis_applies("event-store", "event-modelling", backend, "aws"))
         # The backend filter still applies underneath the target one.
         self.assertEqual(axis_options("http", "go", "aws"), ["none", "net-http"])
-        # A default the target does not offer falls back to the no-infrastructure answer, exactly as a
-        # default the backend cannot be given does — `validate_axis_targets` is what refuses the catalog
-        # that would rely on it.
+        # A default the target does not offer falls back to the no-infrastructure answer, as one the backend
+        # cannot be given does — `validate_axis_targets` refuses the catalog that would rely on it.
         catalog = with_cloud()
         catalog["default"]["event-store"] = "sqlite"
         self.assertEqual(catalog_axis_default(catalog, "event-store", "go", "none"), "sqlite")

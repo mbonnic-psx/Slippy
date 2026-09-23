@@ -62,7 +62,7 @@ def combinations() -> list[tuple[str, str, str, str, str]]:
     for backend in backends_under_test():
         transport = axis_default("http", backend, "none")
         for profile in CATALOG["profiles"]:
-            stores = ("memory", "sqlite", "postgres") if profile == "event-modelling" else ("memory",)
+            stores: tuple[str, ...] = ("memory", "sqlite", "postgres") if profile == "event-modelling" else ("memory",)
             # Only the stores this backend can be given: one added before its adapters has the in-memory
             # answer alone, which every backend ships.
             stores = tuple(dict.fromkeys(offered("event-store", backend, store) for store in stores))

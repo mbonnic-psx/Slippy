@@ -31,12 +31,11 @@ TRANSPORTS = {
     "java-quarkus": "quarkus-rest",
     "java-spring": "spring-web",
 }
-# Backends that answer no axis yet, stated rather than skipped: Rust's walking skeleton landed before its
-# adapters, so every axis falls back to its no-infrastructure answer for it. `docs/axes.md` carries its row of
-# dashes, and the tests below assert that state for it rather than the full coverage the others have. A backend
-# leaves this set in the commit that adds it to an axis's options.
-AXIS_FREE = {"rust"}
-ANSWERING = [backend for backend in CATALOG["backends"] if backend not in AXIS_FREE]
+# Backends that answer only some axes yet, and which: stated rather than skipped. Rust's adapters are arriving
+# an axis at a time, so the axes it does not answer yet fall back to their no-infrastructure answer for it, and
+# `docs/axes.md` carries a dash for each. A backend leaves this map when it answers every axis.
+PARTIAL = {"rust": {"event-store"}}
+ANSWERING = [backend for backend in CATALOG["backends"] if backend not in PARTIAL]
 
 
 def without_java() -> dict:
@@ -98,12 +97,9 @@ class CatalogTest(FactoryTestCase):
         """A default is a recommendation, and the one this factory makes is a real event store and the HTTP
         transport the chosen backend actually has. The identity provider stays absent: Keycloak is scaffolded
         without its flow, so defaulting to it would hand every project a placeholder to finish."""
-        for language in ANSWERING:
+        for language in CATALOG["backends"]:
             self.assertEqual(axis_default("event-store", language, "none"), "postgres", language)
             self.assertEqual(axis_default("auth", language, "none"), "none", language)
-        for language in AXIS_FREE:
-            # Nothing to recommend but the answer that needs no infrastructure: the in-memory store is `always`.
-            self.assertEqual(axis_default("event-store", language, "none"), "memory", language)
         # The transport default is per backend because the options are: Fastify is not something a Go
         # project can be given, so one flat answer would refuse to generate on two backends out of three.
         self.assertEqual(
@@ -149,16 +145,16 @@ class CatalogTest(FactoryTestCase):
         to its no-infrastructure answer. What is refused is the other case: a backend that *can* be given a
         real answer and is left defaulting to none, which is a recommendation that silently stopped."""
         catalog = json.loads(json.dumps(CATALOG))
-        catalog["backends"]["rust"] = {"family": "rust", "label": "Rust", "targets": ["none"]}
+        catalog["backends"]["zig"] = {"family": "zig", "label": "Zig", "targets": ["none"]}
         self.assertEqual(
-            {axis: catalog_axis_default(catalog, axis, "rust", "none") for axis in catalog["axes"]},
+            {axis: catalog_axis_default(catalog, axis, "zig", "none") for axis in catalog["axes"]},
             {"event-store": "memory", "http": "none", "auth": "none", "users": "none"},
         )
 
         # The moment that backend has a transport of its own, the default has to name it.
-        catalog["axes"]["http"]["options"]["rust-axum"] = {
-            "capabilities": ["http-rust-axum"],
-            "backends": ["rust"],
+        catalog["axes"]["http"]["options"]["zig-zap"] = {
+            "capabilities": ["http-zig-zap"],
+            "backends": ["zig"],
             "targets": ["none"],
             "containers": [],
             "migrations": False,
@@ -166,10 +162,10 @@ class CatalogTest(FactoryTestCase):
             "label": "Axum",
             "features": [],
         }
-        with self.assertRaisesRegex(ValueError, "http default names no answer for rust"):
+        with self.assertRaisesRegex(ValueError, "http default names no answer for zig"):
             validate_axes(catalog)
-        catalog["default"]["http"]["rust"] = "rust-axum"
-        self.assertEqual(catalog_axis_default(catalog, "http", "rust", "none"), "rust-axum")
+        catalog["default"]["http"]["zig"] = "zig-zap"
+        self.assertEqual(catalog_axis_default(catalog, "http", "zig", "none"), "zig-zap")
 
         # And a default naming an answer that backend cannot be built with is refused outright, rather
         # than falling back to nothing and generating a project nobody asked for.
@@ -213,16 +209,18 @@ class CatalogTest(FactoryTestCase):
             )
 
     def test_the_axes_are_asked_only_where_there_is_a_choice(self) -> None:
-        for language in AXIS_FREE:
-            # Asked nothing: with one answer or none, an axis is not a question (`axis_applies`).
-            for axis in ("event-store", "http", "auth", "users"):
+        for language, answered in PARTIAL.items():
+            # An axis it does not answer yet is not a question for it: one answer or none is not a choice.
+            for axis in {"event-store", "http", "auth", "users"} - answered:
                 self.assertFalse(axis_applies(axis, "event-modelling", language, "none"), (language, axis))
-        for language in ANSWERING:
-            # Every other backend can be given every event store, and each has exactly one transport.
+        for language in CATALOG["backends"]:
+            # Every backend can be given every event store.
             self.assertTrue(axis_applies("event-store", "event-modelling", language, "none"), language)
             self.assertEqual(
                 axis_options("event-store", language, "none"), ["memory", "sqlite", "postgres"], language
             )
+        for language in ANSWERING:
+            # And each of these has exactly one transport.
             self.assertEqual(len(axis_options("http", language, "none")), 2, language)
             self.assertTrue(axis_applies("auth", "standard", language, "none"), language)
         # The event store belongs to the profile that has the port, so it is not a question the

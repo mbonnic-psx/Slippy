@@ -112,6 +112,30 @@ on the same strong model instead of rereading the whole driving session. Every d
 model explicitly through `subagentModel`; leaving it unset selects a harness default, not the
 `.specify/models.json` decision, and makes the benchmark incomparable.
 
+### A stage on another harness
+
+A role may map to another harness and its model — `claude.local=opencode:ollama/qwen-coder-32k` — so the session
+driving on one harness, on the plan it already pays for, sends its mechanical stages to a local model through
+another. No sub-agent of the host can start that, so `scripts/agents/delegate.py` does: it runs the other
+harness's verified headless command (`headless.command`, with the model through `headless.modelFlag`), with the
+stage's type as the standing brief and the session's task after it.
+
+```sh
+python3 scripts/agents/models.py --set implement=local mutation=local \
+    claude.local=opencode:ollama/qwen-coder-32k fallbacks.local=fast
+python3 scripts/agents/delegate.py implement --brief brief.md --allow apps/service/src/ --verify "make test"
+```
+
+The other harness may not be able to hold a write scope, so the scope is held after the run: a run that wrote
+outside its `--allow` list, changed nothing, failed `--verify`, exited non-zero or ran out of time is undone —
+commits included — back to exactly where it started, and the session reruns the stage on the role `fallbacks`
+names (the host model where none is named). The harness's own agent file carries that fallback model, since
+that is what the file is used for. A check afterwards can undo a write but not a command, so only a stage
+whose type may run any command — `implement`, `mutation`, `converge`, `hand`, `bosun` — may go there, and
+`models.py --check` refuses a table that sends another; give such a role to those stages alone. A delegation
+reads every change in the tree as its own, so it runs alone, never beside a concurrent sibling. What the other
+harness printed is kept under `.specify/delegations/`, ignored.
+
 Under `usage`, the registry also says where each harness keeps the tokens a session spent — Claude Code's
 transcript under `~/.claude/projects/` and Codex's rollout under `~/.codex/sessions/`, each read from the harness
 itself on the date the row names, or `null` where nothing was verified. `scripts/agents/benchmark.py` reads it

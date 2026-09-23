@@ -159,6 +159,8 @@
       "headless": {
         "how": "`claude -p <prompt>` prints the response and exits; `--output-format text` keeps the last line readable; `--permission-mode` picks how tool calls are approved in a session nobody is watching; `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0` keeps a print session waiting for its background delegates, which it otherwise terminates after 600s — mid-slice, with the story delegate still running; under `acceptEdits` the project's `.claude/settings.json` allowlist applies only once the workspace is trusted (`projects[<path>].hasTrustDialogAccepted` in ~/.claude.json); `-p /cruise` resolves the project's slash command, which is how every run so far was driven",
         "command": "claude -p {prompt} --output-format text {permissions}",
+        "modelFlag": "--model {model}",
+        "modelFlagSource": "`claude --help`: `--model <model>`, an alias or a full name, read 2026-09-23",
         "permissions": "--permission-mode acceptEdits",
         "sandboxPermissions": "--dangerously-skip-permissions",
         "source": "the installed Claude Code 2.1.278's --help (-p/--print, --output-format, --permission-mode with acceptEdits and bypassPermissions, --dangerously-skip-permissions), read 2026-09-22; the wait ceiling and the trust rule from the messages the same build printed during a /cruise run, read 2026-09-22",
@@ -899,6 +901,8 @@
       "headless": {
         "how": "`opencode run [message..]` runs opencode non-interactively with the prompt passed directly; `--format default` (the default) prints formatted text to stdout and `--format json` raw JSON events, so the last line of stdout is the tail of the response. Unattended approvals follow the `permission` config (most tools default to allow; `doom_loop` and `external_directory` default to ask; reads of .env files are denied), and what a non-interactive `ask` does was not verified. `--auto` approves every request not explicitly denied. `-c/--continue`, `-s/--session` and `--fork` are not passed.",
         "command": "opencode run {permissions} {prompt}",
+        "modelFlag": "-m {model}",
+        "modelFlagSource": "`opencode run --help` of 1.18.23: `-m, --model` takes provider/model, read 2026-09-23",
         "permissions": "",
         "sandboxPermissions": "--auto",
         "source": "packages/web/src/content/docs/cli.mdx (the `run` section and flag table) and permissions.mdx (Auto mode, the defaults, `opencode run --auto`) in anomalyco/opencode on dev, read 2026-09-22 (opencode.ai returned HTTP 403)"
@@ -1006,6 +1010,8 @@
       "headless": {
         "how": "`qwen <prompt>` runs headless (the positional prompt is one-shot by default; `-p`/`--prompt` is deprecated in its favour as of 0.24.0) and prints the response as plain text to stdout (`--output-format`/`-o` takes text, json, stream-json; text is the default), so the last line of stdout is the tail of the final answer. `--approval-mode` takes plan, default, auto-edit, auto, yolo; `--yolo`/`-y` auto-approves every tool call, shell and edits included, and enables no sandbox. `--continue` and `--resume` are not passed; each run without them is a fresh session. The prompt goes last, after the permission flags.",
         "command": "qwen {permissions} {prompt}",
+        "modelFlag": "-m {model}",
+        "modelFlagSource": "`qwen --help` of 0.24.0: `-m, --model`, read 2026-09-23",
         "permissions": "--approval-mode auto-edit",
         "sandboxPermissions": "--yolo",
         "source": "docs/users/features/headless.md and docs/users/features/approval-mode.md in QwenLM/qwen-code on main, read 2026-09-22; `qwen --help` of 0.24.0 for the positional prompt, read 2026-09-23"

@@ -255,9 +255,16 @@ def agent_model(stage: str, harness: dict[str, object]) -> tuple[str | None, str
         return None, f"no {models.MODELS.relative_to(ROOT)} yet, so this type inherits the session's model"
     try:
         table = json.loads(models.MODELS.read_text())
-        _, model, why = models.resolve(stage, table, harness)
+        role, model, why = models.resolve(stage, table, harness)
     except (ValueError, KeyError) as error:
         return None, f"{models.MODELS.relative_to(ROOT)} could not be read ({error}); `make check-agents` says why"
+    if models.cross(model) is not None:
+        # The stage runs on another harness through delegate.py; this file is what it reruns on when that fails.
+        back, model = models.fallback(role, table, harness)
+        if model is None:
+            return None, f"`{stage}` runs on another harness, and its fallback is the session's model"
+        return model, (f"`{stage}` runs on another harness; this is its fallback, `{back}`, in "
+                       f"{models.MODELS.relative_to(ROOT)}")
     if model is None:
         return None, f"{why}, so this type inherits the session's model"
     return model, f"`{stage}` resolves to {model} in {models.MODELS.relative_to(ROOT)}"

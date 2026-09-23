@@ -11,6 +11,13 @@ project with no table at all are each said in words, so a stage that did not swi
     python3 scripts/agents/models.py implement    # one stage, keyed by the command it runs
     python3 scripts/agents/models.py --check      # the table is well-formed; `make check-agents` runs this
     python3 scripts/agents/models.py --set implement=strong claude.fast=haiku   # change it, checked, any time
+    python3 scripts/agents/models.py --set implement=local claude.local=opencode:ollama/qwen-coder-32k fallbacks.local=fast
+
+A role may map to `<harness>:<model>` — another harness's headless command, on that harness's model. Such a
+stage is not delegated through this harness's sub-agents but through `scripts/agents/delegate.py`, which starts
+the other harness, holds its writes to the stage's manifest afterwards, and undoes the lot when it fails; the
+role named under `fallbacks` is what the stage then reruns on. Only a type whose command scope is `any` may run
+there, since a check after the fact can undo a write but not a command.
 
 A change — by hand or with `--set` — takes effect at the next stage `/drive` runs: the table is read before every
 stage and cached nowhere. `slipwai migrate` merges a newer factory's table over an edited one rather than
@@ -53,6 +60,9 @@ KNOWN_STAGES = (
 )
 # A role mapped to this runs on the model running `/drive` itself: no delegation, said in as many words.
 HOST = "host"
+# The canonical agent types, siblings of this script's `scripts/` wherever it sits (see project.py): each declares
+# the stage it runs and its command scope, which is what decides whether that stage may leave this harness.
+AGENT_TYPES = Path(__file__).resolve().parents[2] / "agents"
 ABSENT = f"no {MODELS.relative_to(ROOT)}: every stage runs on the host model; `slipwai migrate` writes the table"
 
 
@@ -68,6 +78,47 @@ def installed() -> list[str]:
     return [default] if isinstance(default, str) else []
 
 
+def registry() -> dict[str, dict[str, Any]]:
+    return {entry["key"]: entry for entry in json.loads(REGISTRY.read_text())["harnesses"]}
+
+
+def cross(value: object, rows: dict[str, dict[str, Any]] | None = None) -> tuple[str, str] | None:
+    """(harness key, model) where an identifier names another harness — `opencode:ollama/qwen-coder-32k` — else
+    None. Only a prefix the registry knows counts, so a model that carries a colon of its own (`qwen3.5:4b`)
+    is still one identifier."""
+    if not isinstance(value, str):
+        return None
+    key, separator, model = value.partition(":")
+    if not separator or not model or key not in (rows if rows is not None else registry()):
+        return None
+    return key, model
+
+
+def declared_types() -> dict[str, dict[str, str]]:
+    """Each canonical type's declaration, keyed by the stage it runs; a type with no stage is left out."""
+    declared: dict[str, dict[str, str]] = {}
+    for path in sorted(AGENT_TYPES.glob("*.md")) if AGENT_TYPES.is_dir() else []:
+        source = path.read_text()
+        end = source.find("\n---\n", 4)
+        if not source.startswith("---\n") or end == -1:
+            continue
+        fields = {key.strip(): value.strip() for key, _, value in
+                  (row.partition(":") for row in source[4:end].splitlines()) if key.strip()}
+        if fields.get("stage"):
+            declared[fields["stage"]] = fields
+    return declared
+
+
+def fallback(role: str, table: dict[str, Any], harness: dict[str, Any]) -> tuple[str | None, str | None]:
+    """(role, model or None) a stage on another harness reruns on when that run fails: the role `fallbacks` names
+    for it, resolved on this harness, else the host model."""
+    named = table.get("fallbacks", {}).get(role)
+    if not isinstance(named, str):
+        return None, None
+    value = table.get("roles", {}).get(harness["key"], {}).get(named)
+    return named, None if value in (None, HOST) else str(value)
+
+
 def role_of(stage: str, table: dict[str, Any]) -> tuple[str, str]:
     """The role a stage runs under, and a note when it fell to the `default` row."""
     stages = table["stages"]
@@ -81,6 +132,15 @@ def resolve(stage: str, table: dict[str, Any], harness: dict[str, Any]) -> tuple
     of the three reasons made it so — or, with a model, how this harness switches to it."""
     role, fell = role_of(stage, table)
     name = harness["name"]
+    mapped = table.get("roles", {}).get(harness["key"])
+    other = cross(mapped.get(role)) if isinstance(mapped, dict) else None
+    if other is not None:
+        rows = registry()
+        back, model = fallback(role, table, harness)
+        after = f"`{back}` → {model or 'host model'}" if back else "the host model"
+        how = (f"{rows[other[0]]['name']} headless on {other[1]}, through scripts/agents/delegate.py, its writes held "
+               f"to the manifest afterwards; a failed run is undone and reruns on {after}")
+        return role, f"{other[0]}:{other[1]}", f"{how}; {fell}" if fell else how
     mechanism = harness.get("subagentModel")
     if not isinstance(mechanism, dict):
         return role, None, f"the registry records no way for {name} to choose a model for a sub-task"
@@ -139,6 +199,48 @@ def check(table: object, registry: dict[str, dict[str, Any]]) -> list[str]:
         for role, value in mapping.items():
             if value is not None and (not isinstance(value, str) or not value):
                 findings.append(f"`roles.{key}.{role}` must be an identifier, `{HOST}`, or null")
+    return findings + check_cross(table, roles, stages, registry)
+
+
+def check_cross(table: dict[str, Any], roles: dict[str, Any], stages: dict[str, Any],
+                registry: dict[str, dict[str, Any]]) -> list[str]:
+    """What a role mapped to another harness needs: a harness whose headless command takes a model, only stages
+    whose type may run any command, and a fallback that stays on this harness."""
+    findings: list[str] = []
+    fallbacks = table.get("fallbacks", {})
+    if not isinstance(fallbacks, dict):
+        return ["`fallbacks` must map a role to the role its failed stages rerun on"]
+    types = declared_types()
+    for key, mapping in roles.items():
+        if not isinstance(mapping, dict):
+            continue
+        for role, value in mapping.items():
+            other = cross(value, registry)
+            if other is None:
+                continue
+            headless = registry[other[0]].get("headless")
+            if not isinstance(headless, dict) or not headless.get("modelFlag"):
+                findings.append(f"`roles.{key}.{role}` names {registry[other[0]]['name']}, whose headless command the "
+                                "registry records no model flag for (`headless.modelFlag`)")
+            for stage in KNOWN_STAGES:
+                if role_of(stage, table)[0] != role:
+                    continue
+                declared = types.get(stage)
+                if declared is None:
+                    findings.append(f"`{stage}` runs under `{role}`, which `roles.{key}` sends to another harness, but "
+                                    "it has no agent type, so it is never delegated")
+                elif declared.get("commands") != "any":
+                    findings.append(f"`{stage}` runs under `{role}`, which `roles.{key}` sends to another harness, but "
+                                    f"its type may run `{declared.get('commands')}` commands, not any — a check "
+                                    "afterwards cannot undo a command; give it a role of its own")
+    for role, back in fallbacks.items():
+        if not isinstance(back, str) or not back:
+            findings.append(f"`fallbacks.{role}` must name a role")
+            continue
+        for key, mapping in roles.items():
+            if isinstance(mapping, dict) and cross(mapping.get(back), registry) is not None:
+                findings.append(f"`fallbacks.{role}` is `{back}`, which `roles.{key}` also sends to another harness; "
+                                "a fallback runs here")
     return findings
 
 
@@ -153,12 +255,18 @@ def assign(table: dict[str, Any], registry: dict[str, dict[str, Any]], assignmen
     key, separator, value = assignment.partition("=")
     if not separator or not key or not value:
         raise RuntimeError(f"--set takes stage=role or harness.role=identifier, not {assignment!r}")
+    if key.startswith("fallbacks."):
+        role = key.split(".", 1)[1]
+        table.setdefault("fallbacks", {})[role] = value
+        return f"fallbacks.{role} = {value}"
     if "." in key:
         harness, role = key.split(".", 1)
         entry = registry.get(harness)
         if entry is None:
             raise RuntimeError(f"`{harness}` is not a harness the registry knows; `make agents-list` names them")
-        if not isinstance(entry.get("subagentModel"), dict):
+        # Another harness's headless command is started by delegate.py, not by this harness's sub-agents, so a
+        # harness with no sub-agent model of its own can still send a stage there.
+        if cross(value, registry) is None and not isinstance(entry.get("subagentModel"), dict):
             raise RuntimeError(f"the registry records no way for {entry['name']} to choose a model for a sub-task, "
                                "so a role mapped for it would never be read")
         table.setdefault("roles", {}).setdefault(harness, {})[role] = None if value == "null" else value

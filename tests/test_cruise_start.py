@@ -193,7 +193,10 @@ if [ "$n" -lt 3 ]; then echo "cruise: continue"; else echo "cruise: done"; fi"""
             self.assertIn(f"{STOP_FILE} written; no runner is running here", idle.stdout)
             (repo / STOP_FILE).unlink()
             (Path(directory) / "calls").unlink()
-            slow = fake_harness(Path(directory), 'sleep 30; echo "cruise: continue"')
+            # The harness starts a process of its own, as a real one does; `--now` has to end that too, or the
+            # session goes on — and goes on spending — after the runner is gone.
+            slow = fake_harness(Path(directory), 'sh -c \'sleep 2; touch "$0"\' "$(dirname "$0")/survived" &\n'
+                                                 'wait; echo "cruise: continue"')
             started = cruise(repo, "start", env=slow)
             self.assertEqual(started.returncode, 0, started.stderr)
             match = re.search(r"pid (\d+)", started.stdout)
@@ -208,6 +211,8 @@ if [ "$n" -lt 3 ]; then echo "cruise: continue"; else echo "cruise: done"; fi"""
             while time.time() < deadline and (repo / RUNNER_PID).exists():
                 time.sleep(0.1)
             self.assertFalse((repo / RUNNER_PID).exists())
+            time.sleep(2.5)
+            self.assertFalse((Path(directory) / "survived").exists(), "the harness's own process outlived the runner")
             self.assertIn(f"{STOP_FILE} is present; remove it before the next run", cruise(repo, "status").stdout)
             # A run with nothing left to do is over almost as soon as it starts. Whether it ends inside `start`'s
             # own wait or a moment after is the runner's timing against `start`'s poll, so what is held here is

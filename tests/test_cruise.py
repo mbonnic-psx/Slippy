@@ -19,7 +19,6 @@ from test_drive_adoption import adopted, wrapped
 from slipwai.project.cruise import (
     CONFIG,
     DECISION_ENTRY,
-    DEMO_ENTRY,
     LAST_LINES,
     LOG,
     REPORT,
@@ -29,6 +28,7 @@ from slipwai.project.cruise import (
     UNREAD,
 )
 from slipwai.project.cruise_agents import BOSUN, BROWSER, DECISIONS, DEMO_LOG, HAND, OWNER_BRIEF, SKIPPER
+from slipwai.project.cruise_record import DEMO_ENTRY
 from slipwai.project.cruise_unblock import CATASTROPHIC
 from slipwai.project.stage_models import STAGES, switchable_harnesses
 
@@ -77,20 +77,44 @@ class CruiseTest(FactoryTestCase):
                 cruise = (repo / "commands/cruise.md").read_text()
                 declared = frontmatter(cruise)
                 self.assertTrue(declared["description"].startswith("Run /drive as driver and product owner"))
-                self.assertEqual(declared["argument-hint"], "[feature] | unblock: <what the outer loop saw>")
+                self.assertEqual(declared["argument-hint"],
+                                 "[--feature <name>] [kick-off: what this run is for, where the brief or PRD is] | "
+                                 "unblock: <what the outer loop saw> | told: <a person's message>")
+                self.assertIn("a feature named with `--feature` on `run` or `start`\n(`make cruise FEATURE=<name>`) is "
+                              "the first word of every iteration's argument and scopes the run", cruise)
                 self.assertIn("runs **that ladder — `commands/drive.md`,\nevery rule as written**", cruise)
                 self.assertIn("Run `commands/drive.md` from *Enter at the first incomplete stage* to its end", cruise)
                 # The refusals: a run has to be asked for, a person can always stop it, and a spec is theirs to bring.
                 refuse = cruise.split("## Before anything: refuse, or start")[1].split("## Run the ladder")[0]
                 self.assertIn(f"Read `{CONFIG}`. `enabled: false`, or `{STOP_FILE}` present, is a refusal", refuse)
                 self.assertIn("No\n`specs/<feature>/spec.md` is a refusal too", refuse)
-                # A typed /cruise starts the runner and ends; only a runner's session is an iteration.
+                # A typed /cruise starts the runner and watches it; only a runner's session is an iteration.
                 self.assertIn(f"Then run\n`python3 {SCRIPT} loop`: it says what is reading this session's last line. "
                               "**Where it says nobody is**", refuse)
-                self.assertIn(f"run\n`python3 {SCRIPT} start` (with `--feature <feature>` where one was given), repeat "
-                              "what it printed, and end\nthe turn there", refuse)
-                self.assertIn("**Where it says the outer\nloop started this session**, this is an iteration: read the "
-                              f"owner brief (`{OWNER_BRIEF}`) and every standing\nentry in `{DECISIONS}`", refuse)
+                self.assertIn(f"run\n`python3 {SCRIPT} start` with everything typed after `/cruise` as its arguments, "
+                              "verbatim, and repeat what it\nprinted", refuse)
+                self.assertIn("Then take the watch seat (*The watch seat*, below).", refuse)
+                self.assertIn("**Where\nit says the outer loop started this session**, this is an iteration: read the "
+                              f"owner brief (`{OWNER_BRIEF}`)\nand every standing entry in `{DECISIONS}`", refuse)
+                # The kick-off reaches the first iteration only; the watch seat reads, answers, and never drives.
+                self.assertIn("**The argument is the kick-off.** What a person typed after `/cruise`", refuse)
+                self.assertIn("reaches the first iteration of the run and no other", refuse)
+                self.assertIn("(*Blocked: the bosun protocol*, below)", refuse)
+                self.assertIn("## Blocked: the bosun protocol", cruise)
+                seat = refuse.split("## The watch seat")[1]
+                self.assertIn(f"run `python3 {SCRIPT} watch`", seat)
+                self.assertIn("**Put every line it printed in your reply, unchanged, in a\nfenced block, before "
+                              "anything else** — the harness folds a command's output", seat)
+                self.assertIn("run `watch` again\nat once**", seat)
+                self.assertIn("run a command in the background and re-invoke this session", seat)
+                self.assertIn("where it says parked, ended, or no runner, repeat what it said and end the turn", seat)
+                self.assertIn("A watch the\nharness cut short — a tool timeout, with no last line from `watch` — is "
+                              "watched again, not asked about. Where\nthe harness can run a command in the background",
+                              seat)
+                self.assertIn("never a reason to run a stage of the ladder in this session", seat)
+                self.assertIn("**A person typing here is talking to you, not stopping the run.**", seat)
+                self.assertIn(f"`python3 {SCRIPT}` prints every setting and what it controls", seat)
+                self.assertIn("change a setting through `/cruise-settings` where they ask", seat)
                 self.assertIn(f"the iteration number from `{LOG}`", refuse)
                 self.assertIn(f"`touch {STOP_FILE}`", refuse)
                 self.assertIn("pass `driver=cruise` to every `end` this iteration closes", refuse)
@@ -121,10 +145,31 @@ class CruiseTest(FactoryTestCase):
                 blocks = fenced(cruise)
                 self.assertIn(DECISION_ENTRY, blocks)
                 self.assertIn(DEMO_ENTRY, blocks)
+                self.assertIn("**A decision that outlives its slice is also an ADR.**", cruise)
+                self.assertIn("`specs/<feature>/cruise-report.md` lists every ADR still `Proposed`", cruise)
                 self.assertIn(f"one fresh `{SKIPPER}` delegate with the\nquestion", cruise)
                 self.assertIn("`decide: skipper-always`, every question goes to the delegate", cruise)
-                self.assertIn(f"`{BROWSER}` where the slice has a screen, then a browser tool the harness exposes, "
-                              "then HTTP, then\nthe CLI", cruise)
+                # The `hand` setting reaches the delegate only through the brief, and the app the ladder leaves up
+                # for a person is stopped once the hand has finished with it.
+                self.assertIn(f"which is `{CONFIG}`'s `hand` and nothing the delegate can read for itself: `browser` is"
+                              f"\n`{BROWSER}` where the slice has a screen, then a browser tool the harness exposes, "
+                              "then HTTP, then the CLI;\n`http` starts at HTTP; `cli` at the CLI", cruise)
+                self.assertIn("**Then stop what the demo started.**", cruise)
+                self.assertIn("`make demo-down` or `make services-down` where the demo used them", cruise)
+                # A refusal inside an iteration, and a stop between stages, still end on a last line the loop reads.
+                self.assertIn(f"`enabled: false` or the stop file ends on `{LAST_LINES[3]}`", refuse)
+                self.assertIn("a missing\nspecification on `cruise: parked: a specification under "
+                              "specs/<feature>/spec.md`", refuse)
+                self.assertIn(f"commit what is green, and end\non `{LAST_LINES[3]}`", cruise)
+                self.assertIn("Open a `skipper`, `hand` or `bosun`\nbenchmark entry", refuse)
+                # A fetch that could not run is what the ladder says it is, not a park: a project with no remote
+                # would otherwise park on its first iteration and never resume.
+                self.assertIn("A fetch that could not run — no remote, or one this environment cannot reach — is what "
+                              "the ladder says it is, *could not verify this checkout is current*, said in the "
+                              "evidence line, and the run goes on: without a remote the local branch is the claim",
+                              cruise)
+                self.assertNotIn("a fetch that cannot run parks", cruise)
+                self.assertIn("`headless.worktreeFlags`", cruise)
                 self.assertIn("Only an audit with nothing left to build ends with `cruise: done`.", cruise)
                 # The iteration contract ends with the four lines, listed as the only things the loop reads.
                 for last in LAST_LINES:
@@ -220,8 +265,14 @@ class CruiseTest(FactoryTestCase):
             self.assertIn("You write nothing. Return the whole entry, in the shape", skipper)
             self.assertIn("`D<n>` is allocated by the session that delegated you, before dispatch", skipper)
             self.assertIn("Number nothing\nelse:", skipper)
+            self.assertIn("**Say whether it is an ADR.**", skipper)
             self.assertIn("You are the actor. You use what the slice built and you say what using it revealed.", hand)
-            self.assertIn(f"**Where the slice has a screen, use a browser.** `{BROWSER}` first", hand)
+            self.assertIn("**The brief names the rung your ladder starts at** — `.specify/cruise.json`'s `hand`: "
+                          "`browser`, `http` or\n`cli` — and you never climb above it.", hand)
+            self.assertIn(f"`{BROWSER}` first", hand)
+            self.assertIn("Under `http` start there, and under `cli` at the CLI", hand)
+            self.assertIn("Leave the app the brief started running when you finish and say that it is up: the "
+                          "session that delegated\nyou stops it once your verdict is recorded", hand)
             for word in ("`accepted`", "`behaviour`", "`implementation`"):
                 self.assertIn(word, hand)
             self.assertIn("you edit no code, no test and no artifact of\nthe slice", hand)

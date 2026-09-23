@@ -86,9 +86,12 @@ evidence beside it:
 {DEMO_ENTRY}
 ```
 
-`make check-decisions` holds both files to those shapes, and refuses an entry whose `Written to` or
+`make check-decisions` holds both files to those shapes — and every finished slice to a row in
+`adversary-log.md` — and refuses an entry whose `Written to` or
 `Evidence` path is not in the tree. Overrule a decision by changing its `Status` and writing the answer you
-want into the artifact it names; the next iteration re-enters the ladder from that artifact.
+want into the artifact it names; the next iteration re-enters the ladder from that artifact. A decision that
+would cost a migration to reverse is also written as an ADR at `Proposed` under `docs/adr/`, named in the
+entry's `Written to`; accepting it is yours, and the run never does it.
 """
 
 

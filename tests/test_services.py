@@ -12,10 +12,10 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from support import FactoryTestCase
+from support import FactoryTestCase, offering
 
 from slipwai.assets import VERSION
-from slipwai.catalog import CATALOG, axis_default
+from slipwai.catalog import axis_default
 from slipwai.errors import GenerationError
 from slipwai.manifest import MANIFEST_SCHEMA, apps_from_manifest
 from slipwai.scaffold import project_files, write_project
@@ -172,7 +172,9 @@ class ServicesTest(FactoryTestCase):
 
     def test_every_reader_iterates_over_the_services(self) -> None:
         """The proof that no reader kept its own copy: with two services, each names both."""
-        for backend in CATALOG["backends"]:
+        # A backend with a transport, since `docker-compose.yml` is one of the readers and a project with nothing
+        # to run has none.
+        for backend in offering("http"):
             frontend = "react-vite" if backend == "typescript" else "none"
             files, apps = with_payments(backend, frontend, http=axis_default("http", backend, "none"))
             with self.subTest(backend=backend):

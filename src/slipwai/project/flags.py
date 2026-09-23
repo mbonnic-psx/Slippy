@@ -65,6 +65,12 @@ FLAG_READERS: dict[str, FlagReader] = {
         tests="flags/flags_test.go",
         call='flags.Enabled("checkout-v2")',
     ),
+    "rust": FlagReader(
+        tree="rust/flags",
+        source="src/flags.rs",
+        tests="src/flags.rs",
+        call='flags::enabled("checkout-v2")',
+    ),
     "java-quarkus": FlagReader(
         tree="java/flags",
         source="src/main/java/com/example/deliverystarter/flags/Flags.java",

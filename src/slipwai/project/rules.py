@@ -277,6 +277,11 @@ SHARED_CODE = {
         "the workspace modules it imports before Gremlins runs (`scripts/go-mutation.py`), because Gremlins copies "
         "only the module it mutates and would not find them; the shared module is built there, never mutated"
     ),
+    "rust": (
+        "a library crate under `packages/<name>`, added to `members` in the root `Cargo.toml` beside the services "
+        "and named in each using service's `[dependencies]` by path (`<name> = { path = \"../../packages/<name>\" }`) "
+        "— one workspace, so one `Cargo.lock` and one `cargo` invocation cover both"
+    ),
     "java": (
         "a Maven module under `packages/<name>` that each service's pom depends on. Every service is a Maven "
         "project of its own today, with `scripts/verify` and the Makefile as the loop that builds them; a "

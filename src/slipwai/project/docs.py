@@ -35,6 +35,7 @@ def documentation_files(
         "typescript": "Biome — lint, formatting and import order in one pass — TypeScript (`tsc`), and Vitest",
         "python": "Ruff and pytest",
         "go": "gofmt, `go vet`, `go tool staticcheck`, and `go test -coverpkg=./...` held to a minimum by `scripts/go-coverage.py`",
+        "rust": "`cargo fmt --check`, `cargo clippy -- -D warnings`, and `cargo llvm-cov` held to a line-coverage minimum",
         "java-quarkus": (
             "Checkstyle, PMD and SpotBugs for lint; `javac` with Error Prone and NullAway for the type check; "
             "JUnit 5 with Quarkus's own test harness, coverage through the `quarkus-jacoco` extension"

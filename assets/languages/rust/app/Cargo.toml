@@ -1,0 +1,11 @@
+# One service, one package, one member of the workspace named in the repository's root `Cargo.toml`.
+# The dependency lock is the workspace's, at the root, because Cargo keeps one per workspace.
+[package]
+name = "delivery-starter"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lints]
+workspace = true

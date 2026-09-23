@@ -239,6 +239,7 @@ READ_SIDE_FILES: dict[str, dict[str, dict[str, str]]] = {
             "migrations/004_event_tags.sql": "../sql/004_event_tags.sql",
         },
     },
+    "rust": {},
 }
 
 

@@ -51,7 +51,7 @@ import uuid
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 
-from support import FactoryTestCase, backends_under_test
+from support import FactoryTestCase, backends_under_test, targeting
 
 from slipwai.catalog import axis_default
 from slipwai.images import IMAGE_BUILDERS
@@ -173,7 +173,7 @@ class ImagesTest(ImageProbe):
     def test_every_backends_image_starts_and_answers_its_probe(self) -> None:
         fargate = self.pack_platform()
         with self.registry() as registry:
-            for backend in backends_under_test():
+            for backend in targeting("aws", backends_under_test()):
                 tool = IMAGE_BUILDERS[backend]["tool"]
                 with self.subTest(backend=backend):
                     if shutil.which(NEEDS[tool]) is None:

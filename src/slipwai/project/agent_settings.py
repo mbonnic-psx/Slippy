@@ -101,6 +101,7 @@ def claude_settings(apps: list[App], target: str = "none", layout: Layout = AT_R
         "typescript": ["npm ci", "npm run verify", "npm test *"],
         "python": ["python3 *", "python -m pytest *", "python -m ruff *"],
         "go": ["go test *", "go vet *", "gofmt *"],
+        "rust": ["cargo check *", "cargo test *", "cargo fmt *", "cargo clippy *", "cargo llvm-cov *"],
         "java-quarkus": MAVEN_PERMISSIONS,
         "java-spring": MAVEN_PERMISSIONS,
     }

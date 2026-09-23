@@ -24,7 +24,7 @@ import tomllib
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from support import FactoryTestCase, backends_under_test
+from support import FactoryTestCase, backends_under_test, offered, targeting
 
 from slipwai.catalog import axis_default
 
@@ -123,6 +123,8 @@ class LineWidthTest(FactoryTestCase):
             for backend in backends_under_test():
                 for index, selection in enumerate(SELECTIONS):
                     profile, frontend, store, auth, users, target = selection
+                    if backend not in targeting(target):
+                        continue
                     parent = Path(directory) / f"{backend}-{index}"
                     parent.mkdir(parents=True)
                     repo = self.generate(
@@ -131,10 +133,10 @@ class LineWidthTest(FactoryTestCase):
                         profile,
                         backend,
                         frontend,
-                        event_store=store,
+                        event_store=offered("event-store", backend, store, target),
                         http=axis_default("http", backend, "none"),
-                        auth=auth,
-                        users=users,
+                        auth=offered("auth", backend, auth, target),
+                        users=offered("users", backend, users, target),
                         target=target,
                     )
                     offences += [f"{backend} {'/'.join(selection)}: {line}" for line in over_limit(repo)]

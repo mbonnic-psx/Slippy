@@ -77,6 +77,12 @@ def event_documentation(project_name: str, backend: str, service: str = "apps/se
             "usecase": f"{service}/application/<context>/usecase.go",
             "test": f"{service}/domain/<context>/<slice>_test.go (testing)",
         },
+        "rust": {
+            "events": f"{service}/src/domain/<context>/events.rs",
+            "domain": f"{service}/src/domain/<context>/decider.rs",
+            "usecase": f"{service}/src/application/<context>/<use_case>.rs",
+            "test": f"{service}/src/domain/<context>/decider.rs (#[cfg(test)], cargo test)",
+        },
         # Both Java backends, because these are Maven's source roots rather than a framework's.
         "java-quarkus": maven_paths,
         "java-spring": maven_paths,

@@ -228,7 +228,8 @@ def mutation_notes(apps: list[App]) -> str:
 
 
 def mutation_command(backends: list[str]) -> str:
-    tools = {"typescript": "Stryker", "python": "mutmut", "go": "Gremlins", "java-quarkus": "PIT (pitest)",
+    tools = {"typescript": "Stryker", "python": "mutmut", "go": "Gremlins", "rust": "cargo-mutants",
+             "java-quarkus": "PIT (pitest)",
              "java-spring": "PIT (pitest)"}
     # Said here and only where a Go service exists, because `SINCE` is the Go target's: the skill teaches
     # diff-scoped runs as the posture at this gate and the other backends reach for their own tool's way of

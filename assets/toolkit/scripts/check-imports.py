@@ -26,13 +26,14 @@ def project_root(script: Path, depth: int) -> Path:
 
 ROOT = project_root(Path(__file__).resolve(), 1)
 MANIFEST = ROOT / "project.json"
-SOURCE_SUFFIXES = {".go", ".java", ".py", ".ts", ".tsx"}
+SOURCE_SUFFIXES = {".go", ".java", ".py", ".rs", ".ts", ".tsx"}
 IMPORT_LINE = re.compile(r"^\s*(?:from\s+|import\s+|require\s*\(|use\s+)", re.MULTILINE)
-OUTER_LAYER = re.compile(r"(?:^|[/._-])(adapter|adapters|infrastructure|delivery)(?:[/._-]|$)", re.IGNORECASE)
+# `:` is a separator too, for Rust's `crate::adapters::…` paths.
+OUTER_LAYER = re.compile(r"(?:^|[/._:-])(adapter|adapters|infrastructure|delivery)(?:[/._:-]|$)", re.IGNORECASE)
 # The application layer owns its ports; adapters implement them and are injected, and composition is the
 # only place the two meet. So it may not name either, on top of what the domain may not name.
 OUTER_LAYER_FROM_APPLICATION = re.compile(
-    r"(?:^|[/._-])(adapter|adapters|composition|infrastructure|delivery)(?:[/._-]|$)", re.IGNORECASE
+    r"(?:^|[/._:-])(adapter|adapters|composition|infrastructure|delivery)(?:[/._:-]|$)", re.IGNORECASE
 )
 
 
@@ -101,9 +102,9 @@ def reaches_into(line: str, other: str, published: str) -> bool:
     for between separators (`../billing/domain`, `app.billing.domain`, `com.acme.billing.domain`), never
     inside a word. Names that are not segments — `import { billing } from …` — are somebody's identifier.
     """
-    for match in re.finditer(rf"(?:^|[\s/.'\"]){re.escape(other)}(?=[/.'\"]|\s+import\s|$)", line):
+    for match in re.finditer(rf"(?:^|[\s/.:'\"]){re.escape(other)}(?=[/.:'\"]|\s+import\s|$)", line):
         rest = line[match.end():]
-        if re.match(rf"(?:[/.]|\s+import\s+){re.escape(published)}(?:[/.\s;,'\"]|$)", rest):
+        if re.match(rf"(?:[/.]|::|\s+import\s+){re.escape(published)}(?:[/.:\s;,'\"]|$)", rest):
             continue
         return True
     return False

@@ -20,6 +20,7 @@ from ..backends import APP, MAVEN, MAVEN_READY, VERIFY
 from ..services import App, services_of, web_apps, wrapped_of
 from ..tooling import for_app, verify_path
 from .languages.go import GO_COVDATA_READY, GO_COVERAGE_GATE, GO_STATICCHECK, GO_TEST
+from .languages.rust import RUST_CLIPPY, RUST_FMT, RUST_TEST
 from .mutation import GO_MUTATION_SCRIPT, JAVA_QUARKUS_MUTATION_PLACEHOLDER
 from .shared_packages import PACKAGES
 
@@ -124,6 +125,29 @@ def service_commands(backend: str, path: str, verify: str = "scripts/verify") ->
             # the Makefile defines, because an undefined `SINCE` has to mean the full sweep and `$(if ...)`
             # says that in the one place the flag is built — nothing to prune, nothing to leave dangling.
             "mutation": f"python3 {GO_MUTATION_SCRIPT} {APP} $(if $(SINCE),--since $(SINCE))",
+        },
+        "rust": {
+            "install": f"cd {APP} && cargo fetch --locked",
+            # rustc is the type checker; `--all-targets` holds the tests to it too.
+            "typecheck": f"cd {APP} && cargo check --locked --all-targets",
+            "lint": f"{RUST_FMT}\n\t{RUST_CLIPPY}",
+            # The suite under cargo-llvm-cov, which fails below the minimum on the line (`rust.py`).
+            "test": RUST_TEST,
+            # Integration tests are `#[ignore]`d so the default suite needs no Docker; this runs only those.
+            "integration": f"cd {APP} && cargo test --locked -- --ignored",
+            "adversarial": f"cd {APP} && cargo test --locked adversarial",
+            "audit": (
+                "@command -v cargo-deny >/dev/null 2>&1 || { echo 'install cargo-deny to run dependency audit' "
+                f">&2; exit 2; }}; cd {APP} && cargo deny --locked check advisories"
+            ),
+            # cargo-mutants exits non-zero when a mutant survives, so the run is the gate. `SINCE` scopes it to
+            # what differs from a ref, as Go's does: `--in-diff` reads the diff from a file, so it is written
+            # first and removed after.
+            "mutation": (
+                "@command -v cargo-mutants >/dev/null 2>&1 || { echo 'install cargo-mutants to run mutation "
+                f"testing' >&2; exit 2; }}; cd {APP} && $(if $(SINCE),git diff $(SINCE) -- . > mutants.diff && )"
+                "cargo mutants $(if $(SINCE),--in-diff mutants.diff)"
+            ),
         },
         "java-quarkus": {
             "install": MAVEN_READY,

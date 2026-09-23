@@ -1,0 +1,7 @@
+# The toolchain this repository builds with. rustup reads this file and installs exactly this release, with
+# the components the gate runs, on a laptop, in a container and in CI — so `make verify` means the same
+# thing everywhere. Raise it here, in one commit, when the project moves to a newer Rust.
+[toolchain]
+channel = "__TOOLCHAIN__"
+components = ["clippy", "rustfmt", "llvm-tools-preview"]
+profile = "minimal"

@@ -6,10 +6,10 @@ import os
 import shutil
 import tempfile
 
-from support import FactoryTestCase
+from support import FactoryTestCase, offering
 
 from slipwai.assets import BACKING_SERVICE_ROOT
-from slipwai.catalog import CATALOG, axis_default, family_of
+from slipwai.catalog import axis_default, family_of
 from slipwai.naming import java_package_segment, python_package_name
 from slipwai.project.service_layouts import SERVICE_FILES
 
@@ -59,7 +59,7 @@ class BackingServicesTest(FactoryTestCase):
         service and something else in the next; a *shared* type lets correlation be written where causation
         belongs, which compiles, runs, and produces a causal tree in which everything caused itself.
         """
-        for backend in CATALOG["backends"]:
+        for backend in offering("event-store", "postgres"):
             with self.subTest(backend=backend), tempfile.TemporaryDirectory() as directory:
                 repo = self.generate(
                     directory,
@@ -311,7 +311,7 @@ class BackingServicesTest(FactoryTestCase):
         carrying the port and the contract suite the other adapters are held to.
         """
         with tempfile.TemporaryDirectory() as directory:
-            for backend in CATALOG["backends"]:
+            for backend in offering("event-store"):
                 transport = axis_default("http", backend, "none")
                 repo = self.generate(
                     directory,

@@ -13,7 +13,7 @@ import re
 import subprocess
 import tempfile
 
-from support import FactoryTestCase, backends_under_test
+from support import FactoryTestCase, backends_under_test, offering, targeting
 
 from slipwai.assets import PRUNER
 from slipwai.catalog import CATALOG, axis_default, axis_options
@@ -32,7 +32,7 @@ class ReadinessTest(FactoryTestCase):
         on `/ready` from a route of their own, and the two whose framework owns startup contribute a
         readiness check to the endpoint that framework maintains."""
         with tempfile.TemporaryDirectory() as directory:
-            for backend in backends_under_test():
+            for backend in offering("http", backends=backends_under_test()):
                 with self.subTest(backend=backend):
                     repo = self.generate(
                         directory,
@@ -138,7 +138,7 @@ class ReadinessTest(FactoryTestCase):
 
     def test_a_production_target_gates_traffic_on_readiness_and_restarts_on_liveness(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            for backend in backends_under_test():
+            for backend in targeting("aws", backends_under_test()):
                 with self.subTest(backend=backend):
                     store = "postgres" if "postgres" in axis_options(
                         "event-store", backend, "aws"

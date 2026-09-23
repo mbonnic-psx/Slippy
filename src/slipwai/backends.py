@@ -102,6 +102,8 @@ BACKEND_EXECUTABLES = {
     "python": set(),
     # The gate scripts a Go service runs through; `project/languages/go.py` writes them, `project/mutation.py` says why.
     "go": frozenset({"scripts/go-coverage.py", "scripts/go-mutation.py"}),
+    # Cargo is the whole toolchain and the skeleton ships no script of its own.
+    "rust": set(),
     "java-quarkus": MAVEN_EXECUTABLES,
     "java-spring": MAVEN_EXECUTABLES,
 }
@@ -147,6 +149,10 @@ MAVEN_TOOLING: Tooling = {
 }
 
 
+# Where a Rust build writes inside a container: outside `/workspace`, so the mounted checkout never gains a
+# root-owned `target/` (`container_environment` below), and given a volume of its own in `COMPOSE_CACHES`.
+RUST_CONTAINER_TARGET = "/root/cargo-target"
+
 # What each backend calls the operations a backing service adds. One table because the Makefile, the CI
 # workflow and the README all have to agree about them, and three copies of "how does a Go project apply a
 # migration" is three places for them to drift apart.
@@ -182,6 +188,20 @@ BACKEND_TOOLING: dict[str, Tooling] = {
         "ci_install": f"cd {APP} && go mod download",
         "container_setup": "",
         "container_environment": {},
+    },
+    # `migrate` and `integration` are owed and answered, though nothing reaches them until the event-store
+    # axis is offered for Rust: integration tests are `#[ignore]`d in the default suite and run by name here.
+    # The official `rust:` images are Debian with GNU Make and git, so nothing needs installing first.
+    "rust": {
+        "install": f"cd {APP} && cargo fetch --locked",
+        "migrate": f"cd {APP} && cargo run --locked --bin migrate",
+        "integration": f"cd {APP} && cargo test --locked -- --ignored",
+        "ci_image": "rust:1.98-bookworm",
+        "ci_install": f"cd {APP} && cargo fetch --locked",
+        "container_setup": "",
+        # The build output outside the mounted checkout: a `target/` masked by a volume still has Docker create
+        # the mount point on the host, owned by root, and the next host-side `cargo build` fails on it.
+        "container_environment": {"CARGO_TARGET_DIR": RUST_CONTAINER_TARGET},
     },
     "java-quarkus": MAVEN_TOOLING,
     "java-spring": MAVEN_TOOLING,
@@ -219,6 +239,9 @@ COMPOSE_CACHES = {
     # The environment `uv sync` builds beside each service, and uv's own download cache above them.
     "python": (f"/workspace/{APP}/.venv", "/root/.cache/uv"),
     "go": ("/root/go", "/root/.cache"),
+    # Cargo's registry and git caches; the build output is kept out of the checkout the other way, by
+    # pointing `CARGO_TARGET_DIR` outside the mount, for the reason Maven's is (see `container_environment`).
+    "rust": ("/usr/local/cargo/registry", "/usr/local/cargo/git", RUST_CONTAINER_TARGET),
     # Only `~/.m2`, which sits outside the mounted checkout and so is exactly what an anonymous volume is
     # for. The build output is handled the other way — see MAVEN_CONTAINER_ENVIRONMENT. Masking
     # a service's `target/` with a volume keeps the class files out of the host tree but still
@@ -268,6 +291,7 @@ def dev_command(backend: str, qualifier: str, path: str, verify: str = "scripts/
         "python": f"./{verify} --install-only\n\tLOG_FORMAT=pretty PYTHONPATH={path}/src "
         f"uv run --project {path} --no-sync python -m {python_package_name(qualifier)}.main",
         "go": f"cd {path} && LOG_FORMAT=pretty go run ./cmd/serve",
+        "rust": f"cd {path} && LOG_FORMAT=pretty cargo run --locked --bin serve",
         # Quarkus dev mode, which is the reason to reach for `make dev` at all: it recompiles and reloads on
         # the next request, so an edit is visible without restarting anything. It reads HOST and PORT
         # through `application.properties`, so the container and the laptop are configured the same way.
@@ -294,6 +318,7 @@ def event_store_directory(backend: str, path: str) -> str:
         "typescript": f"{APP}/src/adapters/driven/",
         "python": f"{APP}/src/<package>/adapters/driven/",
         "go": f"{APP}/adapters/driven/",
+        "rust": f"{APP}/src/adapters/driven/",
         # Both Java backends, because this is Maven's source layout rather than a framework's.
         "java-quarkus": MAVEN_DRIVEN_ADAPTERS,
         "java-spring": MAVEN_DRIVEN_ADAPTERS,

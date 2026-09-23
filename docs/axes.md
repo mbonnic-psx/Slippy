@@ -219,8 +219,8 @@ a `docker compose` the day you want the integration suite; defaulting to the oth
 ### Which backend can be given what
 
 An option declares the backends it is implemented for, so coverage is a fact about the catalog rather than
-a promise. Every axis is currently implemented for every backend, and this table is what keeps that
-sentence honest: it is checked against `catalog.json` by
+a promise. Every axis is currently implemented for every backend but Rust, whose walking skeleton landed
+before its adapters and which answers none yet, and this table is what keeps that sentence honest: it is checked against `catalog.json` by
 `tests/test_catalog.py::test_the_documented_axis_coverage_is_the_catalog_s`, so a backend added without
 adapters appears here as a row of dashes instead of silently falsifying the claim.
 
@@ -231,6 +231,7 @@ adapters appears here as a row of dashes instead of silently falsifying the clai
 | `go` | `memory`, `sqlite`, `postgres` | `none`, `net-http` | `none`, `keycloak` | `none`, `keycloak` |
 | `java-quarkus` | `memory`, `sqlite`, `postgres` | `none`, `quarkus-rest` | `none`, `keycloak` | `none`, `keycloak` |
 | `java-spring` | `memory`, `sqlite`, `postgres` | `none`, `spring-web` | `none`, `keycloak` | `none`, `keycloak` |
+| `rust` | — | — | — | — |
 
 Under the `aws` target the same backends are offered these menus — checked by `tests/test_targets.py`:
 

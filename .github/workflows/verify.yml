@@ -124,7 +124,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        backend: [typescript, python, go, java-quarkus, java-spring]
+        backend: [typescript, python, go, rust, java-quarkus, java-spring]
     env:
       FACTORY_BACKENDS: ${{ matrix.backend }}
     steps:

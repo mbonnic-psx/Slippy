@@ -30,10 +30,6 @@ def write(root: Path, files: dict[str, str]) -> Path:
 
 
 class SurveyTest(unittest.TestCase):
-    def only(self, roots: tuple[Root, ...]) -> Root:
-        self.assertEqual(len(roots), 1, f"exactly one candidate expected, got {[r.path for r in roots]}")
-        return roots[0]
-
     def test_an_empty_tree_says_so(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             found = survey(Path(directory))

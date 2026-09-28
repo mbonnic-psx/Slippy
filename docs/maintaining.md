@@ -101,7 +101,11 @@ src/slipwai/
 ├── manifest.py          that list read back from a written `project.json`, for `add-service` and `replay`
 ├── layout.py            where the factory's delivery material lives in a project (`layout.delivery`), and how files
 │                        assembled for the root are placed and re-pointed when it lives elsewhere
-├── ecosystems.py        what a build ecosystem's files say about the code they build — the table `survey.py` reads
+├── ecosystems/          what a build ecosystem's files say about the code they build — the table `survey.py` reads
+│   ├── __init__.py      the table itself, `ECOSYSTEMS`, in the order tried (Cargo last)
+│   ├── common.py        the eight targets, `Detected`, and the helpers every row writes its commands with
+│   ├── rows.py          the rows for Node, Python, Go, Maven, Gradle, Ant, .NET, PHP and Ruby
+│   └── cargo.py         the Cargo row: a `Cargo.toml` is Rust built by Cargo
 ├── survey.py            what an existing repository is made of, read off its tree, for `adopt` (experimental)
 ├── origin.py            how a repository came to have the factory's material, and an adoption's recorded facts
 ├── delivery_facts.py    what the tree says about how a repository is delivered: which forge runs its CI,

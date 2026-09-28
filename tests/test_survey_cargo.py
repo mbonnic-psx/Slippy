@@ -9,9 +9,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from test_adopt import repository, slipwai
 from test_survey import write
 
-from slipwai.survey import Root, buildable, survey
+from slipwai.survey import Root, buildable, survey, toolchain_as
 
 
 class CargoSurveyTest(unittest.TestCase):
@@ -68,12 +69,16 @@ class CargoSurveyTest(unittest.TestCase):
             self.assertEqual(found.found.commands["install"], "cargo fetch --locked")
 
     def test_a_cargo_toml_in_a_directory_that_is_never_surveyed_is_not_proposed(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = write(Path(directory), {
-                "target/debug/build/x/Cargo.toml": "[package]\n", "vendor/dep/Cargo.toml": "[package]\n",
-                "fixtures/ledger/Cargo.toml": "[package]\n",
-            })
-            self.assertEqual(buildable(root, frozenset({"fixtures/ledger"})), ())
+        """Each case keeps its `Cargo.toml` within `DEPTH`, so removing that one name from `SKIPPED` proposes it."""
+        cases: tuple[tuple[str, str, frozenset[str]], ...] = (
+            ("target", "target/Cargo.toml", frozenset()),
+            ("vendor", "vendor/Cargo.toml", frozenset()),
+            ("skipped fixture", "fixtures/Cargo.toml", frozenset({"fixtures"})),
+        )
+        for name, manifest, skipped in cases:
+            with self.subTest(name), tempfile.TemporaryDirectory() as directory:
+                root = write(Path(directory), {manifest: "[package]\n"})
+                self.assertEqual(buildable(root, skipped), (), f"{manifest} is under a directory never surveyed")
 
     def test_a_package_json_beside_a_cargo_toml_is_reported_once_as_node(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -82,6 +87,31 @@ class CargoSurveyTest(unittest.TestCase):
             })
             found = self.only(survey(root).roots)
             self.assertEqual((found.found.ecosystem, found.found.evidence), ("node", "package.json"))
+
+    def test_saying_a_mixed_node_and_cargo_directory_is_rust_records_cargo_and_a_refresh_changes_nothing(self) -> None:
+        files = {
+            "Cargo.toml": '[package]\nname = "native"\n', "package.json": json.dumps({"name": "native"}),
+            "README.md": "# native\n",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = write(Path(directory), files)
+            self.assertEqual(
+                toolchain_as(root, ".", "rust"), {"kind": "rust", "version": "", "ecosystem": "cargo"},
+                "the survey reads Node here, and somebody saying Rust is saying which build is the application's",
+            )
+            repo = repository(Path(directory), "adopted", files)
+            found = survey(repo).roots[0].found
+            self.assertEqual(found.ecosystem, "node", "without the word, Node")
+            result = slipwai(repo, "adopt", "--yes", "--language", f"{repo.name}=rust")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            deployable = json.loads((repo / "project.json").read_text())["deployables"][repo.name]
+            self.assertEqual(deployable["language"], "rust")
+            self.assertEqual(deployable["toolchain"], {"kind": "rust", "version": "", "ecosystem": "cargo"})
+            self.assertEqual(deployable["provenance"]["language"], "overridden")
+            self.assertEqual(deployable["provenance"]["toolchain"], "overridden")
+            refreshed = slipwai(repo, "adopt", "--refresh")
+            self.assertEqual(refreshed.returncode, 0, refreshed.stderr)
+            self.assertIn("refreshed: nothing", refreshed.stdout)
 
     def test_a_fuzz_crate_under_a_root_crate_is_a_candidate_of_its_own(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

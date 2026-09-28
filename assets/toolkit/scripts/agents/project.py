@@ -496,10 +496,16 @@ def hook_file(harness: dict[str, object]) -> tuple[Path, dict[str, object]] | No
     if not isinstance(projection, dict):
         return None
     path = ROOT / str(projection["where"])
-    script = f"python3 {PREFIX}scripts/agents/cruise.py"
+    # From the repository root, whatever directory the harness runs its hooks in: the script's path is the
+    # root's, and a session opened in a subdirectory ran it against a path that is not there — the hook failed
+    # silently rather than holding the turn. Claude Code's are written from `$CLAUDE_PROJECT_DIR`; a harness has
+    # no such variable in common, and Git does, so the command asks it. Spliced into the registry's JSON entry
+    # already escaped, since the quotes it carries would otherwise end the string they are put into.
+    script = f'cd "$(git rev-parse --show-toplevel)" && python3 {PREFIX}scripts/agents/cruise.py'
     events: dict[str, object] = {}
     for verb, event in dict(projection["events"]).items():  # type: ignore[call-overload]
-        entry = json.loads(json.dumps(projection["entry"]).replace("{command}", f"{script} {verb}"))
+        command = json.dumps(f"{script} {verb}")[1:-1]
+        entry = json.loads(json.dumps(projection["entry"]).replace("{command}", command))
         if verb == "stopping":
             entry.update(dict(projection.get("stopEntry") or {}))  # type: ignore[call-overload]
         events[str(event)] = [entry]
@@ -767,7 +773,11 @@ def main() -> None:
         if harness is None:
             raise RuntimeError(f'unknown Spec Kit integration "{key}"')
         if harness.get("projectable") is False:
-            raise RuntimeError(f'{harness["name"]} keeps its skills outside the repository and cannot be projected')
+            # The registry's own reason, not a paraphrase of it: a person told "outside the repository" still
+            # has to go and find out *where*, and the row already says. `~/.hermes/skills` is the whole
+            # answer to what to do instead.
+            reason = harness.get("unprojectableReason") or "it cannot be projected into a repository"
+            raise RuntimeError(f'{harness["name"]} cannot be projected: {reason}')
         project(harness)
         if not CHECK:
             done = ("Extension pointers projected" if CONTEXT_ONLY

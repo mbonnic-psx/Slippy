@@ -58,9 +58,11 @@ the evidence that selected it, and runs from there.
 | 6 | **Slice gaps** | A recorded gaps review — otherwise `/gaps`. A missing state is a paper edit here and a rewritten test later |
 | 7 | **Release constraint** *(production target)* | The flag that holds this slice back from the actor, named in the plan: the key of the releasable capability the slice belongs to, declared in `infra/service/flags.auto.tfvars` seeded `off`. One flag covers a capability, not a slice — the stage says to recommend which, and to ask only where it is genuinely a product question |
 | 8 | **Plan and tasks** | `plan.md` and `tasks.md`, whose *Structure Decision* names the owning service and bounded context |
-| 9 | **Implementation** | Spec Kit's implement command, one RED-GREEN-REFACTOR increment per task — one rule of the example map with its examples — starting from a green `make verify` |
-| 10 | **Convergence** | A converged verdict for the current commit, then `/gaps` over the slice diff |
-| 11 | **Demo** | The actor-visible path, ready to show — a stop for feedback, not a report. It opens with a progress board in the actor's words (✅ works now · 🆕 new in this demo · ⬜ still to come, `N of M slices accepted` · ⚠️ not working yet · 🔀 ready (parallel) · ➡️ next (this session) · ⛔ blocked) and ends with the command to paste and a question only the actor can answer. Slices are counted, tasks are not: a slice is a thing the actor can use. `/where-are-we` draws the same board on demand between demos |
+| 9 | **Screen design** *(browser app)* | A `Designed:` line per screen under `tasks.md`'s `## Design review` — `docs/design.md`, then `frontend-design`'s second pass over the plan, before any code |
+| 10 | **Implementation** | Spec Kit's implement command, one RED-GREEN-REFACTOR increment per task — one rule of the example map with its examples — starting from a green `make verify` |
+| 11 | **Design review** *(browser app)* | A `Reviewed:` line per screen — the rendered screens, screenshot per state, read against `web-interface-guidelines`, every finding fixed or given its reason. A green gate is evidence for it, never the stage |
+| 12 | **Convergence** | A converged verdict for the current commit, then `/gaps` over the slice diff |
+| 13 | **Demo** | The actor-visible path, ready to show — a stop for feedback, not a report. It opens with a progress board in the actor's words (✅ works now · 🆕 new in this demo · ⬜ still to come, `N of M slices accepted` · ⚠️ not working yet · 🔀 ready (parallel) · ➡️ next (this session) · ⛔ blocked) and ends with the command to paste and a question only the actor can answer. Slices are counted, tasks are not: a slice is a thing the actor can use. `/where-are-we` draws the same board on demand between demos |
 
 It never invents a principle, event, or slice to skip a stage: a missing artifact is work to do with the
 user, and a stage needing a real product decision is a stop.
@@ -71,6 +73,12 @@ Principles — the convergence map exists and is green, and an `unrecorded` row 
 question before anything else; **Pin** before Implementation — wrapped code is changed only once `/characterise`
 has recorded what it does at the seam; and **Convergence** re-checks the map after the slice, flips the row a rung
 was reached on, and offers the next unplanned row as a *method slice* for the split.
+
+The two design rungs name only what every browser app ships with. An extension adds to them in its own
+`AGENTS.md` block, written when it is adopted: `uipro` puts its search into *Screen design* for a screen
+`docs/design.md` has no decision for, and `ux-gates` puts `make check-ux-gates` and the kit's
+`design-review.md` and `wcag-checklist.md` into *Design review*. A project that adopted neither reads about
+neither ([Extensions](extensions.md)).
 
 Stages 3 and 8 are also where a project's **bounded contexts** get decided, because that is where the
 question actually arrives — which service owns this slice, and which context inside it. Neither is defaulted
@@ -234,7 +242,7 @@ project's profile, languages, frameworks and services, so the paths and toolchai
 |---|---|
 | `/drive` | The ladder above: one slice from wherever it currently stands to an actor-visible demo |
 | `/cruise` | The same ladder with nobody at the wheel: the agent decides as the product owner and runs each demo as the actor, iteration after iteration, until the specification is satisfied — stopping only for a human ([Cruise](cruise.md)) |
-| `/whats-next` | One slice, one stage, one command and the reason, in at most six lines — the board's ➡️ *Next* line on its own, for the start of a session or after an interruption |
+| `/whats-next` | One slice, one stage, one command and the reason, in at most six lines — the board's ➡️ *Next* line on its own, for the start of a session or after an interruption. Beside a running `/cruise` (`scripts/agents/cruise.py where` prints its state, and nothing where there is no runner) the step is the runner's, not a command to type |
 | `/where-are-we` | The demo stop's progress board on demand — ✅ works now · 🔧 in progress, and the ladder stage it has reached · ⬜ still to come, `N of M slices accepted` · ⚠️ not working yet · 🔀 ready (parallel) · ➡️ next (this session) · ⛔ blocked — read off the same artifacts, running nothing |
 | `/gaps` | Adversarially review a written artifact — spec, criteria, examples, a slice diff — for holes before they become rewritten tests |
 | `/adversary` | Direct an independent agent to try to break a finished slice: hostile inputs, replays, interleavings, authorisation paths |
@@ -247,6 +255,7 @@ project's profile, languages, frameworks and services, so the paths and toolchai
 | `/cruise-status` | Say whether a `/cruise` runner is running, how the last iteration ended, whether it is parked and why, and show the tail of its feed |
 | `/cruise-stop` | End a `/cruise` run after the iteration in flight, or at once with `now` |
 | `/cruise-tell` | Queue a message for a running `/cruise` — a steer, a fact it lacked, a scope — which the next iteration carries; `--now` ends the iteration in flight for it |
+| `/cruise-watch` | Take the watch seat beside a running `/cruise` — print the feed as the runner writes it, return at each boundary and watch again, answer a person typing here — without starting anything |
 | `/add-service` | Add a service — its own language, framework and axis answers — without hand edits |
 | `/add-frontend` | Add a browser application the same way |
 | `/catch-up` | After `slipwai migrate`, work through what the newer factory now asks of code it did not write — the changelog notes for the versions crossed, and the gates that are now red because of them |

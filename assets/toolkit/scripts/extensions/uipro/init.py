@@ -47,6 +47,13 @@ def project_root(script: Path, depth: int) -> Path:
 
 
 ROOT = project_root(Path(__file__).resolve(), 3)
+
+# Where `./init` actually is, from the repository root: beside this script's own tree at the root in a
+# generated project, and under `layout.delivery` where the method was installed beside an existing codebase.
+# Derived rather than written, because "run `./init --extension …`" is advice nobody can follow when the
+# file is `./delivery/init` — the first real adoption to meet it typed `./init` four times.
+DELIVERY = Path(__file__).resolve().parents[3]
+INIT = "./init" if DELIVERY == ROOT else f"./{DELIVERY.relative_to(ROOT).as_posix()}/init"
 MARKER_BEGIN = "<!-- extension:uipro:begin -->"
 MARKER_END = "<!-- extension:uipro:end -->"
 GUIDANCE = f"""
@@ -54,9 +61,9 @@ GUIDANCE = f"""
 ## UI/UX Pro Max
 `skills/{SKILL}/` is a design-system generator that runs offline: a search over local data that answers
 which pattern, style, palette, type pairing, chart types and UX rules fit a product of this kind. Reach for
-it **before the first screen of a slice that `docs/design.md` has no decision for**, and for one focused
-question — a component, a chart, a stack rule — with a single `--domain` or `--stack` search. Read the
-skill's own `SKILL.md` for the query contract; the short form is:
+it **at `/drive`'s *Screen design* rung, for a screen `docs/design.md` has no decision for**, and for
+one focused question — a component, a chart, a stack rule — with a single `--domain` or `--stack` search.
+Read the skill's own `SKILL.md` for the query contract; the short form is:
 
     python3 skills/{SKILL}/scripts/search.py "<product type> <industry> <keywords>" --design-system \\
         -p "<project name>" --persist --output-dir .
@@ -66,7 +73,8 @@ made from, and the input the browser app's `tokens.css` is filled from — but i
 `docs/design.md` stays the page every slice with a screen reads first: write what was chosen and why
 there, in the same commit as the tokens, link the `MASTER.md` it came from, and where the two disagree the
 page wins. Then take the plan through `skills/frontend-design`'s second pass — the review against the
-brief for defaults that would appear whatever the product — before writing any code.
+brief for defaults that would appear whatever the product — before writing any code, and say on the screen's
+`Designed:` line which search the decision came from.
 
 **Check you can reach it before you trust it.** The search is standard-library Python 3 and travels with
 the skill, so the only two ways it is unreachable are a checkout without the skill and a machine without
@@ -160,7 +168,7 @@ def main() -> int:
             "was installed and AGENTS.md is unchanged.\n"
             "Add one first, then adopt it here:\n"
             "  slipwai add-frontend web\n"
-            "  ./init --extension uipro",
+            f"  {INIT} --extension uipro",
             file=sys.stderr,
         )
         return 0
@@ -171,7 +179,7 @@ def main() -> int:
             "Install one:\n"
             f"  npm install -g ui-ux-pro-max-cli@{CLI_VERSION}\n"
             "Then adopt it here, which is what points the agent at it:\n"
-            "  ./init --extension uipro",
+            f"  {INIT} --extension uipro",
             file=sys.stderr,
         )
         return 0
@@ -183,7 +191,7 @@ def main() -> int:
             print(
                 f"`{' '.join(command)} init` exited {installed.returncode}: AGENTS.md is unchanged.\n"
                 "Fix what it reported, then adopt it here:\n"
-                "  ./init --extension uipro",
+                f"  {INIT} --extension uipro",
                 file=sys.stderr,
             )
             return 0
@@ -194,7 +202,7 @@ def main() -> int:
                 "AGENTS.md is unchanged.\n"
                 f"This script knows ui-ux-pro-max-cli {CLI_VERSION}; a newer CLI may lay its files out "
                 "differently. Pin the version, or update this script, then:\n"
-                "  ./init --extension uipro",
+                f"  {INIT} --extension uipro",
                 file=sys.stderr,
             )
             return 0

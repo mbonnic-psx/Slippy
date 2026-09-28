@@ -38,26 +38,27 @@ TIERS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("foundation", ("assets", "errors", "versions", "changelog", "naming")),
     # What a caller may ask for, what an option declares about the feature it owns, what an optional
     # dev-tooling hook is, where a project goes to production, what a snippet resolves to, what differs
-    # per backend language and where each backend answers its two probes — and what a build ecosystem's
-    # files say, for a repository the factory did not make.
+    # per backend language and where each backend answers its two probes — what a build ecosystem's
+    # files say, for a repository the factory did not make, and which coding agent reads what is written.
     ("contract", ("catalog", "axes", "features", "extensions", "targets", "examples", "backends", "images",
-                  "ecosystems", "probes")),
+                  "ecosystems", "probes", "harness")),
     # One validated answer per axis, which applications a project has, what they add up to being able to do,
     # how a written manifest reads back into that list, how a canonical toolkit file reaches a project, where
     # the delivery material lives — and the build wrapper a wrapped Java application runs through, written
     # where its repository has none.
     ("answers", ("selection", "services", "capabilities", "manifest", "tooling", "toolkit", "layout", "survey",
                  "delivery_facts", "origin", "wrappers", "convergence", "structure", "platform", "strategy",
-                 "quick_wins", "programme")),
+                 "quick_wins", "programme", "uncommitted")),
     # One module per part of the repository being generated.
     ("parts", ("project",)),
     # The whole of a project, assembled and written — one more service added to one that exists — and the
-    # whole of it again, from a newer factory, as a commit the existing one can merge, that merge made, and
-    # what the merge could not do said out loud.
+    # whole of it again, from a newer factory, as a commit the existing one can merge, that merge made, what
+    # the merge could not do said out loud, and where an adoption stands in the sequence it was given.
     ("assembly", ("scaffold", "add_service", "replay", "migrate", "catch_up", "adopt", "adopt_report", "resurvey",
-                  "converge")),
+                  "converge", "next_steps", "confirm")),
     # The command line, and the entry point the executable is built from.
-    ("edge", ("cli", "cli_add", "cli_adopt", "cli_prompts", "preflight", "upgrade", "__main__")),
+    ("edge", ("cli", "cli_add", "cli_adopt", "cli_confirm", "cli_init", "cli_interview", "cli_prompts", "preflight",
+              "upgrade", "__main__")),
     # The package's own `__init__`: last, so it may name anything and nothing may name it.
     ("package", ("__init__",)),
 )

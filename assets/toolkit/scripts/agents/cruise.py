@@ -76,6 +76,12 @@ def project_root(script: Path, depth: int) -> Path:
 
 SCRIPT = Path(__file__).resolve()
 ROOT = project_root(SCRIPT, 2)
+# The code index's health, freshness and per-delegate use live beside this script, shared with the hooks. No bytecode:
+# a `__pycache__/` written beside the scripts is an untracked directory in the project, which `add-service` refuses
+# to start over and the run's fingerprint would read as progress.
+sys.dont_write_bytecode = True
+sys.path.insert(0, str(SCRIPT.parent))
+import code_index  # noqa: E402
 # The delivery toolkit this script is part of: `commands/`, `scripts/`, `skills/` beside each other, at the root
 # or under the delivery directory of an adopted repository.
 DELIVERY = SCRIPT.parents[2]
@@ -91,10 +97,6 @@ STREAM = ROOT / ".specify/cruise-stream.jsonl"
 # The code index `./init --extension codegraph` leaves, and the project MCP file that carries its server: what the
 # runner says it can expect of them before the first iteration, rather than a feed that fell back to grep without saying.
 CODE_INDEX = ROOT / ".codegraph/codegraph.db"
-# A shell command that asks the index something, as against one that maintains it: `codegraph sync` keeps the gate
-# green and answers nothing, and counting it once let a run claim the index was asked when every answer was grep
-# (the CLI's query subcommands, `codegraph help` in the 1.6.0 bundle, read 2026-09-22).
-INDEX_QUERY = re.compile(r"\bcodegraph\s+(query|explore|node|files|callers|callees|impact|affected)\b")
 MCP_CONFIG = ROOT / ".mcp.json"
 # How far into the run log the watching session has read.
 WATCH_CURSOR = ROOT / ".specify/cruise-watch.cursor"
@@ -129,8 +131,26 @@ WATCH_QUIET_SECONDS = 20.0
 # checkpoint at every stage boundary, so a checkpoint held this often without a rewrite is a session that is
 # not moving, and a hook that never let go would spend tokens forever on it.
 HOLD_LIMIT = 3
+# How long `stop --now` waits for the runner it signalled to be gone before it returns: the runner ends the
+# iteration's session first, and a harness session shutting down takes a moment.
+STOP_WAIT_SECONDS = 30.0
 REGISTRY = SCRIPT.with_name("registry.json")
 INTEGRATION = ROOT / ".specify/integration.json"
+# What a run may never change to get moving — the gates that judge it and the controls that hold it: `make
+# verify`'s scripts and everything beside them, the Makefile that runs them, the tools they run (`tools/`, ignored by
+# Git and installed by an extension), CI, and the hook files the harnesses read this script from. A gate is
+# satisfied in the tree it measures; an iteration that changed one of these instead has the run parked with the
+# change as the reason (`controls_changed` on its log entry), and Claude Code's `PreToolUse` hook (`guard`) refuses
+# the edit before it lands. Under `tools/` a file added is an install, which `./init --extension` does; a file
+# changed or removed is an edit.
+CONTROL_PATHS = (DELIVERY / "Makefile", DELIVERY / "scripts", ROOT / "Makefile", ROOT / "tools",
+                 ROOT / ".github/workflows", ROOT / ".gitea/workflows", ROOT / ".claude/settings.json")
+INSTALLED = ROOT / "tools"
+SKIPPED_DIRECTORIES = {".git", "__pycache__", "node_modules"}
+GUARD_REASON = ("cruise: `{path}` is a gate or a control of this run, and an iteration never edits one — a gate is "
+                "satisfied in the tree it measures, or the run parks with the gate's own output as the reason "
+                "(`cruise: parked: <gate>: <what it said>`). The bosun's brief and commands/cruise.md, *Blocked: the "
+                "bosun protocol*, say so; the runner parks the run at the end of an iteration that changed one anyway.")
 # Every setting: the values it takes — a tuple of words, or a kind — its default, and what it controls. The
 # factory writes the same list into `.specify/cruise.json` and `commands/cruise-settings.md`.
 CHOICES: dict[str, tuple[str, ...]] = {
@@ -486,6 +506,82 @@ def child_environment(harness: dict[str, Any] | None) -> dict[str, str]:
     if headless is not None and isinstance(headless.get("env"), dict):
         environment.update({str(key): str(value) for key, value in headless["env"].items()})
     return environment
+
+
+def control_paths() -> list[Path]:
+    """Every gate and control the run is held by, present or not: the fixed ones, and the hook file of every harness
+    whose registry row projects one."""
+    paths = list(CONTROL_PATHS)
+    for row in registry().values():
+        projection = (row.get("hooks") or {}).get("projection") if isinstance(row.get("hooks"), dict) else None
+        if isinstance(projection, dict) and projection.get("where"):
+            paths.append(ROOT / str(projection["where"]))
+    return list(dict.fromkeys(paths))
+
+
+def controls_signature() -> dict[str, str]:
+    """Every file under the controls by its content, taken before an iteration and compared after it."""
+    signature: dict[str, str] = {}
+    for control in control_paths():
+        if control.is_file():
+            files = [control]
+        elif control.is_dir():
+            files = []
+            for directory, names, filenames in os.walk(control):
+                names[:] = sorted(name for name in names if name not in SKIPPED_DIRECTORIES)
+                files += [Path(directory) / name for name in sorted(filenames)]
+        else:
+            continue
+        for path in files:
+            try:
+                if path.is_file():
+                    signature[path.relative_to(ROOT).as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
+            except OSError:
+                continue
+    return signature
+
+
+def controls_changed(before: dict[str, str], after: dict[str, str]) -> list[str]:
+    """What an iteration did to the controls, each with its kind — except a file installed under `tools/`."""
+    installed = INSTALLED.relative_to(ROOT).as_posix() + "/"
+    changes = []
+    for path in sorted(set(before) | set(after)):
+        if path in before and path in after:
+            if before[path] != after[path]:
+                changes.append(f"{path} (modified)")
+        elif path in before:
+            changes.append(f"{path} (deleted)")
+        elif not path.startswith(installed):
+            changes.append(f"{path} (added)")
+    return changes
+
+
+def guard() -> None:
+    """Claude Code's `PreToolUse` hook on the editing tools — Edit, Write, MultiEdit, NotebookEdit: in a session the
+    runner started, refuse an edit to a gate or a control before it lands, with the reason on stderr and exit 2,
+    which is how that harness reads a refusal (a 2.1.281 print session, probed 2026-09-24: the tool result carries
+    the reason, the model reads it, the file is not written). Outside a runner's iteration the hook does nothing, so
+    a person's `/drive` session edits what it likes. The shell is not covered here — a command can write anything —
+    which is why the runner compares the controls after every iteration too."""
+    if not os.environ.get(RUNNER_VARIABLE):
+        return
+    event = read_event()
+    given = event.get("tool_input") if isinstance(event.get("tool_input"), dict) else {}
+    target = given.get("file_path") or given.get("notebook_path")
+    if not target:
+        return
+    path = Path(str(target))
+    if not path.is_absolute():
+        path = Path(str(event.get("cwd") or ROOT)) / path
+    path = path.resolve()
+    for control in control_paths():
+        if path == control or control in path.parents:
+            try:
+                shown = path.relative_to(ROOT).as_posix()
+            except ValueError:
+                shown = str(path)
+            print(GUARD_REASON.format(path=shown), file=sys.stderr)
+            raise SystemExit(2)
 
 
 def stream_of(harness: dict[str, Any] | None) -> str | None:
@@ -1130,11 +1226,18 @@ def drive(table: dict[str, Any], harness: dict[str, Any] | None, template: str, 
                 feature, kickoff if attempt == "kick-off" else None, told_argument(messages)) if part))
             print(f"cruise: iteration {len(entries()) + 1} carries {len(messages)} message(s) from a person", flush=True)
         iteration = len(entries()) + 1
+        # The index an iteration starts against is the runner's to make sound, not the iteration's: a corrupt one is
+        # moved aside and rebuilt, a stale one synced, and the entry says which — before the clock starts.
+        index = code_index.health()
+        if index:
+            print(f"cruise: code index before iteration {iteration} — {index['state']}: {index['detail']} "
+                  f"({index['seconds']}s)", flush=True)
         started = now()
         LAST_RESPONSE.unlink(missing_ok=True)
         INTERRUPTED = False
         print(f"cruise: iteration {iteration} started {started}, running `{ask}`", flush=True)
         began = time.monotonic()
+        controls_before = controls_signature()
         # The model flag is read with the settings, so `/cruise-settings model=…` holds from the next iteration.
         last = iterate(template + model_flags(harness, table["model"]), ask, environment, iteration, stream)
         if INTERRUPTED:
@@ -1151,6 +1254,16 @@ def drive(table: dict[str, Any], harness: dict[str, Any] | None, template: str, 
                                  "last_line": last or "no last line", "fingerprint": seen}
         if attempt is not None:
             entry["attempt"] = attempt
+        if index:
+            entry["index"] = index
+        use = code_index.delegate_use(STREAM, iteration).get(iteration) if index and stream else None
+        if use:
+            entry["index_use"] = use
+            for line in code_index.use_lines(iteration, use):
+                print(line, flush=True)
+        changed = controls_changed(controls_before, controls_signature())
+        if changed:
+            entry["controls_changed"] = changed
         given = delivered()
         if given:
             entry["told"] = [str(each["text"]) for each in given]
@@ -1164,6 +1277,13 @@ def drive(table: dict[str, Any], harness: dict[str, Any] | None, template: str, 
         # The boundary `watch` returns on: the iteration, what it ended on, and how long it took.
         print(f"cruise: iteration {iteration} ended — {last or 'no last line'} ({duration(time.monotonic() - began)})",
               flush=True)
+        if changed:
+            # A gate made to pass is no pass, whatever the last line says: the run parks on the change itself, and a
+            # person reverts it, or keeps it on purpose and resumes with a message.
+            park(f"iteration {iteration} changed a gate or a control of the run — {', '.join(changed)} — and a gate "
+                 "is satisfied in the tree it measures, never edited; revert the change, or keep it on purpose and "
+                 "resume with a message", no_park, poll, seen)
+            continue
         if INTERRUPTED:
             # Ended for a message, not by its own last line: the next iteration is where the message goes, and it
             # starts now — there is nothing to park on and nothing to count.
@@ -1376,6 +1496,18 @@ def stop(arguments: list[str]) -> None:
         return
     if "--now" in arguments:
         os.kill(running[0], signal.SIGTERM)
+        # Said once it has ended, not once it was told to. The runner ends the iteration's session before it goes,
+        # and a `start` typed the moment this returned found the old runner still alive and declined to start one
+        # — after which nobody was running, and the watch seat found nobody to watch.
+        for _ in range(int(STOP_WAIT_SECONDS / 0.05)):
+            if running_pid() is None:
+                break
+            time.sleep(0.05)
+        else:
+            print(f"cruise: {relative(STOP)} written and the runner (pid {running[0]}) told to end; it is still ending "
+                  f"the iteration in flight after {STOP_WAIT_SECONDS:g}s — `python3 scripts/agents/cruise.py status` "
+                  "says when it has gone")
+            return
         print(f"cruise: {relative(STOP)} written and the runner (pid {running[0]}) terminated with the iteration "
               "in flight; its increment commits are on the slice branch, and the next run re-derives from disk")
         return
@@ -1414,36 +1546,9 @@ def refusals() -> dict[tuple[str, str], list[int]]:
 def index_queries() -> dict[int, int]:
     """How many times each iteration in the stream asked the code index — an MCP tool of the codegraph server, or a
     query subcommand of the CLI through the shell; never `sync`, `init` or `serve`, which maintain it — so `status`
-    can say whether the index was used rather than only kept fresh."""
-    asked: dict[int, int] = {}
-    if not STREAM.is_file():
-        return asked
-    iteration = 0
-    for line in STREAM.read_text(errors="replace").splitlines():
-        if line.startswith("# iteration "):
-            iteration = int(line.split()[2])
-            asked.setdefault(iteration, 0)
-            continue
-        try:
-            event = json.loads(line)
-        except ValueError:
-            continue
-        if not isinstance(event, dict):
-            continue
-        message = event.get("message") if isinstance(event.get("message"), dict) else {}
-        for block in message.get("content") if isinstance(message.get("content"), list) else []:
-            if not isinstance(block, dict) or block.get("type") != "tool_use":
-                continue
-            given = block.get("input") if isinstance(block.get("input"), dict) else {}
-            if str(block.get("name", "")).startswith("mcp__codegraph__") or (
-                    block.get("name") == "Bash" and INDEX_QUERY.search(str(given.get("command", "")))):
-                asked[iteration] = asked.get(iteration, 0) + 1
-        item = event.get("item") if isinstance(event.get("item"), dict) else {}
-        if event.get("type") == "item.started" and (
-                (item.get("type") == "mcp_tool_call" and item.get("server") == "codegraph")
-                or (item.get("type") == "command_execution" and INDEX_QUERY.search(str(item.get("command", ""))))):
-            asked[iteration] = asked.get(iteration, 0) + 1
-    return asked
+    can say whether the index was used rather than only kept fresh. Summed over the host and every delegate."""
+    return {iteration: sum(agent["queries"] for agent in agents)
+            for iteration, agents in code_index.delegate_use(STREAM).items()}
 
 
 def index_use_lines() -> list[str]:
@@ -1461,6 +1566,18 @@ def index_use_lines() -> list[str]:
     return [f"cruise: the code index was never asked in the {len(asked)} iteration(s) the stream holds — every answer "
             "about callers and blast radius was a text search; `python3 scripts/agents/cruise.py denials` says whether "
             "it was refused, and `start` says whether it can be reached at all"]
+
+
+def delegate_lines(last: int = 5) -> list[str]:
+    """`status`'s per-delegate account of the last few iterations the stream holds: each agent's queries, and each
+    that searched the source for a symbol before asking the index."""
+    if not CODE_INDEX.is_file():
+        return []
+    used = code_index.delegate_use(STREAM)
+    lines: list[str] = []
+    for iteration in sorted(used)[-last:]:
+        lines += code_index.use_lines(iteration, used[iteration])
+    return lines
 
 
 def denials() -> None:
@@ -1520,12 +1637,67 @@ def status() -> None:
     if found:
         print(f"cruise: {sum(len(its) for its in found.values())} permission refusal(s) in the stream; "
               "`python3 scripts/agents/cruise.py denials` lists them")
-    for line in index_use_lines():
+    for line in index_use_lines() + delegate_lines():
         print(line)
+
+
+def checkpoint_fields() -> dict[str, str]:
+    """The checkpoint's labelled fields — Feature, Slice, Stage, Written, Delegates out, Open question, Next — as
+    the command writes them (`CHECKPOINT_ENTRY`), or nothing where no checkpoint is written."""
+    if not CHECKPOINT.is_file():
+        return {}
+    fields: dict[str, str] = {}
+    label: str | None = None
+    for line in CHECKPOINT.read_text().splitlines():
+        found = re.findall(r"\*\*([A-Za-z ]+):\*\* (.*?)(?= · \*\*|$)", line)
+        if found:
+            for label, value in found:
+                fields[label] = value.strip()
+        elif label is not None and line.startswith("  ") and label in ("Delegates out", "Open question", "Next"):
+            fields[label] = f"{fields[label]} {line.strip()}"
+    return fields
+
+
+def where() -> None:
+    """Where a run stands, for `/where-are-we` and `/whats-next` typed beside it — and nothing at all where no runner
+    is running, so that both commands answer exactly as they do without `/cruise`. With a runner alive: the run,
+    the iteration in flight or the park it waits in, the checkpoint's slice, stage and next step, and what a
+    person can do from here, which is never to run a stage themselves."""
+    running = running_pid()
+    if running is None:
+        return
+    log = entries()
+    tail = RUN_LOG.read_text(errors="replace").rstrip().splitlines()[-2:] if RUN_LOG.is_file() else []
+    parked = next((line.removeprefix("cruise: parked — ") for line in tail if line.startswith("cruise: parked — ")),
+                  None) if tail and tail[-1].startswith("cruise: waiting;") else None
+    print(f"cruise: a run is going here — runner pid {running[0]} since {running[1]}, {len(log)} iteration(s) logged, "
+          + (f"parked after iteration {len(log)}" if parked else f"iteration {len(log) + 1} in flight"))
+    fields = checkpoint_fields()
+    if fields:
+        print(f"cruise: feature {fields.get('Feature', '?')} · slice {fields.get('Slice', '?')} · stage "
+              f"{fields.get('Stage', '?')} · checkpoint written {fields.get('Written', '?')}")
+        for label in ("Open question", "Delegates out"):
+            if fields.get(label) and fields[label].lower() != "none":
+                print(f"cruise: {label.lower()} — {fields[label]}")
+        print(f"cruise: next — {fields.get('Next', '(the checkpoint names no next step)')}")
+    else:
+        print("cruise: no checkpoint written yet — the iteration has not reached its first stage boundary")
+    if parked:
+        print(f"cruise: parked — {parked}")
+        print("cruise: nothing to run from here — a person provides what the park names; `/cruise-tell` with it resumes "
+              "the run, `/cruise-stop` ends it")
+    else:
+        print("cruise: nothing to run from here — the runner is on it; `/cruise` watches it, `/cruise-tell` steers it, "
+              "`/cruise-stop` ends it")
 
 
 def main() -> None:
     arguments = sys.argv[1:]
+    if arguments[:1] == ["where"]:
+        # Before the settings check: a project with no `/cruise` settings has no run, and the commands that ask
+        # this read silence as "answer as without /cruise".
+        where()
+        return
     if not CONFIG.is_file():
         print(ABSENT)
         return
@@ -1533,7 +1705,7 @@ def main() -> None:
              "watch": lambda: watch(arguments[1:]), "stop": lambda: stop(arguments[1:]), "status": status,
              "tell": lambda: tell(arguments[1:]), "told": told,
              "denials": denials, "resume": resume, "compacting": compacting, "loop": loop, "stopping": stopping,
-             "responded": responded}
+             "responded": responded, "guard": guard}
     if arguments and arguments[0] in verbs:
         verbs[arguments[0]]()
         return

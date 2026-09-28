@@ -19,8 +19,9 @@ FAKE_SPECIFY = "#!/bin/sh\nexit 0\n"
 # `j` once per row moves the cursor from the first extension to the Confirm row below the last.
 TO_CONFIRM = b"j" * len(known_extensions(CATALOG))
 # The server as `scripts/extensions/codegraph/init.py` names it, in the JSON shape most harnesses read and Codex's TOML.
-SERVER = {"type": "stdio", "command": "npx", "args": ["-y", "@colbymchenry/codegraph", "serve", "--mcp"]}
-CODEX_TABLE = '[mcp_servers.codegraph]\ncommand = "npx"\nargs = ["-y", "@colbymchenry/codegraph", "serve", "--mcp"]\n'
+SERVER = {"type": "stdio", "command": "npx", "args": ["-y", "@colbymchenry/codegraph@1.6.0", "serve", "--mcp"]}
+CODEX_TABLE = ('[mcp_servers.codegraph]\ncommand = "npx"\n'
+               'args = ["-y", "@colbymchenry/codegraph@1.6.0", "serve", "--mcp"]\n')
 
 
 def run_init_at_a_terminal(repo: Path, args: list[str], keys: bytes, environment: dict) -> str:
@@ -282,6 +283,18 @@ class ExtensionsCatalogTest(FactoryTestCase):
             self.assertIn("def project_guidance()", source, key)
             self.assertIn("project_guidance()\n", source, key)
             self.assertIn(f'replace_block("{key}", GUIDANCE)', source, key)
+
+    def test_no_extension_tells_a_wrapped_repository_to_run_a_script_that_is_not_there(self) -> None:
+        """An adoption puts `init` under `delivery/`, and these messages said `./init --extension <key>` —
+        advice nobody can follow, typed four times by the first adoption to meet it. The path is derived
+        from where the script itself is, so it reads `./delivery/init` there and `./init` in a project the
+        factory generated."""
+        for key in known_extensions(CATALOG):
+            source = (
+                Path(__file__).parents[1] / f"assets/toolkit/scripts/extensions/{key}/init.py"
+            ).read_text()
+            self.assertIn("INIT = ", source, key)
+            self.assertNotIn(f"  ./init --extension {key}", source, f"{key}: written rather than derived")
 
     def test_an_extension_must_declare_a_name_and_a_description(self) -> None:
         for field in ("name", "description"):

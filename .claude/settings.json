@@ -1,0 +1,124 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(make)",
+      "Bash(make verify)",
+      "Bash(make test)",
+      "Bash(make check-constitution)",
+      "Bash(make constitution-requirements)",
+      "Bash(python3 delivery/scripts/*)",
+      "Bash(python3 $CLAUDE_PROJECT_DIR/delivery/scripts/*)",
+      "Bash(scripts/codegraph *)",
+      "Bash(git status)",
+      "Bash(git status *)",
+      "Bash(git rev-parse *)",
+      "Bash(git log)",
+      "Bash(git log *)",
+      "Bash(git diff)",
+      "Bash(git diff *)",
+      "Bash(git show *)",
+      "Bash(git branch)",
+      "Bash(git branch *)",
+      "Bash(git fetch)",
+      "Bash(git fetch *)",
+      "Bash(git pull)",
+      "Bash(git pull *)",
+      "Bash(git checkout *)",
+      "Bash(git switch *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git merge *)",
+      "Bash(git rebase *)",
+      "Bash(git push)",
+      "Bash(git push *)",
+      "mcp__codegraph__*"
+    ],
+    "deny": [
+      "Bash(git push --force)",
+      "Bash(git push --force *)",
+      "Bash(git push -f)",
+      "Bash(git push -f *)",
+      "Bash(git reset --hard)",
+      "Bash(git reset --hard *)",
+      "Bash(git clean)",
+      "Bash(git clean *)"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "codegraph"
+  ],
+  "hooks": {
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $CLAUDE_PROJECT_DIR/delivery/scripts/agents/cruise.py compacting"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $CLAUDE_PROJECT_DIR/delivery/scripts/agents/cruise.py resume"
+          }
+        ]
+      },
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $CLAUDE_PROJECT_DIR/delivery/scripts/agents/code_index.py session",
+            "timeout": 900
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $CLAUDE_PROJECT_DIR/delivery/scripts/agents/cruise.py stopping"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $CLAUDE_PROJECT_DIR/delivery/scripts/agents/cruise.py guard"
+          }
+        ]
+      },
+      {
+        "matcher": "Grep|Bash|mcp__codegraph__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $CLAUDE_PROJECT_DIR/delivery/scripts/agents/code_index.py guard"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Agent|Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 $CLAUDE_PROJECT_DIR/delivery/scripts/agents/code_index.py sync"
+          }
+        ]
+      }
+    ]
+  }
+}

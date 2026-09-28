@@ -1,0 +1,14 @@
+{
+  "_comment": "How /cruise runs /drive with nobody at the wheel. Change it with /cruise-settings (python3 delivery/scripts/agents/cruise.py --set key=value), checked; `make check-agents` holds the shape. delivery/commands/cruise.md says what each value means. `enabled: false` is the default: a project has to ask for this.",
+  "enabled": false,
+  "decide": "recommended-first",
+  "release": "flagged",
+  "constitution": "ratify",
+  "hand": "browser",
+  "unblock": "bosun",
+  "stuck_after": 3,
+  "max_iterations": null,
+  "max_hours": null,
+  "poll_minutes": 10,
+  "model": null
+}

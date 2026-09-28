@@ -1,0 +1,19 @@
+name: verify delivery
+# Written by slipwai adopt (experimental). Runs the delivery gate — the recorded commands of the applications
+# that were here, and the method's own checks — from the Makefile under delivery/. The repository's
+# own CI is untouched; this is one more workflow beside it.
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - run: make -f delivery/Makefile verify

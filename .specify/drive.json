@@ -1,0 +1,5 @@
+{
+  "_comment": "How /drive hands implementation to drive-implement. `delegate`: story | rule | task — how much one delegate is handed. `cycle`: rule | example — how many RED tests a RED-GREEN-REFACTOR cycle opens with. Change it with /drive-settings (python3 delivery/scripts/agents/drive.py --set delegate=… cycle=…), checked; `make check-agents` holds the shape. delivery/commands/drive.md, *How implementation is delegated*, says what each value means and which veto overrides it.",
+  "delegate": "story",
+  "cycle": "rule"
+}

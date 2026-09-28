@@ -1,0 +1,146 @@
+#!/bin/sh
+set -eu
+# This lives under delivery/; everything below happens at the repository root.
+cd "$(dirname "$0")/.."
+
+selected_integration=
+expect_integration=false
+expect_extension=false
+selected_extensions=
+remaining=$#
+while [ "$remaining" -gt 0 ]; do
+  argument=$1
+  shift
+  remaining=$((remaining - 1))
+  if [ "$expect_extension" = true ]; then
+    selected_extensions="$selected_extensions $argument"
+    expect_extension=false
+    continue
+  fi
+  if [ "$expect_integration" = true ]; then
+    selected_integration=$argument
+    expect_integration=false
+    set -- "$@" "$argument"
+    continue
+  fi
+  case "$argument" in
+    --integration) expect_integration=true; set -- "$@" "$argument" ;;
+    --integration=*) selected_integration=${argument#--integration=}; set -- "$@" "$argument" ;;
+    --extension) expect_extension=true ;;
+    --extension=*) selected_extensions="$selected_extensions ${argument#--extension=}" ;;
+    *) set -- "$@" "$argument" ;;
+  esac
+done
+
+if [ -z "$selected_extensions" ] && command -v python3 >/dev/null 2>&1; then
+  selected_extensions=$(printf '%s' '[{"key": "codegraph", "name": "CodeGraph", "description": "Indexes the codebase into a local knowledge graph your coding agent can query over MCP, so it can trace callers, dependencies, and the blast radius of a change across files."}, {"key": "uipro", "name": "UI/UX Pro Max", "description": "Installs the ui-ux-pro-max skill into delivery/skills/: an offline, searchable design-system generator (styles, palettes, type pairings, chart types and UX rules by product type) a slice consults before deciding what its screen looks like. Needs a browser app."}, {"key": "ux-gates", "name": "UX gates", "description": "Installs the ux-ui-agent-skills kit under tools/ and adds its objective gates to make verify: no literal colour, size or duration outside the design tokens, and real-render contrast, focus, target-size, responsive and axe checks over screen previews where a browser is present. Needs a browser app."}]' | python3 delivery/scripts/extensions/menu.py)
+fi
+
+run_specify() {
+  # The release this project records (`project.json`, `speckitSource`), so a rerun that restores the ignored
+  # projections reinstalls the same Spec Kit rather than moving to upstream HEAD. SPECIFY_SOURCE overrides it.
+  recorded=$(sed -n 's/.*"speckitSource": *"\([^"]*\)".*/\1/p' project.json 2>/dev/null | head -n 1)
+  source=${SPECIFY_SOURCE:-${recorded:-git+https://github.com/github/spec-kit.git@v1.0.8}}
+  if command -v specify >/dev/null 2>&1; then
+    specify init --here --force "$@"
+    return
+  fi
+
+  if command -v uvx >/dev/null 2>&1; then
+    uvx --from "$source" specify init --here --force "$@"
+    return
+  fi
+
+  if command -v uv >/dev/null 2>&1; then
+    uv tool run --from "$source" specify init --here --force "$@"
+    return
+  fi
+
+  if command -v python3 >/dev/null 2>&1; then
+    tools_dir=.specify-tools
+    if [ ! -x "$tools_dir/bin/specify" ]; then
+      package=${SPECIFY_PACKAGE:-$source}
+      python3 -m pip install --disable-pip-version-check --upgrade --target "$tools_dir" "$package"
+    fi
+    PYTHONPATH="$tools_dir${PYTHONPATH:+:$PYTHONPATH}" "$tools_dir/bin/specify" init --here --force "$@"
+    return
+  fi
+
+  cat >&2 <<'EOF'
+Spec Kit is not installed, and neither uv nor Python 3 is available to install it.
+Install uv or Python 3, then rerun ./delivery/init, or install the official specify CLI.
+See https://github.com/github/spec-kit/blob/main/docs/installation.md
+EOF
+  return 1
+}
+
+# What "$@" still holds after the scan is exactly what Spec Kit is for; every flag this project answers
+# itself was lifted out above. So an empty "$@" where `specify init` has already recorded an integration
+# (`.specify/integration.json` — generation ships other files under `.specify/`, only Spec Kit writes this
+# one) is a rerun asking nothing of Spec Kit: an extension add, a re-answered axis, a deferred push. All of
+# that is local or forge-bound, while reinstalling Spec Kit needs its source host, so skipping it here is
+# what lets such a rerun finish where that host is unreachable.
+if [ $# -eq 0 ] && [ -f .specify/integration.json ]; then
+  printf '%s
+' 'Spec Kit is already installed and nothing new was asked of it, so it was left alone; `./delivery/init --integration <agent>` reruns `specify init`.'
+else
+  run_specify "$@"
+fi
+if ! command -v python3 >/dev/null 2>&1; then
+  printf '%s
+' 'Spec Kit initialized, but Python 3 is required to install the project skills and commands for the selected agent.' >&2
+  exit 1
+fi
+
+if grep -qs 'PyYAML' .specify/scripts/bash/*.sh && ! python3 -c 'import yaml' >/dev/null 2>&1; then
+  if python3 -m pip install --disable-pip-version-check --quiet --user PyYAML >/dev/null 2>&1 \
+     && python3 -c 'import yaml' >/dev/null 2>&1; then
+    printf '%s\n' "Installed PyYAML for python3: Spec Kit's scripts compose this project's preset templates with it."
+  elif python3 -m venv --system-site-packages .delivery-tools/venv >/dev/null 2>&1 \
+     && .delivery-tools/venv/bin/python -m pip install --disable-pip-version-check --quiet PyYAML >/dev/null 2>&1; then
+    cat >&2 <<'EOF'
+Spec Kit's scripts need PyYAML on python3 to compose this project's preset templates, and this python3 will
+not take it from pip (PEP 668: an externally managed environment). A venv with it is at .delivery-tools/venv,
+sharing the system's packages; start the agent from a shell where that venv comes first:
+    export PATH="$PWD/.delivery-tools/venv/bin:$PATH"
+Without it, .specify/scripts/bash/create-new-feature.sh stops with "PyYAML is required".
+EOF
+  else
+    cat >&2 <<'EOF'
+Spec Kit's scripts need PyYAML on python3 to compose this project's preset templates, and neither pip nor a
+venv could install it here. Install it for the python3 on PATH — `python3 -m pip install --user PyYAML`, or
+your package manager's python3-yaml — and rerun ./delivery/init. Without it,
+.specify/scripts/bash/create-new-feature.sh stops with "PyYAML is required".
+EOF
+  fi
+fi
+
+if [ -f .slipwai/extensions.json ]; then
+  python3 delivery/scripts/extensions/project.py || printf '%s
+' 'The adopted extensions were not re-projected; `make agents` retries it.' >&2
+fi
+if [ -n "$selected_integration" ]; then
+  python3 delivery/scripts/agents/project.py "$selected_integration"
+else
+  python3 delivery/scripts/agents/project.py
+fi
+
+for extension in $selected_extensions; do
+  script="delivery/scripts/extensions/$extension/init.py"
+  if [ -f "$script" ]; then
+    SLIPWAI_INTEGRATION="$selected_integration" python3 "$script" || printf '%s
+' "$extension extension setup did not finish; see $script." >&2
+  else
+    printf '%s
+' "Unknown extension \"$extension\" (no $script in this project)." >&2
+  fi
+done
+if [ -n "$selected_extensions" ]; then
+  if [ -n "$selected_integration" ]; then
+    python3 delivery/scripts/agents/project.py --context "$selected_integration" || printf '%s
+' 'The extension pointers did not reach the agent context file; `make agents` retries it.' >&2
+  else
+    python3 delivery/scripts/agents/project.py --context || printf '%s
+' 'The extension pointers did not reach the agent context file; `make agents` retries it.' >&2
+  fi
+fi

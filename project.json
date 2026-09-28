@@ -1,0 +1,395 @@
+{
+  "schema": 2,
+  "generator": {
+    "name": "slipwai",
+    "generatedWith": "1.4.0.dev0",
+    "updatedWith": "1.4.0.dev0"
+  },
+  "speckitSource": "git+https://github.com/github/spec-kit.git@v1.0.8",
+  "origin": "adopted",
+  "name": "slipwai",
+  "profile": "standard",
+  "frontend": "none",
+  "target": "existing",
+  "capabilities": [
+    "continuous-delivery"
+  ],
+  "deployables": {
+    "slipwai": {
+      "kind": "tool",
+      "generated": false,
+      "path": ".",
+      "language": "python",
+      "commands": {
+        "install": "make install",
+        "typecheck": "make typecheck",
+        "lint": "make lint check-structure",
+        "test": "make test",
+        "integration": null,
+        "adversarial": null,
+        "audit": null,
+        "mutation": null
+      },
+      "toolchain": {
+        "kind": "python",
+        "version": "3.11",
+        "ecosystem": "python"
+      },
+      "purpose": "The factory: generates and adopts repositories that carry the delivery method",
+      "provenance": {
+        "language": "detected",
+        "commands": "overridden",
+        "kind": "overridden",
+        "purpose": "overridden"
+      },
+      "eventSourced": false,
+      "capabilities": []
+    }
+  },
+  "layout": {
+    "applications": "apps",
+    "packages": "packages",
+    "delivery": "delivery"
+  },
+  "why": "Run /cruise on the factory itself to build Rust support and execution-model delegation",
+  "database": {
+    "schema": "unmanaged",
+    "tools": [],
+    "drivers": [
+      "jdbc",
+      "pgx",
+      "postgres",
+      "postgresql"
+    ],
+    "provenance": "detected"
+  },
+  "infrastructure": {
+    "home": "here",
+    "describedBy": [
+      "opentofu / terraform"
+    ],
+    "provenance": "detected"
+  },
+  "ci": {
+    "forge": "github",
+    "gate": ".github/workflows/verify-delivery.yml",
+    "branch": "main",
+    "evidence": ".github/workflows",
+    "provenance": "overridden"
+  },
+  "release": {
+    "path": "pipeline",
+    "evidence": [
+      "pipeline: .github/workflows/package.yml",
+      "pipeline: .github/workflows/publish-package.yml",
+      "pipeline: .github/workflows/release.yml",
+      "pipeline: .github/workflows/verify.yml",
+      "scripted: assets/targets/aws/scripts/deploy.py",
+      "scripted: assets/targets/azure/scripts/deploy.py",
+      "scripted: tests/fixtures/adopt/converging/deploy.sh",
+      "scripted: tests/fixtures/adopt/javascript-gitlab/deploy.sh",
+      "scripted: Makefile"
+    ],
+    "provenance": "detected"
+  },
+  "platform": {
+    "snapshot": "2026-09-08",
+    "dated": "2026-09-28",
+    "products": [
+      {
+        "app": "slipwai",
+        "product": "python",
+        "title": "Python",
+        "version": "3.11",
+        "cycle": "3.11",
+        "status": "supported",
+        "eol": "2027-10-31",
+        "evidence": "`toolchain.version` (detected)"
+      }
+    ],
+    "provenance": "detected"
+  },
+  "strategy": {
+    "recommended": "leave-it",
+    "trigger": null,
+    "because": [
+      "the trigger \u2014 'Run /cruise on the factory itself to build Rust support and execution-model delegation' \u2014 names neither a platform, a delivery problem, a change problem, a capability nor a host, so no strategy follows from it; leave the architecture where it is until it does, and take the delivery rungs below, which pay off regardless"
+    ],
+    "before": [
+      "a green suite in the gate \u2014 the safety net is `tests-exist`"
+    ],
+    "stop": "now, as far as the architecture goes",
+    "decided": null,
+    "adr": null,
+    "finished": false,
+    "programme": [
+      {
+        "kind": "quick-win",
+        "step": "a connection string with a password is written in the file \u2014 rotate it now \u2014 a key in Git history is public \u2014 then read it from the environment or a secret store and purge the history (`git filter-repo`)",
+        "pacing": "now \u2014 a slice of its own whatever the strategy; a secret in the tree today",
+        "evidence": "assets/backing-services/java/database_url.java:10"
+      },
+      {
+        "kind": "quick-win",
+        "step": "a connection string with a password is written in the file \u2014 rotate it now \u2014 a key in Git history is public \u2014 then read it from the environment or a secret store and purge the history (`git filter-repo`)",
+        "pacing": "now \u2014 a slice of its own whatever the strategy; a secret in the tree today",
+        "evidence": "assets/backing-services/java/tests/database_url_test.java:19"
+      },
+      {
+        "kind": "quick-win",
+        "step": "a connection string with a password is written in the file \u2014 rotate it now \u2014 a key in Git history is public \u2014 then read it from the environment or a secret store and purge the history (`git filter-repo`)",
+        "pacing": "now \u2014 a slice of its own whatever the strategy; a secret in the tree today",
+        "evidence": "tests/test_release.py:295"
+      },
+      {
+        "kind": "quick-win",
+        "step": "a connection string with a password is written in the file \u2014 rotate it now \u2014 a key in Git history is public \u2014 then read it from the environment or a secret store and purge the history (`git filter-repo`)",
+        "pacing": "now \u2014 a slice of its own whatever the strategy; a secret in the tree today",
+        "evidence": "tests/test_upgrade.py:187"
+      },
+      {
+        "kind": "quick-win",
+        "step": "no lockfile beside `package.json` (package-lock.json / yarn.lock) \u2014 install once and commit the lockfile the package manager writes; without it every build resolves versions afresh and no two are the same",
+        "pacing": "now \u2014 a slice of its own whatever the strategy; a secret in the tree today",
+        "evidence": "assets/frontends/react-vite/api-client/package.json"
+      },
+      {
+        "kind": "quick-win",
+        "step": "no lockfile beside `package.json` (package-lock.json / yarn.lock) \u2014 install once and commit the lockfile the package manager writes; without it every build resolves versions afresh and no two are the same",
+        "pacing": "now \u2014 a slice of its own whatever the strategy; a secret in the tree today",
+        "evidence": "assets/frontends/react-vite/app/package.json"
+      },
+      {
+        "kind": "quick-win",
+        "step": "no lockfile beside `Cargo.toml` (Cargo.lock) \u2014 install once and commit the lockfile the package manager writes; without it every build resolves versions afresh and no two are the same",
+        "pacing": "now \u2014 a slice of its own whatever the strategy; a secret in the tree today",
+        "evidence": "assets/languages/rust/app/Cargo.toml"
+      },
+      {
+        "kind": "quick-win",
+        "step": "no lockfile beside `Cargo.toml` (Cargo.lock) \u2014 install once and commit the lockfile the package manager writes; without it every build resolves versions afresh and no two are the same",
+        "pacing": "now \u2014 a slice of its own whatever the strategy; a secret in the tree today",
+        "evidence": "assets/languages/rust/repository/Cargo.toml"
+      },
+      {
+        "kind": "quick-win",
+        "step": "no lockfile beside `package.json` (package-lock.json / yarn.lock) \u2014 install once and commit the lockfile the package manager writes; without it every build resolves versions afresh and no two are the same",
+        "pacing": "now \u2014 a slice of its own whatever the strategy; a secret in the tree today",
+        "evidence": "assets/languages/typescript/app/package.json"
+      },
+      {
+        "kind": "quick-win",
+        "step": "no lockfile beside `package.json` (package-lock.json / yarn.lock) \u2014 install once and commit the lockfile the package manager writes; without it every build resolves versions afresh and no two are the same",
+        "pacing": "now \u2014 a slice of its own whatever the strategy; a secret in the tree today",
+        "evidence": "assets/toolkit/scripts/event-model/package.json"
+      },
+      {
+        "kind": "quick-win",
+        "step": "no lockfile beside `package.json` (package-lock.json / yarn.lock) \u2014 install once and commit the lockfile the package manager writes; without it every build resolves versions afresh and no two are the same",
+        "pacing": "now \u2014 a slice of its own whatever the strategy; a secret in the tree today",
+        "evidence": "tests/fixtures/adopt/converging/apps/shop/package.json"
+      },
+      {
+        "kind": "quick-win",
+        "step": "no lockfile beside `package.json` (package-lock.json / yarn.lock) \u2014 install once and commit the lockfile the package manager writes; without it every build resolves versions afresh and no two are the same",
+        "pacing": "now \u2014 a slice of its own whatever the strategy; a secret in the tree today",
+        "evidence": "tests/fixtures/adopt/javascript-gitlab/package.json"
+      },
+      {
+        "kind": "quick-win",
+        "step": "no lockfile beside `package.json` (package-lock.json / yarn.lock) \u2014 install once and commit the lockfile the package manager writes; without it every build resolves versions afresh and no two are the same",
+        "pacing": "now \u2014 a slice of its own whatever the strategy; a secret in the tree today",
+        "evidence": "tests/fixtures/adopt/javascript-service/package.json"
+      },
+      {
+        "kind": "run",
+        "step": "`slipwai`: how it starts is not proven \u2014 run it once the way the README, container file or CI config says, write what was proven (the command, the port, the seed, the runtime it needs and the ones it cannot run on) in `survey/running.md`, and record the one command that starts it and proves it answers as `commands.smoke` in `project.json` (`null` is a written no, with the reason there); `make smoke` and the gate's smoke job run it from then on",
+        "pacing": "next, after the build and before any slice changes code that was here, whatever the strategy: a change to an application nothing has started is a change nobody has seen run, and a suite that never builds the context cannot tell a constructor the container can call from one it cannot",
+        "evidence": "commands.smoke: unrecorded for ."
+      },
+      {
+        "kind": "rung",
+        "step": "Data: the schema is versioned nowhere \u2014 the ecosystem's own migration tool, with a baseline migration that matches the database as it is (`delivery/docs/change-strategy.md`, *Data*)",
+        "pacing": "depends on the strategy \u2014 decide it first (`/ground`)",
+        "evidence": "database.schema: unmanaged"
+      },
+      {
+        "kind": "tooling",
+        "step": "`slipwai`: no `audit` command is recorded; the ecosystem has pip-audit",
+        "pacing": "over time, whatever the strategy: one tool, one slice, green through the ratchet before it is recorded as a command \u2014 the method never adds one uninvited",
+        "evidence": "commands.audit: null"
+      }
+    ],
+    "provenance": "detected"
+  },
+  "convergence": [
+    {
+      "axis": "path-to-production",
+      "rung": "pipeline",
+      "target": "pipeline-decides",
+      "evidence": "pipeline: .github/workflows/package.yml; pipeline: .github/workflows/publish-package.yml; pipeline: .github/workflows/release.yml; pipeline: .github/workflows/verify.yml; scripted: assets/targets/aws/scripts/deploy.py; scripted: assets/targets/azure/scripts/deploy.py; scripted: tests/fixtures/adopt/converging/deploy.sh; scripted: tests/fixtures/adopt/javascript-gitlab/deploy.sh; scripted: Makefile",
+      "provenance": "detected",
+      "planned": null
+    },
+    {
+      "axis": "integration",
+      "rung": "unknown",
+      "target": "continuous",
+      "evidence": "CI on github, gate .github/workflows/verify-delivery.yml",
+      "provenance": "unrecorded",
+      "planned": null
+    },
+    {
+      "axis": "safety-net",
+      "rung": "tests-exist",
+      "target": "mutation-measured",
+      "evidence": "test recorded for slipwai",
+      "provenance": "detected",
+      "planned": null
+    },
+    {
+      "axis": "structure",
+      "rung": "named",
+      "target": "typed",
+      "evidence": "slipwai: tool; not under apps/: .",
+      "provenance": "detected",
+      "planned": null
+    },
+    {
+      "axis": "platform",
+      "rung": "supported",
+      "target": "audited",
+      "evidence": "in support on 2026-09-28: Python 3.11; no audit command recorded for slipwai",
+      "provenance": "detected",
+      "planned": null
+    },
+    {
+      "axis": "constitution",
+      "rung": "template",
+      "target": "in-full",
+      "evidence": ".specify/memory/constitution.md",
+      "provenance": "detected",
+      "planned": null
+    },
+    {
+      "axis": "data",
+      "rung": "recorded",
+      "target": "settled",
+      "evidence": "schema: unmanaged",
+      "provenance": "detected",
+      "planned": null
+    },
+    {
+      "axis": "infrastructure",
+      "rung": "settled",
+      "target": "settled",
+      "evidence": "home: here",
+      "provenance": "detected",
+      "planned": null
+    },
+    {
+      "axis": "strategy",
+      "rung": "recommended",
+      "target": "done",
+      "evidence": "why: Run /cruise on the factory itself to build Rust support and execution-model delegation; recommended: leave-it",
+      "provenance": "detected",
+      "planned": null
+    }
+  ],
+  "survey": {
+    "ci": [
+      ".github/workflows"
+    ],
+    "containers": [
+      ".github/runner/Dockerfile",
+      "assets/backing-services/docker-compose.yml"
+    ],
+    "makefile": true,
+    "readme": true,
+    "quickWins": [
+      {
+        "kind": "secret-in-tree",
+        "where": "assets/backing-services/java/database_url.java:10",
+        "what": "a connection string with a password is written in the file",
+        "fix": "rotate it now \u2014 a key in Git history is public \u2014 then read it from the environment or a secret store and purge the history (`git filter-repo`)"
+      },
+      {
+        "kind": "secret-in-tree",
+        "where": "assets/backing-services/java/tests/database_url_test.java:19",
+        "what": "a connection string with a password is written in the file",
+        "fix": "rotate it now \u2014 a key in Git history is public \u2014 then read it from the environment or a secret store and purge the history (`git filter-repo`)"
+      },
+      {
+        "kind": "secret-in-tree",
+        "where": "tests/test_release.py:295",
+        "what": "a connection string with a password is written in the file",
+        "fix": "rotate it now \u2014 a key in Git history is public \u2014 then read it from the environment or a secret store and purge the history (`git filter-repo`)"
+      },
+      {
+        "kind": "secret-in-tree",
+        "where": "tests/test_upgrade.py:187",
+        "what": "a connection string with a password is written in the file",
+        "fix": "rotate it now \u2014 a key in Git history is public \u2014 then read it from the environment or a secret store and purge the history (`git filter-repo`)"
+      },
+      {
+        "kind": "no-lockfile",
+        "where": "assets/frontends/react-vite/api-client/package.json",
+        "what": "no lockfile beside `package.json` (package-lock.json / yarn.lock)",
+        "fix": "install once and commit the lockfile the package manager writes; without it every build resolves versions afresh and no two are the same"
+      },
+      {
+        "kind": "no-lockfile",
+        "where": "assets/frontends/react-vite/app/package.json",
+        "what": "no lockfile beside `package.json` (package-lock.json / yarn.lock)",
+        "fix": "install once and commit the lockfile the package manager writes; without it every build resolves versions afresh and no two are the same"
+      },
+      {
+        "kind": "no-lockfile",
+        "where": "assets/languages/rust/app/Cargo.toml",
+        "what": "no lockfile beside `Cargo.toml` (Cargo.lock)",
+        "fix": "install once and commit the lockfile the package manager writes; without it every build resolves versions afresh and no two are the same"
+      },
+      {
+        "kind": "no-lockfile",
+        "where": "assets/languages/rust/repository/Cargo.toml",
+        "what": "no lockfile beside `Cargo.toml` (Cargo.lock)",
+        "fix": "install once and commit the lockfile the package manager writes; without it every build resolves versions afresh and no two are the same"
+      },
+      {
+        "kind": "no-lockfile",
+        "where": "assets/languages/typescript/app/package.json",
+        "what": "no lockfile beside `package.json` (package-lock.json / yarn.lock)",
+        "fix": "install once and commit the lockfile the package manager writes; without it every build resolves versions afresh and no two are the same"
+      },
+      {
+        "kind": "no-lockfile",
+        "where": "assets/toolkit/scripts/event-model/package.json",
+        "what": "no lockfile beside `package.json` (package-lock.json / yarn.lock)",
+        "fix": "install once and commit the lockfile the package manager writes; without it every build resolves versions afresh and no two are the same"
+      },
+      {
+        "kind": "no-lockfile",
+        "where": "tests/fixtures/adopt/converging/apps/shop/package.json",
+        "what": "no lockfile beside `package.json` (package-lock.json / yarn.lock)",
+        "fix": "install once and commit the lockfile the package manager writes; without it every build resolves versions afresh and no two are the same"
+      },
+      {
+        "kind": "no-lockfile",
+        "where": "tests/fixtures/adopt/javascript-gitlab/package.json",
+        "what": "no lockfile beside `package.json` (package-lock.json / yarn.lock)",
+        "fix": "install once and commit the lockfile the package manager writes; without it every build resolves versions afresh and no two are the same"
+      },
+      {
+        "kind": "no-lockfile",
+        "where": "tests/fixtures/adopt/javascript-service/package.json",
+        "what": "no lockfile beside `package.json` (package-lock.json / yarn.lock)",
+        "fix": "install once and commit the lockfile the package manager writes; without it every build resolves versions afresh and no two are the same"
+      }
+    ]
+  },
+  "agent": {
+    "harness": "claude",
+    "evidence": "named with --integration",
+    "provenance": "overridden"
+  }
+}

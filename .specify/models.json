@@ -1,0 +1,55 @@
+{
+  "_comment": "Which model runs each stage of /drive's ladder, by role. `stages` is keyed by the command each stage runs, with a `default` row for the rest; `roles` maps each role to an identifier per harness — `host` is the model running /drive itself, null is no identifier mapped yet. Edit the roles for your harness, by hand or with `python3 delivery/scripts/agents/models.py --set claude.fast=haiku`, at any time: /drive reads this before every stage. `make models` shows what results, `make check-agents` checks the shape. A harness with no row here cannot choose a model for a sub-task (delivery/scripts/agents/registry.json, `subagentModel`) and runs every stage on the host model. delivery/docs/agent-harnesses.md says more.",
+  "stages": {
+    "default": "strong",
+    "principles": "strong",
+    "specify": "strong",
+    "event-model": "strong",
+    "split": "strong",
+    "example-map": "strong",
+    "gaps": "strong",
+    "release-constraint": "strong",
+    "plan": "strong",
+    "tasks": "fast",
+    "implement": "fast",
+    "converge": "strong",
+    "demo": "strong",
+    "adversary": "strong",
+    "mutation": "fast",
+    "skipper": "skipper",
+    "hand": "strong",
+    "bosun": "skipper"
+  },
+  "roles": {
+    "claude": {
+      "strong": "host",
+      "fast": "sonnet",
+      "skipper": "host"
+    },
+    "codex": {
+      "strong": "host",
+      "fast": null,
+      "skipper": "host"
+    },
+    "copilot": {
+      "strong": "host",
+      "fast": null,
+      "skipper": "host"
+    },
+    "cursor-agent": {
+      "strong": "host",
+      "fast": null,
+      "skipper": "host"
+    },
+    "gemini": {
+      "strong": "host",
+      "fast": null,
+      "skipper": "host"
+    },
+    "opencode": {
+      "strong": "host",
+      "fast": null,
+      "skipper": "host"
+    }
+  }
+}

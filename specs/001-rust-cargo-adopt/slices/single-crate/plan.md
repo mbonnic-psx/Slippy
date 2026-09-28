@@ -108,8 +108,12 @@ specs/001-rust-cargo-adopt/slices/single-crate/
 ### Source Code
 
 ```text
-src/slipwai/ecosystems.py                  # the cargo row
-tests/test_survey.py                       # detection, commands, subdirectory, mixed, malformed, skipped
+src/slipwai/ecosystems/                    # was ecosystems.py; split at T004 (see below)
+├── __init__.py                            # the table: ECOSYSTEMS, and the names callers import, unchanged
+├── common.py                              # TARGETS, EXTRA, Detected, and the helpers every row writes with
+├── rows.py                                # the nine rows that were here, moved unchanged, and `aggregates`
+└── cargo.py                               # the cargo row; the later Cargo slices grow this module
+tests/test_survey_cargo.py                 # detection, commands, subdirectory, mixed, malformed, skipped
 tests/fixtures/adopt/rust-crate/           # Cargo.toml, Cargo.lock, src/lib.rs with one test, README.md
 scripts/test-adoption.py                   # ADOPTIONS["rust-crate"] = ([], "cargo")
 changelog.d/rust-cargo-adopt.md            # MINOR, experimental
@@ -119,6 +123,12 @@ changelog.d/rust-cargo-adopt.md            # MINOR, experimental
 its purpose covers the survey. One vocabulary (the survey's: candidate, ecosystem, target, toolchain), so one
 bounded context; the strategy is `leave-it` (D2, ADR 0002 at `Proposed`), so the row lands in the existing
 module beside its nine siblings.
+
+**Why a package (found at T004).** `scripts/check-structure.py` holds every module and suite to 350 lines;
+`ecosystems.py` stood at exactly 350 before this slice and the row took it to 365, and `test_survey.py` to 386.
+The gate is not changed. A package keeps every submodule in the `contract` tier by prefix, so `TIERS` needs no
+edit, every `from .ecosystems import …` still resolves, and the Cargo slices after this one grow `cargo.py` and
+`test_survey_cargo.py` rather than the two files at their budget. The nine rows moved without a change.
 
 ## Not working yet (deliberate, owned by later slices)
 

@@ -33,7 +33,7 @@ existing ecosystems. T001 begins by running both green, so a later red is the sl
 
 **Independent test**: survey a fixture tree holding one `Cargo.toml`; adopt the committed Rust fixture end to end.
 
-- [ ] T001 [US1] **Rule 1 — a directory holding a `Cargo.toml` is proposed as Rust built by Cargo, with its
+- [x] T001 [US1] **Rule 1 — a directory holding a `Cargo.toml` is proposed as Rust built by Cargo, with its
   commands** (scenarios 1, 2, 5; the no-answer halves of 3 and 4; FR-001, FR-002, FR-004, FR-008; SG1, SG3, SG4,
   SG5; every edge case of this slice).
   Files: `tests/test_survey.py`, `src/slipwai/ecosystems.py`.
@@ -60,7 +60,7 @@ existing ecosystems. T001 begins by running both green, so a later red is the sl
     beside it; do not weaken it.
   - REFACTOR: add `rust` to the list of kinds in the `Detected.toolchain` docstring; no behaviour change, suite green.
 
-- [ ] T002 [US1] **Rule 2 — an adopted Rust crate is recorded, left alone by a second adopt, passes its own gate and
+- [x] T002 [US1] **Rule 2 — an adopted Rust crate is recorded, left alone by a second adopt, passes its own gate and
   survives a newer factory's `migrate`** (scenario 1 through the command's boundary; FR-008; SC-001, SC-003, SC-004;
   SG6). Depends on T001.
   Files: `tests/fixtures/adopt/rust-crate/Cargo.toml`, `tests/fixtures/adopt/rust-crate/Cargo.lock`,
@@ -81,7 +81,7 @@ existing ecosystems. T001 begins by running both green, so a later red is the sl
     unknown `kind`), stop and report: it is a plan contradiction (SG2 says unknown kinds are skipped), not an
     addition to this task.
 
-- [ ] T003 [P] [US1] **Changelog fragment** (FR-009; `changelog.d/README.md`).
+- [x] T003 [P] [US1] **Changelog fragment** (FR-009; `changelog.d/README.md`).
   Files: `changelog.d/rust-cargo-adopt.md`.
   Not a RED-GREEN increment: a fragment is a document, and `tests/test_changelog.py` is its check. First line
   `MINOR`; then one bold sentence saying `slipwai adopt` now recognises a Cargo repository (one crate: install,
@@ -101,7 +101,7 @@ No white box in this slice: no event model, no screen states to write back; `che
 
 ## Phase 3: Polish
 
-- [ ] T004 [US1] **Run the gate.** Depends on T001–T003. No files written.
+- [x] T004 [US1] **Run the gate.** Depends on T001–T003. No files written.
   Run `make verify`, then `make test-adoption`; both green (`cargo` is at `~/.cargo/bin/cargo` here, so the
   fixture's `verify` runs and is not skipped). Report each command's outcome. Do not commit red; do not touch any
   file not named above to make it pass — hand the failure back.

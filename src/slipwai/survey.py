@@ -11,7 +11,7 @@ said, `confirmed` for what the person accepted and `overridden` for what they ch
 Bounded on purpose. The walk stops a few levels down and skips dependency and build output, a directory that
 builds is not searched for builds inside it when its manifest says it owns them (npm workspaces, Maven
 modules, a Gradle settings file, a .NET solution), and a signal this cannot read is reported as absent, not
-guessed. `ecosystems.py` is the table of what can be recognised.
+guessed. `ecosystems/` is the table of what can be recognised.
 """
 from __future__ import annotations
 

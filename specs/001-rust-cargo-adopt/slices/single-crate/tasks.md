@@ -260,3 +260,38 @@ the manifest-keyed pages (#11) but not this one — the owner decides whether it
 - [ ] T013 [US1] **LOW (Phase 4) — the fragment's Catch-up says refresh proposes a Cargo candidate; it reports it
   `not wrapped`.** Reword `changelog.d/rust-cargo-adopt.md` to say what a maintainer does (`resurvey.py:174-178`,
   `:343-347`), and add a refresh test for a Cargo root in an adopted repository after `tests/test_pin.py:117`.
+
+**Pass 2 (2026-09-29): converged — confirming pass; the loop stopped at its bound (2 of 2).** No CRITICAL or HIGH
+owed; nothing appended. Reviewed diff `cd2d3f3..HEAD` against D10 and T011. `make test TESTS="test_ratchet_cargo
+test_survey_cargo test_survey test_adopt"`: 21 tests, OK; `make lint` and `make test TESTS=test_changelog` green.
+`scripts/test-adoption.py --only rust-crate` (cargo on PATH): adopted, re-survey a no-op, verify green on day one
+and after `migrate` to 99.0.0 — with the amended lint. The full gate was not run (it runs after demo acceptance).
+
+- **Every lint proposal is the D10 command.** There is one proposal site, `src/slipwai/ecosystems/cargo.py:18-20`,
+  and `in_dir` prefixes it for root and subdirectory alike; both are asserted verbatim at
+  `tests/test_survey_cargo.py:35-38` (root) and `:56-60` (`crates/ledger`). Every other `clippy` in `src/` is the
+  generated project's own gate (`project/languages/rust.py:35,120`, `project/docs.py:38`), untouched, as D10 says.
+- **The ratchet keys each finding separately.** Real clippy 0.1.98 on a two-finding crate with the proposed
+  flags, piped through `ratchet.findings_in` (`assets/adoption/scripts/ratchet.py:116`), gave two keys
+  (`src/lib.rs: error: unneeded \`return\` statement`, `src/lib.rs: error: length comparison to zero: …`); the
+  `could not compile` / `build failed` lines produced none. `tests/test_ratchet_cargo.py:52-63` holds the same
+  with a fixture output. Real output matches the fixture's shape; its column numbers differ, which the key drops.
+- **The test has teeth, though its `findings_in` half was never red.** Removing ` --message-format=short` from
+  `cargo.py` (restored with `git checkout -- src/slipwai/ecosystems/cargo.py`) fails the new test at its first
+  assertion (`test_ratchet_cargo.py:57`) and both survey tests — three failures, each for the flag. The
+  `findings_in` assertions are a characterisation of the ratchet, not a RED: they would catch a ratchet change
+  that merged same-file short lines, and the `DEFAULT` assertion (`:63`) records why the flag exists. Adequate
+  for what D10 asked.
+- **No regression elsewhere.** The diff touches only `cargo.py`, the two tests, the fragment and `tasks.md`;
+  pass 1's per-level account stands unchanged, and T005–T010, T012, T013 are still owed as Phase 4.
+
+Constitution this pass touched:
+
+- **I** — `changelog.d/rust-cargo-adopt.md:4-6` quotes the D10 command and says why; line 1 still claims `MINOR`,
+  `VERSION` unchanged at `1.4.0.dev0` (`test_changelog` green). The lint string changed from pass 1's, but no
+  release carries it — the fragment is unreleased — so no project was given the old answer.
+- **II** — the re-survey of the adopted `rust-crate` is still a no-op with the new command
+  (`scripts/test-adoption.py:220-223`); the change adds no writing command.
+- **V (as it holds today, `.specify/memory/constitution.md:149-152`)** — the new test enters at the survey
+  boundary over a fixture tree and calls the ratchet's own function loaded from the shipped script; no mock.
+- III, IV, VI–XI — not touched by this diff.

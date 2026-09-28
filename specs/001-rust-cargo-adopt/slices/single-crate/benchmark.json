@@ -1,0 +1,104 @@
+{
+  "_comment": "What each stage of /drive cost this slice and how well it did, one entry per stage run, appended by scripts/agents/benchmark.py at the stage's start and end. Tokens come from the harness's own transcript or are null with the reason; signals are what the stage reported. `make benchmark` reads every record. docs/agent-harnesses.md says what the numbers can and cannot be compared with.",
+  "feature": "001-rust-cargo-adopt",
+  "slice": "single-crate",
+  "from": "fa19f0dc5c4f18ff6b3f8817e69ebd18b61737b8",
+  "stages": [
+    {
+      "stage": "gaps",
+      "started": "2026-09-28T21:04:59Z",
+      "planned": "gaps: strong → host model — `strong` maps to the host model",
+      "tasks": {
+        "start": null,
+        "end": null
+      },
+      "ended": "2026-09-28T21:05:14Z",
+      "seconds": 15,
+      "span": {
+        "from": {
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/dc5c91ba-35d8-447d-84c4-10cb6472ce5f.jsonl": 718112
+        },
+        "to": {
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/dc5c91ba-35d8-447d-84c4-10cb6472ce5f.jsonl": 752231
+        }
+      },
+      "usage": {
+        "source": "claude",
+        "session": "dc5c91ba-35d8-447d-84c4-10cb6472ce5f",
+        "read": "message.usage on each assistant line, once per requestId",
+        "host": {
+          "claude-opus-5-5": {
+            "input": 2,
+            "output": 1483,
+            "cache_read": 113486,
+            "cache_creation": 1733
+          }
+        },
+        "subagents": {},
+        "agents": []
+      },
+      "ran": [
+        "claude-opus-5-5"
+      ],
+      "agents": null,
+      "delegated": false,
+      "signals": {
+        "gaps": 6,
+        "driver": "cruise"
+      }
+    },
+    {
+      "stage": "bosun",
+      "started": "2026-09-28T21:06:21Z",
+      "planned": "bosun: skipper → host model — `skipper` maps to the host model",
+      "tasks": {
+        "start": null,
+        "end": null
+      },
+      "ended": "2026-09-28T22:07:41Z",
+      "seconds": 3680,
+      "span": {
+        "from": {
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/dc5c91ba-35d8-447d-84c4-10cb6472ce5f.jsonl": 856373
+        },
+        "to": {
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/dc5c91ba-35d8-447d-84c4-10cb6472ce5f.jsonl": 867268,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/dc5c91ba-35d8-447d-84c4-10cb6472ce5f/subagents/agent-a4ea1fbf49d369d58.jsonl": 319723
+        }
+      },
+      "usage": {
+        "source": "claude",
+        "session": "dc5c91ba-35d8-447d-84c4-10cb6472ce5f",
+        "read": "message.usage on each assistant line, once per requestId; read after the session that opened the entry had ended",
+        "host": {
+          "claude-opus-5-5": {
+            "input": 2,
+            "output": 1427,
+            "cache_read": 128648,
+            "cache_creation": 1921
+          }
+        },
+        "subagents": {
+          "claude-opus-5-5": {
+            "input": 40,
+            "output": 595,
+            "cache_read": 695549,
+            "cache_creation": 95394
+          }
+        },
+        "agents": [
+          "drive-bosun"
+        ]
+      },
+      "ran": [
+        "claude-opus-5-5"
+      ],
+      "agents": [
+        "drive-bosun"
+      ],
+      "delegated": true,
+      "signals": {},
+      "cut_off": "the iteration was ended by `stop --now`"
+    }
+  ]
+}

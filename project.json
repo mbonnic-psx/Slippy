@@ -28,7 +28,8 @@
         "integration": null,
         "adversarial": null,
         "audit": null,
-        "mutation": null
+        "mutation": null,
+        "smoke": "./slipwai --version && ./slipwai adopt --next"
       },
       "toolchain": {
         "kind": "python",

@@ -105,6 +105,39 @@ candidate at the root.
 - No `Cargo.lock`: install stays `cargo fetch --locked`, which fails loudly rather than resolving silently; the
   maintainer may override it when confirming.
 
+### Slice `single-crate` — Gaps reviewed (2026-09-28, iteration 2)
+
+Checked against `src/slipwai/ecosystems.py`, `survey.py`, `delivery_facts.role_of`, `project/adopted_ci.py`,
+`platform.py`, `programme.py`, `structure.py` and `scripts/test-adoption.py`. The criteria and states this review
+added, each owned by this slice:
+
+- **SG1 — the toolchain before slice 3.** A crate adopted under this slice records its toolchain as kind `rust`
+  with an empty version, whatever toolchain file it carries; `toolchain-pin` is what reads the pin. The survey
+  page therefore shows no version for it, the way it shows none for any absent pin.
+- **SG2 — no Rust setup in the adopted CI yet.** Until `ci-toolchain`, the gate's workflow writes no setup step for
+  kind `rust` (`adopted_ci.SETUP` has no row, and a kind it does not know is skipped, as today). This is a
+  deliberate hole, shown under *Not working yet*, and not a fault.
+- **SG3 — the exact lint command.** At the root, lint is `cargo clippy --all-targets -- -D warnings && cargo fmt
+  --check`; in a subdirectory `crates/ledger` every command is prefixed once, e.g.
+  `cd crates/ledger && cargo clippy --all-targets -- -D warnings && cargo fmt --check`, as other ecosystems
+  prefix theirs — the `cd` holds for both halves.
+- **SG4 — what the crate is for stays a question.** A crate's role is read only by the rules every ecosystem
+  already shares — a `Dockerfile` beside it makes it a service, a directory named as a test suite makes it one —
+  and otherwise stays unrecorded, as for PHP and Ruby. Reading `src/main.rs`, `src/lib.rs` or `[[bin]]` is not
+  in this feature.
+- **SG5 — a crate that is not a workspace owns nothing below it.** A second `Cargo.toml` under a single crate
+  (e.g. a `fuzz/` crate) is its own candidate in this slice; `workspace` is the slice that makes a root own its
+  members.
+- **SG6 — adopting again changes nothing, and the gate is green.** The Rust fixture goes through the same
+  end-to-end path as every other adoption fixture (`make test-adoption`): adopt, `adopt --refresh` with no
+  change, `make -f delivery/Makefile verify` green where `cargo` is on the machine and skipped with a reason where
+  it is not, and a newer factory's `migrate`. So the fixture commits its `Cargo.lock` and passes its own clippy,
+  fmt and test.
+- **Out of scope here, stated so the audit does not reopen it:** the pages that key on an ecosystem — an upgrade
+  path (`programme.UPGRADE_PATHS`), a tool proposed for an empty target (`programme.TOOLING`), the products a
+  manifest pins (`platform.manifest_products`), dependencies and entry points in the structure view — say nothing
+  Rust-specific. That is the axis answers of issue #11, which the Assumptions put out of scope.
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements

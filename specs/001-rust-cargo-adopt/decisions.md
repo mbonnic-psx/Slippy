@@ -43,3 +43,25 @@
 - **Confidence:** medium · **Would reverse if:** the first user's repository is a workspace, which would pull `workspace` up to second
 - **Written to:** specs/001-rust-cargo-adopt/story-split.md, specs/001-rust-cargo-adopt/decisions.md
 - **Status:** standing
+
+## D5 — Programme: the thirteen quick wins the survey lists — are any of them a slice ahead of this feature?
+- **Stage:** convergence programme (read at pin) · **Slice:** single-crate · **When:** 2026-09-28T21:40:00Z · **Iteration:** 2
+- **Question:** `delivery/docs/change-strategy.md` opens its programme with four "connection string with a password" findings and nine "no lockfile" findings; a secret in the tree goes ahead of every product slice (stop table row 15).
+- **Options:** open a quick-win slice per finding · record them as false positives read off the tree, no slice (recommended)
+- **Decision:** No slice. The four "secrets" are documentation and test placeholders (`postgres://user:pass@host:port/db` in a Javadoc at `assets/backing-services/java/database_url.java:10`, `app:secret@localhost` in its unit test, `someone:a-token@git.example` in `tests/test_release.py:295` and `tests/test_upgrade.py:187`); the nine lockfile findings are templates under `assets/` that the factory copies into a generated project, where the project's own install writes the lockfile.
+- **Why:** Each line was read, and none names a host anyone can reach; opening a rotation slice for a string that authenticates to nothing would spend the run on nothing a maintainer adopting a Cargo repository sees.
+- **Decided by:** host (stage recommendation)
+- **Confidence:** high · **Would reverse if:** any of those credentials is found to work against a real system, or the owner wants the survey itself to stop reporting factory templates (a factory change of its own)
+- **Written to:** specs/001-rust-cargo-adopt/decisions.md
+- **Status:** standing
+
+## D6 — Pin: the application has no proven run path and no `smoke`; how does the slice get past the refusal?
+- **Stage:** pin · **Slice:** single-crate · **When:** 2026-09-28T22:15:00Z · **Iteration:** 2
+- **Question:** `delivery/survey/running.md` read *Not yet proven* for `.` and `project.json` had no `commands.smoke`, so Pin refuses every slice that changes code that was here until the run path is proven — and the generated `smoke` target lives in `delivery/Makefile`, a control file a run may not change.
+- **Options:** park for a person to prove it · prove the run path in the tree and record `commands.smoke`, leaving the generated target for a person to regenerate (recommended by the bosun's standing moves)
+- **Decision:** Proved and recorded: `./slipwai --version && ./slipwai adopt --next`, from the root, exits 0 and leaves `git status` unchanged (re-run by the host on 2026-09-28 after the bosun's session was cut off); written into `delivery/survey/running.md` and `project.json` `deployables.slipwai.commands.smoke`. `delivery/Makefile`'s `smoke` target was not regenerated and still says none is recorded.
+- **Why:** The rule is that the application starts before its behaviour is pinned; that is a fact of the tree, provable here with the checkout's own launcher, and nobody has to supply anything for it. Regenerating the Makefile is a control-file change, which only a person makes.
+- **Decided by:** drive-bosun
+- **Confidence:** high · **Would reverse if:** a person regenerates the targets (`./slipwai adopt --refresh`) and `make -f delivery/Makefile smoke` fails, or wants a different smoke — a task in the next slice is to confirm `make -f delivery/Makefile smoke` runs the recorded command once regenerated
+- **Written to:** delivery/survey/running.md, project.json, specs/001-rust-cargo-adopt/decisions.md
+- **Status:** standing

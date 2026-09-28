@@ -12,12 +12,13 @@ import os
 import re
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 
 from support import FactoryTestCase
 from test_cruise_runner import cruise, enable, fake_harness, logged
 
-from slipwai.project.cruise_record import RUNNER_STREAM
+from slipwai.project.cruise_record import RUNNER_LOG, RUNNER_PID, RUNNER_STREAM
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
@@ -271,7 +272,51 @@ tail -n +4 {fixtures}/claude-stream.jsonl | sed 's/cruise: continue/cruise: done
             self.assertIn("**Put every line it printed in your reply, unchanged, in a\nfenced block, before anything "
                           "else** — the harness folds a command's output, so the feed reaches a person only\nthrough "
                           "your reply", cruise)
+            # The seat on its own: `/cruise-status` reads once and stops, and the way back was `/cruise`, which reads as
+            # starting a run. Its rules are the seat's rules, one text with `commands/cruise.md`'s.
+            watch = (repo / "commands/cruise-watch.md").read_text()
+            self.assertIn("description: Take the watch seat beside a running /cruise — print the feed as the runner "
+                          "writes it, return at each boundary and watch again, answer a person typing here — without "
+                          "starting anything", watch)
+            self.assertIn("sits back down where the feed left off, in this session, and starts nothing", watch)
+            self.assertIn("To take it: run `python3 scripts/agents/cruise.py watch`. It prints", watch)
+            seat = watch.split("To take it: ", 1)[1]
+            self.assertIn(seat.rstrip("\n"), cruise, "the two seats read the same text")
+            self.assertIn("**A person typing here is talking to you, not stopping the run.**", seat)
+            self.assertIn("`/where-are-we` and `/whats-next` read the runner's state first (`where`)", seat)
             page = (repo / "docs/skills-and-commands.md").read_text()
             self.assertIn("- `/cruise-settings` — `commands/cruise-settings.md`\n- `/cruise-status` — "
                           "`commands/cruise-status.md`\n- `/cruise-stop` — `commands/cruise-stop.md`\n"
-                          "- `/cruise-tell` — `commands/cruise-tell.md`", page)
+                          "- `/cruise-tell` — `commands/cruise-tell.md`\n"
+                          "- `/cruise-watch` — `commands/cruise-watch.md`", page)
+
+    def test_stop_now_returns_once_the_runner_has_gone_so_a_start_typed_next_starts_one(self) -> None:
+        """`stop --now` signalled the runner and returned at once, while the runner was still ending the
+        iteration's session — so a `start` typed next found it alive and declined, the old runner then went, and the
+        watch that followed found nobody. Here the iteration ignores the signal for two seconds, the way a harness
+        session shutting down does, and `stop --now` returns only once the runner is gone."""
+        with tempfile.TemporaryDirectory() as directory:
+            repo = self.generate(directory, "stopped", "standard", "python")
+            enable(repo)
+            env = fake_harness(Path(directory), """trap '' TERM
+python3 -c 'import signal, time; signal.signal(signal.SIGTERM, signal.SIG_IGN); time.sleep(2)'
+echo "cruise: continue\"""")
+            try:
+                started = cruise(repo, "start", env=env)
+                self.assertEqual(started.returncode, 0, started.stderr)
+                for _ in range(100):
+                    if (repo / RUNNER_LOG).is_file() and "iteration 1 started" in (repo / RUNNER_LOG).read_text():
+                        break
+                    time.sleep(0.05)
+                else:
+                    self.fail("the first iteration never started")
+                stopped = cruise(repo, "stop", "--now")
+                self.assertIn("terminated with the iteration in flight", stopped.stdout)
+                self.assertFalse((repo / RUNNER_PID).exists(), "stop --now returned while the runner was still going")
+                (repo / ".specify/cruise.stop").unlink()
+                again = cruise(repo, "start", env=env)
+                self.assertEqual(again.returncode, 0, again.stderr)
+                self.assertIn("cruise: runner started as pid", again.stdout)
+                self.assertNotIn("already running", again.stdout)
+            finally:
+                cruise(repo, "stop", "--now")

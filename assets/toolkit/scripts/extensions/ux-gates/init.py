@@ -17,10 +17,19 @@ fresh clone, a CI runner — is what `check-ux-gates` reports as skipped rather 
 A project with no browser app has nothing to gate, so it is refused politely with the command that would
 change that. Never fails `./init`: a missing `npx`, a failed install or an unexpected layout is reported,
 not fatal. See docs/extensions.md for what every extension's `init.py` owes.
+
+It also writes the one place the kit is expected: a `ux-gates` job in `.github/workflows/verify.yml`, between
+markers so a second run rewrites it and nothing else. The render gates launch a browser per preview, so what
+they cost is linear in `screens/`; the job spreads them over `SHARDS` runners from the first screen rather
+than after a project has crossed its time budget, and on a pull request renders only the previews the change
+can move (`UX_GATES_SINCE`, which `scripts/check-ux-gates.py` explains). Every shard installs the kit and a
+browser and sets `UX_GATES_REQUIRE=1`, so a shard that could not measure is red, never a skipped green. It
+sits inside `verify.yml` rather than beside it because a deploy is a `workflow_run` of `verify`.
 """
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -43,6 +52,13 @@ def project_root(script: Path, depth: int) -> Path:
 
 
 ROOT = project_root(Path(__file__).resolve(), 3)
+
+# Where `./init` actually is, from the repository root: beside this script's own tree at the root in a
+# generated project, and under `layout.delivery` where the method was installed beside an existing codebase.
+# Derived rather than written, because "run `./init --extension …`" is advice nobody can follow when the
+# file is `./delivery/init` — the first real adoption to meet it typed `./init` four times.
+DELIVERY = Path(__file__).resolve().parents[3]
+INIT = "./init" if DELIVERY == ROOT else f"./{DELIVERY.relative_to(ROOT).as_posix()}/init"
 MARKER_BEGIN = "<!-- extension:ux-gates:begin -->"
 MARKER_END = "<!-- extension:ux-gates:end -->"
 GUIDANCE = f"""
@@ -54,18 +70,24 @@ the gates in it that are objective: a screen either passes or it does not.
 - **Always:** `{KIT_DIR}/scripts/lint_hardcodes.py` over each browser app's `src/`. A literal colour,
   pixel size or duration outside `tokens.css` fails the build; it is the rule `docs/design.md` already
   states, now measured. A justified exception carries a `ds-allow-hardcode` comment on its line.
-- **Where a browser is present** (`node`, and `playwright` resolvable from the project root): the render
-  gates over every `*.html` under each browser app's `screens/` — contrast in light and dark across
-  default, hover and focus states, visible focus, target size, no overflow at 280/320/414px, and axe. A
-  screen preview under `screens/` is what puts a screen under those gates; the live routes are not
-  rendered, because the gates read files and the app needs its API. With no browser the render gates are
-  reported as skipped, never as passed.
+- **Where a browser is present** (`node`, `playwright` resolvable from the project root, and Chrome or
+  Playwright's own Chromium — `npx playwright install chromium`): the render gates over every `*.html`
+  under each browser app's `screens/` — contrast in light and dark across default, hover and focus states,
+  visible focus, target size, no overflow at 280/320/414px, and axe. A screen preview under `screens/` is
+  what puts a screen under those gates; the live routes are not rendered, because the gates read files and
+  the app needs its API. With no browser the render gates are reported as skipped, never as passed, and the
+  gate says which browser it ran on. A gate that fails or crashes is never made to pass by editing
+  `scripts/check-ux-gates.py` or anything under `{KIT_DIR}/`: fix the screen, install the browser, or
+  report the gate's own words.
 
-**Run `make check-ux-gates` before the demo stop of any slice with a screen**, and fix what it finds
-rather than carrying it as a note. For the judgement the gates cannot make, the kit's checklists are files:
-`{KIT_DIR}/accessibility/wcag-checklist.md` (POUR-organised, P0 first) and
-`{KIT_DIR}/workflows/design-review.md` (six weighted dimensions and Nielsen's heuristics), read alongside
-`skills/web-interface-guidelines`. Never state a contrast ratio you did not measure; the gates print theirs.
+**What this adds to `/drive`'s *Design review* rung.** Run `make check-ux-gates` first and fix what it
+finds rather than carrying it as a note. Then the review itself, which the gates are not: render the screen
+from its preview under `screens/` where it has one, and read the screenshots against
+`{KIT_DIR}/workflows/design-review.md` (six weighted dimensions and Nielsen's heuristics) and
+`{KIT_DIR}/accessibility/wcag-checklist.md` (POUR-organised, P0 first) as well as
+`skills/web-interface-guidelines`, and name all three on the screen's `Reviewed:` line. Every gate green is
+the objective half: screens have passed all of them and still shipped browser-default links and a raw
+identifier. Never state a contrast ratio you did not measure; the gates print theirs.
 
 **Check you can reach it before you trust it.** `{KIT_DIR}/` is ignored by Git and installed by this
 extension, so a fresh clone, a container or a CI runner has the pointer and not the kit. When
@@ -78,6 +100,66 @@ actually ran when you report a screen as checked.
 before claiming a screen passed.
 {MARKER_END}
 """
+
+
+SHARDS = 6
+WORKFLOW = ".github/workflows/verify.yml"
+CI_BEGIN = "  # extension:ux-gates:begin"
+CI_END = "  # extension:ux-gates:end"
+
+
+def ci_job(node: str) -> str:
+    """The sharded job, naming this checkout's own paths so a delivery layout's `scripts/` is found too."""
+    here = Path(__file__).resolve()
+    install = here.relative_to(ROOT).as_posix()
+    gate = (here.parents[2] / "check-ux-gates.py").relative_to(ROOT).as_posix()
+    shards = ", ".join(str(shard) for shard in range(1, SHARDS + 1))
+    return f"""{CI_BEGIN}
+  # The render gates, over {SHARDS} runners. `make verify` above reports them skipped, not passed,
+  # because `{KIT_DIR}/` is ignored by Git; these jobs install the pinned kit and a browser, and
+  # require both. On a pull request each renders only the previews the change can move; on `main` all
+  # of them, since `main` deploys and a browser upgrade arrives without a diff. Written by
+  # `./init --extension ux-gates`, which rewrites this block and nothing else.
+  ux-gates:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [{shards}]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: {node}
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: python3 {install}
+      - run: npx playwright install --with-deps chromium
+      - run: python3 {gate}
+        env:
+          UX_GATES_REQUIRE: '1'
+          UX_GATES_SHARD: ${{{{ matrix.shard }}}}/{SHARDS}
+          UX_GATES_SINCE: ${{{{ github.event.pull_request.base.sha }}}}
+{CI_END}
+"""
+
+
+def ci_gates() -> str:
+    """Put the sharded job in `verify.yml`, or replace the one there; say where it went, or why it did not."""
+    workflow = ROOT / WORKFLOW
+    if not workflow.is_file():
+        return f"there is no {WORKFLOW}, so CI runs no render gates; `make check-ux-gates` is the gate to run"
+    text = workflow.read_text()
+    found = re.search(r"^\s*node-version: *(\S+)", text, re.MULTILINE)
+    job = ci_job(found.group(1) if found else "lts/*")
+    block = re.compile(rf"\n*{re.escape(CI_BEGIN)}\n.*?{re.escape(CI_END)}\n?", re.DOTALL)
+    updated = block.sub(lambda _: "\n" + job, text, count=1) if block.search(text) else text.rstrip("\n") + "\n" + job
+    if updated != text:
+        workflow.write_text(updated)
+    return f"{WORKFLOW} runs the render gates in a `ux-gates` job over {SHARDS} shards"
 
 
 def browser_apps() -> list[str]:
@@ -110,7 +192,7 @@ def main() -> int:
             "installed and AGENTS.md is unchanged.\n"
             "Add one first, then adopt it here:\n"
             "  slipwai add-frontend web\n"
-            "  ./init --extension ux-gates",
+            f"  {INIT} --extension ux-gates",
             file=sys.stderr,
         )
         return 0
@@ -119,7 +201,7 @@ def main() -> int:
             "`npx` was not found, so the ux-ui-agent-skills kit was not installed and AGENTS.md is "
             "unchanged.\n"
             "Install Node.js, then adopt it here, which is what points the agent at it:\n"
-            "  ./init --extension ux-gates",
+            f"  {INIT} --extension ux-gates",
             file=sys.stderr,
         )
         return 0
@@ -134,7 +216,7 @@ def main() -> int:
         print(
             f"`npx ux-ui-agent-skills@{KIT_VERSION} init` exited {installed.returncode}: AGENTS.md is "
             "unchanged.\nFix what it reported, then adopt it here:\n"
-            "  ./init --extension ux-gates",
+            f"  {INIT} --extension ux-gates",
             file=sys.stderr,
         )
         return 0
@@ -143,12 +225,12 @@ def main() -> int:
             f"The installer did not write {KIT_DIR}/scripts/lint_hardcodes.py, so AGENTS.md is unchanged.\n"
             f"This script knows ux-ui-agent-skills {KIT_VERSION}; a newer kit may lay its files out "
             "differently. Pin the version, or update this script, then:\n"
-            "  ./init --extension ux-gates",
+            f"  {INIT} --extension ux-gates",
             file=sys.stderr,
         )
         return 0
     project_guidance()
-    print(f"UX gates installed at {KIT_DIR}/ (ignored by Git); `make check-ux-gates` now runs them.")
+    print(f"UX gates installed at {KIT_DIR}/ (ignored by Git); `make check-ux-gates` now runs them, and {ci_gates()}.")
     return 0
 
 

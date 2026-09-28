@@ -14,7 +14,7 @@ from ..probes import HEALTH_PATH
 from ..services import App, containers_of, services_of, web_apps, wrapped_of
 from ..targets import managed
 from ..tooling import app_tooling, service_qualifier, verify_path
-from .adopted_targets import adoption_targets
+from .adopted_targets import adoption_targets, gate_target
 from .agent_targets import agent_targets
 from .compose import composed
 from .flags import flag_gate, flag_gate_dependency
@@ -23,7 +23,7 @@ from .model_targets import MODEL_GATES, model_targets
 from .mutation import mutation_notes
 from .native_commands import STEP, format_command, gated, go_modules_variable, native_commands, steps
 from .openapi import exporting, openapi_targets
-from .production import production_targets
+from .production import deploy_role_gate, production_targets
 from .shared_packages import npm_dependency, npm_workspace_targets
 
 
@@ -158,7 +158,7 @@ def makefile(project_name: str, profile: str, apps: list[App], target: str = "no
     if formatting:
         formatting = f"format: ## Rewrite this project's own code the way `make lint` expects to find it\n\t{formatting}\n"
     verify_dependencies = (
-        "lint typecheck check-imports check-migrations check-slice-scope check-extensions check-agents check-speckit "
+        "check-python lint typecheck check-imports check-migrations check-slice-scope check-extensions check-agents check-speckit "
         "check-codegraph check-ux-gates check-constitution check-benchmark check-decisions test"
     )
     style_target = ""
@@ -172,9 +172,11 @@ def makefile(project_name: str, profile: str, apps: list[App], target: str = "no
     # Not appended to the line above but added as a rule of its own below, inside the transport's marked
     # region: a prerequisite that survived the transport it checks would be a `verify` that cannot run.
     api_document = openapi_targets(project_name, apps)
-    verify_dependencies += flag_gate_dependency(target)
+    role_dependency, role_gate = deploy_role_gate(target)
+    verify_dependencies += flag_gate_dependency(target) + role_dependency
     if wrapped_of(apps):
         verify_dependencies += " check-convergence"
+    verify_target = gate_target(apps, verify_dependencies)
     # Which of each service's answers brings a suite the Docker-free gate cannot run, and which one has
     # migrations to apply, are traits the options declare in `catalog.json` and are read per service.
     integrating = any(s.selection.integration_feature is not None for s in services)
@@ -285,7 +287,7 @@ install: ## Install native dependencies; refresh agent projections after init
 \t@if [ -f .specify/integration.json ]; then $(MAKE){layout.make_flag} --no-print-directory agents; else echo 'Spec Kit not initialized; run ./init when ready.'; fi
 {npm_workspace_targets(apps, target)}
 {agent_targets()}
-.PHONY: typecheck lint {'format ' if formatting else ''}check-imports check-migrations check-slice-scope {'check-styles ' if web else ''}{'check-flags ' if target != 'none' else ''}check-speckit check-codegraph check-ux-gates check-constitution constitution-requirements
+.PHONY: typecheck lint {'format ' if formatting else ''}check-imports check-migrations check-slice-scope {'check-styles ' if web else ''}{'check-flags ' if target != 'none' else ''}check-speckit check-codegraph check-ux-gates check-constitution constitution-requirements{role_dependency}
 typecheck: ## Run the native compiler or static type check
 \t{native['typecheck']}
 lint: ## Run the native formatting and static-analysis gate
@@ -297,7 +299,7 @@ check-migrations: ## Fail when a migration contracts the schema without naming t
 \tpython3 scripts/check-migrations.py
 check-slice-scope: ## Fail when a slice/<id> branch touches what a sibling slice may also be writing
 \tpython3 scripts/check-slice-scope.py
-{style_target}{flag_gate(target)}check-speckit: ## Fail when an initialized Spec Kit-managed file differs from its manifest
+{style_target}{flag_gate(target)}{role_gate}check-speckit: ## Fail when an initialized Spec Kit-managed file differs from its manifest
 \tpython3 scripts/check-speckit.py
 check-codegraph: ## Fail when the adopted code index no longer describes the tracked source
 \tpython3 scripts/check-codegraph.py
@@ -320,7 +322,5 @@ audit: ## Run the ecosystem-native dependency vulnerability audit
 \t{native['audit']}
 
 .PHONY: verify ci
-verify: {verify_dependencies} ## Full deterministic pre-commit gate
-\t@echo
-\t@echo 'verify: all gates passed'
+{verify_target}
 {document_gate}{ci_targets}{production_section}{adoption_targets(apps, layout)}"""

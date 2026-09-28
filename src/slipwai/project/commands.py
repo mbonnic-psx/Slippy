@@ -9,10 +9,12 @@ from ..targets import managed
 from .add_commands import add_command_files
 from .adversary import adversary_command
 from .benchmark import benchmark_command, what_each_stage_costs
+from .catch_up_command import catch_up_files
 from .converge_stage import convergence_stage
 from .cruise import cruise_command, cruise_settings_command
-from .cruise_seat import cruise_status_command, cruise_stop_command, cruise_tell_command
+from .cruise_seat import cruise_status_command, cruise_stop_command, cruise_tell_command, cruise_watch_command
 from .demo_stop import demo_stop
+from .design_stage import PLAN_STYLING, with_design_rungs
 from .drive_adoption import adoption_ladder
 from .drive_settings import drive_settings_command, implementation_section
 from .existing import release_stage
@@ -34,12 +36,6 @@ def drive_command(
     # project whose browser app is `apps/portal` has no `apps/web` for this to point at.
     web = web_apps(apps)
     baseline = ", ".join(f"`{app.path}`" for app in web)
-    styling = (
-        """ Where the slice puts anything on a screen, its styling is one of the tasks written here rather
-   than a follow-on: name the screens it adds or changes and where each takes its styles from."""
-        if web
-        else ""
-    )
     stages = [
         """**Principles** — `.specify/memory/constitution.md` is ratified rather than absent, unfilled, or
    still the template `./init` installed, and `make check-constitution` passes. A passing gate alone is not
@@ -120,7 +116,7 @@ def drive_command(
    version's requirement — cites the artefact it was read from: the library's documentation at the pinned
    version, its source, a run against it. A statement with no citation reads *assumed*, and a plan does not
    rest on it."""
-        + context_decision + styling,
+        + context_decision + (PLAN_STYLING if web else ""),
         """**Implementation** — tasks remain unchecked. Run the installed Spec Kit implement command."""
         + (
             f""" A screen this slice
@@ -133,6 +129,7 @@ def drive_command(
         convergence_stage(),
         """**Demo** — the actor-visible path is ready to show.""",
     ]
+    stages = with_design_rungs(stages, baseline) if web else stages
     if adoption is not None:
         stages = adoption_ladder(stages, apps, layout)
     ladder = "\n".join(f"{index}. {stage}" for index, stage in enumerate(stages, start=1))
@@ -152,8 +149,8 @@ Read artifacts from disk rather than conversation memory and walk this ladder fr
 is the first one whose artifact is missing, empty, or still a placeholder — **including the stages upstream
 of the slice loop**. State the entry stage and the evidence that selected it before changing anything, then
 run that stage and every stage after it. Never rerun a completed stage merely to check. Where `.codegraph/` is in
-the tree, load `codegraph_explore` by name through this harness's tool-search step before the first stage, so a
-caller or blast-radius question later is one call and not a text search.
+the tree, a caller or blast-radius question is one index call — `scripts/codegraph callers <symbol>`, or
+`codegraph_explore` — and not a text search; grep is for words in documents.
 
 **The checkout goes stale the way conversation memory does, so check the branch before the artifacts.**
 Every signal the ladder reads — a slice's `status`, whether `examples.md` or `tasks.md` exists, the slice
@@ -310,7 +307,8 @@ than an open question.
 # three reaching back out to the factory. One list, so the documentation and the files cannot disagree.
 BASE_COMMANDS = ("drive", "where-are-we", "whats-next", "gaps", "adversary", "mutation", "constitution-coverage",
                  "model-delegation-settings", "drive-settings", "benchmark", "cruise", "cruise-settings",
-                 "cruise-status", "cruise-stop", "cruise-tell", "add-service", "add-frontend", "catch-up")
+                 "cruise-status", "cruise-stop", "cruise-tell", "cruise-watch", "add-service", "add-frontend",
+                 "catch-up")
 # Copied whole from `assets/profiles/event-modelling/commands/`; listed because the documentation names them in order.
 EVENT_COMMANDS = ("example-map", "validate-code-against-model")
 
@@ -331,6 +329,7 @@ def command_files(
         "commands/cruise-status.md": cruise_status_command(layout),
         "commands/cruise-stop.md": cruise_stop_command(layout),
         "commands/cruise-tell.md": cruise_tell_command(layout),
+        "commands/cruise-watch.md": cruise_watch_command(layout),
         "commands/where-are-we.md": where_are_we_command(event, target),
         "commands/whats-next.md": whats_next_command(event),
         "commands/gaps.md": gaps_command(event),
@@ -342,4 +341,5 @@ def command_files(
         "commands/benchmark.md": benchmark_command(layout),
     }
     files.update(add_command_files(apps, target))
+    files.update(catch_up_files(apps, target))
     return files

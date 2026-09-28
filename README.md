@@ -105,7 +105,8 @@ Four steps. You install a `slipwai` command and run it. You do not clone this re
 
 New here? Use the [generate learning path](docs/learn-generate.md), or
 [adopt](docs/learn-adopt.md) for an existing tree. Both cover install, first session, upgrade, migrate and
-`/catch-up`, with terminal screenshots.
+`/catch-up`, with terminal screenshots. The runsheets — [new project](docs/runsheet-greenfield.md) and
+[existing repository](docs/runsheet-brownfield.md) — are the same journeys as one ordered list of commands.
 
 [Scaffold a new project](docs/generating.md) is the full reference.
 [Tools required](docs/requirements.md) lists what each toolchain and `make` target needs.
@@ -215,6 +216,10 @@ changes. What changes is who answers.
 - **It never invents a fact.** A credential, an external system, a person's approval: the slice is marked
   blocked, the run takes the next ready slice, and a strong delegate works around the block — a fake behind
   the port, recorded as a fake, or the narrower reading that keeps every rule — and writes down what it did.
+- **It never makes a gate pass by changing the gate.** `scripts/`, the `Makefile`, `tools/`, CI and the hook
+  settings are not an iteration's to edit: Claude Code refuses the edit before it lands, and the runner parks
+  the run on any change to them, on every harness. A gate the tree cannot satisfy parks the run with the
+  gate's own words as the reason.
 - **Every merge is dark.** Under the default release setting each slice ships behind a flag seeded off.
   Nothing the run merged reaches a real actor until you turn a key on.
 - **Done means the specification is satisfied.** When the split runs out, an audit reads the specification
@@ -227,6 +232,7 @@ changes. What changes is who answers.
 /cruise-settings enabled=true            # switch it on; commits .specify/cruise.json
 /cruise use the PRD in docs/prd.md       # start the runner, detached, and watch it from this session
 /cruise-status                           # is it running, how the last iteration ended, the feed's tail
+/cruise-watch                            # sit back down at the watch seat, where the feed left off
 /cruise-tell take the payments feature next   # queued for the next iteration; --now ends the one in flight
 /cruise-stop                             # end the run after the iteration in flight; `now` ends it now
 ```
@@ -284,8 +290,8 @@ the paths and toolchains named in them are real.
 |---|---|
 | `/drive` | Takes one slice from wherever it stands to a demo the actor can see |
 | `/cruise` | Runs `/drive` on its own, deciding as the product owner and demoing as the actor, until the specification is satisfied. Stops only for a person. `/cruise <kick-off>` gives the first iteration a brief; the session then watches the run and answers you |
-| `/whats-next` | Says what is next — one slice, one stage, one command. Reads the disk and changes nothing |
-| `/where-are-we` | Shows the progress board: what works, what is in progress, what is still to come |
+| `/whats-next` | Says what is next — one slice, one stage, one command. Reads the disk and changes nothing; beside a running `/cruise`, says what the runner is on instead |
+| `/where-are-we` | Shows the progress board: what works, what is in progress, what is still to come; beside a running `/cruise`, the next row is the runner's |
 | `/gaps` | Reviews an artifact for holes, before they become rewritten tests |
 | `/example-map` | *Event profile.* Turns one slice of the event model into rules, examples and executable scenarios |
 | `/validate-code-against-model` | *Event profile.* Checks that the code and the event model still agree |
@@ -302,6 +308,7 @@ the paths and toolchains named in them are real.
 | `/cruise-status` | Says whether a `/cruise` runner is running, how its last iteration ended, and shows the tail of its feed |
 | `/cruise-stop` | Ends a `/cruise` run after the iteration in flight, or at once with `now` |
 | `/cruise-tell` | Queues a message for a running `/cruise`, which the next iteration carries; `--now` ends the iteration in flight for it |
+| `/cruise-watch` | Takes the watch seat beside a running `/cruise`: prints the feed as it is written and watches again, starting nothing |
 
 [The delivery loop](docs/delivery-loop.md) describes each one in full, and the ladder they sit on.
 
@@ -393,9 +400,11 @@ is which, what each answer brings, and how a project answers a question again la
 |---|---|
 | [Generate a new project — learning path](docs/learn-generate.md) | Install, generate, upgrade, migrate and `/catch-up`, with terminal screenshots |
 | [Adopt an existing repository — learning path](docs/learn-adopt.md) — **experimental** | Install, adopt, upgrade, migrate and `/catch-up`, with terminal screenshots |
+| [Runsheet: a new project](docs/runsheet-greenfield.md) | Every command in order, from `slipwai generate` to `/cruise`, and the three steps that keep the project in tune with each slipwai release |
+| [Runsheet: an existing repository](docs/runsheet-brownfield.md) — **experimental** | Every command in order, from `slipwai adopt` through `/ground` to `/cruise`, how to revisit an answer, and how to take each slipwai release |
 | [Scaffold a new project](docs/generating.md) | The interactive and argument forms, one-shot semantics, the generated repository layout, and the event-sourcing boundary between the services and `apps/web` |
 | [Bring a generated project forward](docs/upgrading.md) | `slipwai migrate`: a newer factory's output merged over a project already generated. What comes through clean, what conflicts and should, the catch-up notes it leaves for what a merge cannot do, and the gate that proves it |
-| [Adopt an existing repository](docs/adopting.md) — **experimental** | `slipwai adopt`: the method installed around a repository the factory did not make. The survey, the questions with the findings as defaults, what is written beside the code and never over it, what `project.json` records with provenance, and what it forfeits for a language the factory cannot generate |
+| [Adopt an existing repository](docs/adopting.md) — **experimental** | `slipwai adopt`: the method installed around a repository the factory did not make. The survey, the candidates `/ground` confirms, what is written beside the code and never over it, what `project.json` records with provenance, and what it forfeits for a language the factory cannot generate |
 | [The two workflows](docs/two-workflows.md) | Generated and adopted side by side: the same delivery loop, where each starts on its ladders, the adoption phases woven into `/drive`, the convergence map, and `slipwai converge` as the point where the distinction ends |
 | [Project shape](docs/axes.md) | Profiles, target, language, frontend and the axes. What each answer brings, why an unimplementable combination is refused, and how a project answers an axis again later |
 | [Tools required](docs/requirements.md) | What scaffolding needs, and what each generated toolchain and `make` target needs |
@@ -423,7 +432,7 @@ is which, what each answer brings, and how a project answers a question again la
 | Document | Covers |
 |---|---|
 | [Work on the factory](docs/maintaining.md) | `make verify` and the gates it runs, how `src/slipwai/` is laid out and the check that keeps it that way, browsing generated starters, and regenerating dependency locks |
-| [Architecture decisions](docs/adr/) | The factory's own decisions, in the shape its `architecture-decisions` skill asks of a generated project. Here that mostly means the shape of something a project persists, because a project's log is the one thing no version of this factory can migrate for it. [`0001`](docs/adr/0001-a-dcb-capable-log.md) covers the log's derived tag index and why stream-per-aggregate stays the default write path. [`0002`](docs/adr/0002-the-guard-a-slice-declares.md) covers the guard a slice declares, and identity modelled while tags are not |
+| [Architecture decisions](docs/adr/) | The factory's own decisions, in the shape its `architecture-decisions` skill asks of a generated project. Here that mostly means the shape of something a project persists, because a project's log is the one thing no version of this factory can migrate for it. [`0001`](docs/adr/0001-a-dcb-capable-log.md) covers the log's derived tag index and why stream-per-aggregate stays the default write path. [`0002`](docs/adr/0002-the-guard-a-slice-declares.md) covers the guard a slice declares, and identity modelled while tags are not; and, for what an *adopted* repository persists, [`0003`](docs/adr/0003-a-wrapped-application-begins-as-a-candidate.md), a wrapped application beginning as a candidate the coding agent confirms |
 | [The canonical toolkit](assets/README.md) | The asset tree: where to edit skills, docs, gate scripts, language and frontend packs, and axis adapters |
 | [What a backend owes](docs/backend-obligations.md) | The checklist behind adding a language or a framework: every axis, every `make` target and which gate runs it, every per-backend table, the choices that belong to the ecosystem rather than to this repository, and what a framework that owns startup provides instead of a hand-written adapter |
 | [Publish the factory to Gitea](docs/publishing.md) | `scripts/publish-to-gitea.py`, cutting a release with `make release`, and the local `pages` server |

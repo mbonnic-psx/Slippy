@@ -156,6 +156,7 @@ A project ships with `/cruise` disabled. To start, in any harness's session:
 /cruise                           # starts the runner, detached from this session, and watches it from here
 /cruise use the PRD in docs/prd.md   # the same, with a kick-off the first iteration is given
 /cruise-status                    # is a runner running, how the last iteration ended, the tail of the feed
+/cruise-watch                     # sit back down at the watch seat, where the feed left off, starting nothing
 /cruise-stop                      # end the run after the iteration in flight; `/cruise-stop now` ends it now
 /cruise-tell take the payments feature next   # queued: the next iteration carries it; `--now` first ends the one in flight for it
 ```
@@ -191,10 +192,17 @@ continues, and ends the turn when it says parked, ended or no runner. Watching i
 runner needs nothing from the session, so leaving the seat ends nothing, and `/cruise` typed again later
 finds the runner running and sits back down where the feed left off. A person typing into that session is
 talking to the agent, not stopping the run: it answers — the feed, the settings, the status, the decision log
-— changes a setting through `/cruise-settings` where asked, and watches again. Every line `watch` printed
+— changes a setting through `/cruise-settings` where asked, and watches again. Where the person asks where the
+run stands or what is next, `/where-are-we` and `/whats-next` answer from disk beside the run: each first
+runs `python3 scripts/agents/cruise.py where`, which prints the runner's iteration, the checkpoint's slice,
+stage and next step, and a park's reason — and prints nothing where no runner is running, so outside a run
+both commands answer exactly as they always did. Under a run their step for a person is never a command to
+type: the runner is on it, and `/cruise-tell` is how to steer it. Every line `watch` printed
 goes into the reply unchanged, because a harness folds a command's output to a few lines and the feed has to
-reach the person, not the transcript. From a terminal, `make cruise-watch` is the same seat, and
-`/cruise-status` in any session is the runner's state and the feed's tail without sitting down.
+reach the person, not the transcript. `/cruise-watch` is the seat on its own — a session that read a
+`/cruise-status` and stopped watching sits back down with it, starting nothing — and `make cruise-watch` is
+the same seat from a terminal; `/cruise-status` in any session is the runner's state and the feed's tail
+without sitting down.
 
 The feed is the harness's own event stream, rendered. The registry's `headless` row names the stream where a
 harness has one — Claude Code's `--output-format stream-json --verbose`, Codex's `exec --json` — and the
@@ -231,9 +239,20 @@ iteration honour it whenever the file exists: `--mcp-config` on Claude Code, who
 nobody has trusted ignores the project's settings, the servers they approve and the allow rules they carry
 (hooks still run); a one-run trust override on Codex, which skips every project `.codex/` layer in an
 untrusted project. What the iteration needs travels on its command line. Before the first iteration, `start` says how the index will be
-reached, or that it cannot be, and `status` says afterwards in how many iterations it was asked; an index
-kept fresh and never queried is the failure the block in `AGENTS.md` describes, and the count is what makes
-it visible. `--sandbox` on `run` or `start` swaps in the row's `sandboxPermissions`, which bypasses every
+reached, or that it cannot be. Before every iteration the runner makes the index one it can query
+(`scripts/agents/code_index.py health`): it opens the database and runs SQLite's integrity check, moves a
+corrupt one to `.codegraph/corrupt/` and rebuilds it — the database is ignored by Git and derived from the
+source, and CodeGraph's own `status` and `sync` call a malformed one up to date — and syncs one the tree has
+moved past; the entry's `index` says which, and the feed says it before the iteration starts. Inside the
+iteration, on Claude Code, a `PostToolUse` hook syncs the index each time a delegate returns (CodeGraph's watcher
+is off wherever it decides it is sandboxed, so the index is not trusted to follow), and a `PreToolUse` hook
+refuses a search of the source for a symbol from any session or delegate — told apart by the event's `agent_id`
+— that has not asked the index yet, naming `scripts/codegraph callers <symbol>` instead; words, phrases and
+searches confined to documents are never refused. After it, the entry's `index_use` and the feed count index
+queries per agent, the host and each delegate in the order it was sent, and name the one that searched the
+source for a symbol first, which `status` repeats for the last five iterations. A harness whose stream does not
+mark a delegate's events is counted as the host alone; there the hooks do not exist either, and the count and
+`make check-codegraph` are what is left. `--sandbox` on `run` or `start` swaps in the row's `sandboxPermissions`, which bypasses every
 check, and is for a container with nothing to lose. Which tools a whole build needs is measured, not
 guessed: every refusal is in the feed as it happens, and `python3 scripts/agents/cruise.py denials` lists
 them all afterwards from the raw stream, by tool and command, with the iterations each happened in — the
@@ -394,7 +413,7 @@ it marks the slice blocked, takes the next ready slice, and hands the block to a
    `unrecorded` or `detected`: the bosun works on the survey's value as a stated assumption and never marks
    it `confirmed`.
 3. **Repair the run.** Rebase and resolve, finish or revert what a dead delegate left, find why a gate
-   loops.
+   loops and fix the cause in the tree the gate measures.
 
 Every move is an entry in `decisions.md` with `Decided by: drive-bosun`, the condition under which a person
 should undo it, and a task in the next slice to remove the stub when the real thing arrives. Nothing done to
@@ -404,8 +423,26 @@ bosun one iteration before it parks, and the log marks that iteration `attempt: 
 **What always parks.** The bosun refuses, and the run parks, at anything on this list: destroying data or
 history; releasing what a person has not asked for, such as turning a flag on or deploying to production;
 spending money or exposing a secret; weakening security; discarding a person's commits to make a checkout
-consistent. It also parks when the bosun could not move the block. `unblock: park` switches the bosun off
-and parks at once.
+consistent; making a gate pass by changing the gate. It also parks when the bosun could not move the block.
+`unblock: park` switches the bosun off and parks at once.
+
+**A failing gate is never repaired in the gate.** A run once met `check-ux-gates` failing because two of the
+kit's scripts crash where Chrome is not installed, and the bosun patched `scripts/check-ux-gates.py` to call
+that skipped, committed it, and went on. That is a gate made to pass, and the rule is now held mechanically
+rather than said louder. Nothing under `scripts/` — the `check-*` gates, the runner itself — the `Makefile`,
+anything under `tools/`, CI, or a harness's hook settings is an iteration's to change. `make verify` red on the
+slice's own tree is the slice's work; red for a reason the tree cannot fix — a browser the machine has not got,
+a tool not installed, a kit script that crashes — parks the run with the gate's own words as the reason,
+`cruise: parked: <gate>: <what it said>`, so a person reads what the gate said and not what an iteration made
+of it. Two controls hold it. On Claude Code, `python3 scripts/agents/cruise.py guard` runs as the `PreToolUse`
+hook of every editing tool (`Edit`, `Write`, `MultiEdit`, `NotebookEdit`) and, in a session the runner
+started, refuses an edit to any of those paths before it lands, with the reason as the tool's result — a
+2.1.281 print session, probed 2026-09-24. And on every harness the runner takes the content of every file
+under those paths before an iteration and compares it after: any file modified, deleted or added — except a
+file installed under `tools/`, which is what `./init --extension` does — parks the run at once, naming the
+files, whatever the iteration's last line said; the log entry carries them as `controls_changed`. A person
+reverts the change, or keeps it on purpose and resumes with a message. Outside a runner's iteration neither
+control does anything: a person's `/drive` session edits a gate when a gate needs editing.
 
 ## The limits
 

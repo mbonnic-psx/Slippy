@@ -36,28 +36,32 @@ CHANGE = "\n\nA sentence a newer factory added.\n"
 IDENTITY = (
     "-c", "user.name=product", "-c", "user.email=product@local", "-c", "maintenance.auto=false", "-c", "gc.auto=0",
 )
-# Per fixture: the flags `adopt --yes` is given, and the tool its own build needs on this machine for `verify`.
-ADOPTIONS: dict[str, tuple[list[str], str]] = {
+# Per fixture: the flags `adopt --yes` is given, the tool its own build needs on this machine for `verify`, and the
+# `toolchain.kind` and `toolchain.ecosystem` the adopted `project.json` has to record for its deployable.
+ADOPTIONS: dict[str, tuple[list[str], str, tuple[str, str]]] = {
     # A language the factory cannot generate, with a linter that is red on day one on purpose.
     "javascript-service": (
         ["--why", "the runtime is end of life", "--purpose", "javascript-service=Sells things."], "node",
+        ("node", "node"),
     ),
     # The survey proposes pytest for a `tests/` directory; the repository runs unittest, and the flag says so.
-    "python-worker": (["--command", "python-worker:test=python3 -m unittest discover -s tests -v"], "python3"),
+    "python-worker": (["--command", "python-worker:test=python3 -m unittest discover -s tests -v"], "python3",
+        ("python", "python"),
+    ),
     # A language the factory generates, so `add-service --language go` could put a generated service beside it.
-    "go-module": ([], "go"),
+    "go-module": ([], "go", ("go", "go")),
     # A crate with a committed lockfile and no dependencies: the survey proposes Cargo, and the fixture's own gate
     # (clippy, fmt, test) is green where `cargo` is on the machine.
-    "rust-crate": ([], "cargo"),
+    "rust-crate": ([], "cargo", ("rust", "cargo")),
     # A language the factory cannot generate, whose toolchain the gate's machine may not have.
-    "dotnet-api": ([], "dotnet"),
+    "dotnet-api": ([], "dotnet", ("dotnet", "dotnet")),
     # CI on GitLab, a deploy job, a start script, and a test suite that is red on day one: the gate is a GitLab
     # job and not a GitHub workflow, the release path and the kind are read off the tree, and the red suite stops
     # the first `verify` and says so — quarantined only when `ratchet-tighten` is asked for by name.
-    "javascript-gitlab": (["--purpose", "javascript-gitlab=Takes orders."], "node"),
+    "javascript-gitlab": (["--purpose", "javascript-gitlab=Takes orders."], "node", ("node", "node")),
     # An Ant build from a NetBeans layout, its jars committed: below the floor the method holds a repository to, so
     # the programme opens with the move to Maven or Gradle, and the survey neither refuses it nor crashes on it.
-    "ant-desktop": ([], "ant"),
+    "ant-desktop": ([], "ant", ("java", "ant")),
 }
 # A fixture whose test suite is red on day one: the first `verify` stops and says so — a red suite is never
 # quarantined behind anybody's back — and `ratchet-tighten` is the person's decision to quarantine it, after which the
@@ -68,6 +72,17 @@ FLOOR = {"ant-desktop": "the build is Ant with its jars committed — move it to
 # What the tree itself says is out of support, per fixture, as the support table dates it: the recommendation and
 # the architecture view have to say so even with no `why` recorded.
 EXPIRED = {"go-module": "Go 1.22 left support on 2025-02-11"}
+
+
+# What `adopt` records for the Rust crate, exactly as `specs/001-rust-cargo-adopt/plan.md`'s Design table has it:
+# four commands and four that are not recorded (the toolchain version is empty: the tree's pin is not read).
+RUST_COMMANDS = {
+    "install": "cargo fetch --locked",
+    "typecheck": "cargo check --all-targets",
+    "lint": "cargo clippy --all-targets --message-format=short -- -D warnings && cargo fmt --check",
+    "test": "cargo test",
+    "integration": None, "adversarial": None, "audit": None, "mutation": None,
+}
 
 
 def run(*command: str, cwd: Path, env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
@@ -86,6 +101,21 @@ def clean(repo: Path) -> bool:
 
 def own_files(fixture: Path) -> dict[str, bytes]:
     return {path.relative_to(fixture).as_posix(): path.read_bytes() for path in fixture.rglob("*") if path.is_file()}
+
+
+def recorded(repo: Path, name: str, expected: tuple[str, str]) -> None:
+    """The adopted `project.json` names the fixture's one deployable with the toolchain kind and ecosystem its row
+    expects — and, for the Rust crate, no version and exactly the commands the survey table gives."""
+    deployables = json.loads((repo / "project.json").read_text())["deployables"]
+    deployable = deployables.get(name) or {}
+    toolchain = deployable.get("toolchain") or {}
+    if (toolchain.get("kind"), toolchain.get("ecosystem")) != expected:
+        raise SystemExit(
+            f"test-adoption: {name}: project.json records toolchain {toolchain}, expected kind and ecosystem {expected}"
+        )
+    if name == "rust-crate" and (toolchain.get("version") != "" or deployable.get("commands") != RUST_COMMANDS):
+        raise SystemExit(f"test-adoption: {name}: project.json records {toolchain} and {deployable.get('commands')}, "
+                         f"not an empty version and {RUST_COMMANDS}")
 
 
 def newer_factory(into: Path) -> Path:
@@ -141,7 +171,9 @@ def quarantine(repo: Path, tool: str) -> None:
     print("  day one: the red suite stopped verify and said so; ratchet-tighten quarantined it on request")
 
 
-def adopt_fixture(name: str, flags: list[str], tool: str, work: Path, factory: Path) -> None:
+def adopt_fixture(
+    name: str, flags: list[str], tool: str, expected: tuple[str, str], work: Path, factory: Path
+) -> None:
     fixture = FIXTURES / name
     original = own_files(fixture)
     repo = work / name
@@ -215,6 +247,7 @@ def adopt_fixture(name: str, flags: list[str], tool: str, work: Path, factory: P
     hooks = (repo / ".specify/extensions.yml").read_text()
     if "before_specify:" not in hooks or "before_plan:" not in hooks or hooks.count("convergence-map") < 2:
         raise SystemExit(f"test-adoption: {name}: .specify/extensions.yml lacks the adoption's hooks")
+    recorded(repo, name, expected)
     print("  adopted: one commit by the factory; nothing of theirs written over; /drive grounds, pins, holds the map")
 
     refreshed = must(run(str(FACTORY / "slipwai"), "adopt", "--refresh", cwd=repo), "adopt --refresh")
@@ -393,8 +426,8 @@ def main() -> int:
         work = Path(scratch)
         factory = newer_factory(work)
         for name in names:
-            flags, tool = ADOPTIONS[name]
-            adopt_fixture(name, flags, tool, work, factory)
+            flags, tool, expected = ADOPTIONS[name]
+            adopt_fixture(name, flags, tool, expected, work, factory)
         if run_journey:
             journey(work, factory)
         if args.keep is not None:

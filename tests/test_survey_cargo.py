@@ -32,7 +32,10 @@ class CargoSurveyTest(unittest.TestCase):
             self.assertEqual((crate.language, crate.ecosystem, crate.evidence), ("rust", "cargo", "Cargo.toml"))
             self.assertEqual(crate.commands["install"], "cargo fetch --locked")
             self.assertEqual(crate.commands["typecheck"], "cargo check --all-targets")
-            self.assertEqual(crate.commands["lint"], "cargo clippy --all-targets -- -D warnings && cargo fmt --check")
+            self.assertEqual(
+                crate.commands["lint"],
+                "cargo clippy --all-targets --message-format=short -- -D warnings && cargo fmt --check",
+            )
             self.assertEqual(crate.commands["test"], "cargo test")
             for target in ("integration", "adversarial", "audit", "mutation"):
                 self.assertIn(target, crate.commands)
@@ -51,7 +54,9 @@ class CargoSurveyTest(unittest.TestCase):
             self.assertEqual(commands["install"], "cd crates/ledger && cargo fetch --locked")
             self.assertEqual(commands["typecheck"], "cd crates/ledger && cargo check --all-targets")
             self.assertEqual(
-                commands["lint"], "cd crates/ledger && cargo clippy --all-targets -- -D warnings && cargo fmt --check"
+                commands["lint"],
+                "cd crates/ledger && cargo clippy --all-targets --message-format=short -- -D warnings"
+                " && cargo fmt --check",
             )
             self.assertEqual(commands["test"], "cd crates/ledger && cargo test")
 

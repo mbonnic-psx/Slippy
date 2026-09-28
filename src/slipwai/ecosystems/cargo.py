@@ -15,7 +15,9 @@ def cargo(root: Path, directory: str) -> Detected | None:
         complete(
             install=in_dir(directory, "cargo fetch --locked"),
             typecheck=in_dir(directory, "cargo check --all-targets"),
-            lint=in_dir(directory, "cargo clippy --all-targets -- -D warnings && cargo fmt --check"),
+            lint=in_dir(
+                directory, "cargo clippy --all-targets --message-format=short -- -D warnings && cargo fmt --check"
+            ),
             test=in_dir(directory, "cargo test"),
         ),
         {"kind": "rust", "version": ""},

@@ -219,8 +219,8 @@ a `docker compose` the day you want the integration suite; defaulting to the oth
 ### Which backend can be given what
 
 An option declares the backends it is implemented for, so coverage is a fact about the catalog rather than
-a promise. Every axis is currently implemented for every backend but Rust, whose walking skeleton landed
-before its adapters and which answers none yet, and this table is what keeps that sentence honest: it is checked against `catalog.json` by
+a promise. Every axis is currently implemented for every backend but Rust, whose adapters are arriving an axis
+at a time and which answers the event store so far, and this table is what keeps that sentence honest: it is checked against `catalog.json` by
 `tests/test_catalog.py::test_the_documented_axis_coverage_is_the_catalog_s`, so a backend added without
 adapters appears here as a row of dashes instead of silently falsifying the claim.
 
@@ -231,7 +231,7 @@ adapters appears here as a row of dashes instead of silently falsifying the clai
 | `go` | `memory`, `sqlite`, `postgres` | `none`, `net-http` | `none`, `keycloak` | `none`, `keycloak` |
 | `java-quarkus` | `memory`, `sqlite`, `postgres` | `none`, `quarkus-rest` | `none`, `keycloak` | `none`, `keycloak` |
 | `java-spring` | `memory`, `sqlite`, `postgres` | `none`, `spring-web` | `none`, `keycloak` | `none`, `keycloak` |
-| `rust` | — | — | — | — |
+| `rust` | `memory`, `sqlite`, `postgres` | — | — | — |
 
 Under the `aws` target the same backends are offered these menus — checked by `tests/test_targets.py`:
 
@@ -251,8 +251,8 @@ Each answer arrives in that backend's own idiom:
 | Answer | What arrives | Dependency |
 |---|---|---|
 | `memory` | The in-memory adapter behind the event-store port, and the contract suite it answers to | none |
-| `sqlite` | A real append-only log in one file — schema in the adapter, no container, no migration step | none in TypeScript (`node:sqlite`) or Python (`sqlite3`); `modernc.org/sqlite` in Go, which needs no cgo; `org.xerial:sqlite-jdbc` in Java, which is the one place either Java backend does not use a framework integration — Quarkus publishes no first-party SQLite extension and the Quarkiverse one tracks Quarkus 3.0, and Spring Boot needs none because the adapter opens its own `SQLiteDataSource` |
-| `postgres` | An append-only event-store table, its migrations, the Postgres adapter, and the integration suite that races two appends at one version | `pg`, `psycopg`, `pgx/v5`; in Java the framework's own — `quarkus-jdbc-postgresql` with `quarkus-agroal` for the pool and `quarkus-flyway` for the migrations, or `spring-boot-starter-jdbc` with HikariCP and `spring-boot-starter-flyway` |
+| `sqlite` | A real append-only log in one file — schema in the adapter, no container, no migration step | none in TypeScript (`node:sqlite`) or Python (`sqlite3`); `modernc.org/sqlite` in Go, which needs no cgo; `sqlx` with its `sqlite` feature in Rust; `org.xerial:sqlite-jdbc` in Java, which is the one place either Java backend does not use a framework integration — Quarkus publishes no first-party SQLite extension and the Quarkiverse one tracks Quarkus 3.0, and Spring Boot needs none because the adapter opens its own `SQLiteDataSource` |
+| `postgres` | An append-only event-store table, its migrations, the Postgres adapter, and the integration suite that races two appends at one version | `pg`, `psycopg`, `pgx/v5`, `sqlx` with its `postgres` and `migrate` features in Rust; in Java the framework's own — `quarkus-jdbc-postgresql` with `quarkus-agroal` for the pool and `quarkus-flyway` for the migrations, or `spring-boot-starter-jdbc` with HikariCP and `spring-boot-starter-flyway` |
 | `fastify` / `fastapi` / `net-http` / `quarkus-rest` / `spring-web` | The HTTP driving adapter, its 404-hardening default correction, edge tests that dispatch through the real router with no socket, and the one entry point that binds a port — `make dev`, and the `service` in Compose | `fastify`; `fastapi`+`uvicorn`; none (Go's standard library); `quarkus-rest`+`quarkus-rest-jackson` with `quarkus-smallrye-health` serving the probe; `spring-boot-starter-web` on virtual threads with `spring-boot-starter-actuator` serving it |
 | `keycloak` | A realm imported at start-up, the group-to-role mapping, and the OIDC adapter — with the protocol flow deliberately left unimplemented, except on either Java backend, where the framework's client performs it and only the mapping is this project's | none in TypeScript, Python and Go; `quarkus-oidc`, or `spring-boot-starter-oauth2-resource-server` |
 | `keycloak` on `--users` | A second realm, `customers`, in the same container — self-registration and password reset on, a public PKCE client, a bearer-only `api` client stamped into every token's audience; in every browser app the login, session and silent renewal; in the service the customer adapter, which refuses any issuer but this realm's and any unverified email — with token validation left unimplemented where nothing owns startup, and on Java a named `quarkus-oidc` tenant or a second Spring Security filter chain for `/api/customers/**` | `react-oidc-context` and `oidc-client-ts` in the browser app; none in TypeScript, Python and Go services; the same Java dependencies as `--auth`, in a region both share |

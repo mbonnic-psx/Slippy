@@ -36,6 +36,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 # Path setup has to happen first, hence the E402s.
 from slipwai.assets import FRONTEND_ROOT  # noqa: E402
+from slipwai.project.languages import cargo  # noqa: E402
 from slipwai.project.languages.go import go_module_variant  # noqa: E402
 from slipwai.project.languages.python import (  # noqa: E402
     LOCK_FEATURES as PYTHON_LOCK_FEATURES,
@@ -261,6 +262,43 @@ def go_module_files() -> dict[Path, str]:
     return wanted
 
 
+def rust_locks() -> dict[Path, str]:
+    """One workspace `Cargo.lock` per union of Rust dependency sets (`project/languages/cargo.py`).
+
+    Resolved in a throwaway workspace whose one member, named with the placeholder the factory replaces,
+    asks for every crate the union needs — `sqlx` once, with every store's features, which is exactly what
+    Cargo unifies two services on two stores into. `cargo generate-lockfile` is the resolution; nothing here
+    edits a lock by hand.
+    """
+    wanted: dict[Path, str] = {}
+    store_sets = [
+        stores for size in range(len(cargo.STORES) + 1) for stores in itertools.combinations(cargo.STORES, size)
+    ]
+    for stores in store_sets:
+        variant = "-".join(["memory", *stores])
+        crates = "".join(f"{name} = {spec}\n" for name, spec in cargo.EVENT_STORE_CRATES.items())
+        if stores:
+            features = sorted({feature for store in stores for feature in cargo.SQLX_FEATURES[store]})
+            listed = ", ".join(f'"{feature}"' for feature in features)
+            crates += (
+                f'sqlx = {{ version = "{cargo.SQLX_VERSION}", default-features = false, features = [{listed}] }}\n'
+            )
+        with tempfile.TemporaryDirectory() as staging:
+            workspace = Path(staging)
+            (workspace / "Cargo.toml").write_text('[workspace]\nresolver = "3"\nmembers = ["member"]\n')
+            (workspace / "member/src").mkdir(parents=True)
+            (workspace / "member/src/lib.rs").write_text("")
+            (workspace / "member/Cargo.toml").write_text(
+                f'[package]\nname = "{cargo.PLACEHOLDER}"\nversion = "0.1.0"\nedition = "2024"\n\n'
+                f"[dependencies]\n{crates}"
+            )
+            result = subprocess.run(["cargo", "generate-lockfile"], cwd=workspace, capture_output=True, text=True)
+            if result.returncode != 0:
+                raise SystemExit(f"`cargo generate-lockfile` failed for the {variant} lock:\n{result.stderr}")
+            wanted[cargo.LOCKS / variant / "Cargo.lock"] = (workspace / "Cargo.lock").read_text()
+    return wanted
+
+
 def targets() -> dict[Path, str]:
     """Every lockfile this repository commits, mapped to the content it should hold."""
     wanted: dict[Path, str] = {}
@@ -275,6 +313,7 @@ def targets() -> dict[Path, str]:
         wanted[FRONTEND_ROOT / f"react-vite/locks/{name}"] = frontend_only_lock(web_features)
     wanted.update(python_locks())
     wanted.update(go_module_files())
+    wanted.update(rust_locks())
     return wanted
 
 
@@ -283,7 +322,7 @@ def main() -> int:
     parser.add_argument("--check", action="store_true", help="report stale lockfiles without writing any")
     arguments = parser.parse_args()
 
-    for tool in ("npm", "uv", "go"):
+    for tool in ("npm", "uv", "go", "cargo"):
         if shutil.which(tool) is None:
             print(f"{tool} is required to resolve a dependency tree.", file=sys.stderr)
             return 2

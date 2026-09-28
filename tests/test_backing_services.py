@@ -74,7 +74,7 @@ class BackingServicesTest(FactoryTestCase):
                 sources = [
                     path.read_text()
                     for path in sorted((repo / "apps/service").rglob("*"))
-                    if path.is_file() and path.suffix in {".go", ".java", ".js", ".py", ".sql", ".ts"}
+                    if path.is_file() and path.suffix in {".go", ".java", ".js", ".py", ".rs", ".sql", ".ts"}
                 ]
                 service = "\n".join(sources)
                 # Named types, not one alias twice. Spelled `...ID` in Go and `...Id` elsewhere, which is
@@ -328,7 +328,7 @@ class BackingServicesTest(FactoryTestCase):
                     any("contract" in path for path in always), f"{backend}: no contract suite in memory"
                 )
                 self.assertTrue(any("events" in path for path in always), f"{backend}: no port in memory")
-                for feature in ("memory", "sqlite", transport):
+                for feature in ("memory", "sqlite", *([transport] if transport != "none" else [])):
                     for destination in layout[feature]:
                         path = repo / "apps/service" / self.generated_path(backend, "store", destination)
                         self.assertTrue(path.is_file(), f"{backend}: {path}")

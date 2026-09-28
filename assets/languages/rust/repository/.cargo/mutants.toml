@@ -1,0 +1,10 @@
+# cargo-mutants' configuration, read from the workspace root when `make mutation` runs in any Rust service.
+#
+# A run fails on any surviving mutant, which is cargo-mutants' own default and the gate this project wants:
+# a survivor is a test to write, or an equivalent mutant to name in the commit that excludes it.
+#
+# Left out, as Go's `.gremlins.yaml` leaves them out: the Postgres adapters, which only
+# `make test-integration` exercises, so in the default suite every mutant in them would survive for want of a
+# database rather than a test; entry points under `src/bin/`, which are wiring; and the contract suites, which
+# are test code every adapter runs, where a survivor is a weakness in a helper rather than a rule nothing checks.
+exclude_globs = ["**/src/bin/**", "**/*_postgres.rs", "**/*_contract.rs"]

@@ -197,6 +197,7 @@
             "typescript",
             "python",
             "go",
+            "rust",
             "java-quarkus",
             "java-spring"
           ],
@@ -222,6 +223,7 @@
             "typescript",
             "python",
             "go",
+            "rust",
             "java-quarkus",
             "java-spring"
           ],
@@ -247,6 +249,7 @@
             "typescript",
             "python",
             "go",
+            "rust",
             "java-quarkus",
             "java-spring"
           ],

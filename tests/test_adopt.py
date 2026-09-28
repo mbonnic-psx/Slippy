@@ -338,6 +338,7 @@ class AdoptTest(FactoryTestCase):
             self.assertNotEqual(nothing.returncode, 0)
             self.assertIn("nothing here starts a build the survey can read", nothing.stderr)
             self.assertIn("build.xml", nothing.stderr)
+            self.assertIn("Cargo.toml", nothing.stderr)
             self.assertNotIn("Traceback", nothing.stderr)
             self.assertFalse((prose / "project.json").exists())
             skipped = slipwai(repo, "adopt", "--yes", "--skip", "shop")

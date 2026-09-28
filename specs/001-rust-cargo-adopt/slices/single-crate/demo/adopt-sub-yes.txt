@@ -1,0 +1,20 @@
+adopted carin-sub with slipwai 1.4.0.dev0 — experimental: this path is new, its shape may change in a MINOR, and what surprised you belongs on the public issue tracker
+294 files written under delivery/ and beside it; nothing of the repository's own was written over. One commit by the factory; `git reset --hard HEAD^` undoes all of it.
+  ledger: crates/ledger (rust; what it is for is not recorded), 4 of 8 targets have a command; the rest are written no's
+  Nobody has looked at it: every fact above is the survey's own reading, recorded `detected`. /ground asks, and `/survey` refreshes what stays the tree's word.
+CI: none found in this repository, so nothing was written; when there is one, have it run `make -f delivery/Makefile verify`.
+How a change reaches production: not recorded — nothing in the tree says, and nobody has yet; `--release` or project.json's `release` is where to say it, and /drive asks before the first slice (unrecorded).
+Map: delivery/docs/convergence.md — 1 of 9 axes at a generated project's rung, 4 below, 4 unrecorded; verify holds it, /survey refreshes it.
+Platform: nothing the survey can date — no runtime pin, framework version or image; /ground asks.
+Strategy: recommended `leave-it` — no business trigger is recorded, so nothing is asking for the architecture to change; the delivery rungs below pay off whatever the trigger turns out to be. Decided: nothing yet; an accepted ADR with a Strategy line decides, leave-it included.
+Appended a marked block to AGENTS.md and .gitignore; edit around it, not inside it.
+Wrote .claude/settings.json, since there was none.
+Wrote Makefile with `-include delivery/Makefile`, since there was none: `make verify` is one word.
+
+Next: ./delivery/init — installs Spec Kit and projects the skills and commands into Claude Code, which this record already names, so it asks nothing (./delivery/init --integration <agent> changes it). Add --extension codegraph to index the code for that agent.
+Then: /ground, in the agent — it asks what the tree could not say, one row of the map at a time, and records each answer with its provenance; what --yes left unrecorded is settled there.
+Then: make verify — the gate. Its first run records the lint and typecheck findings that are there as the baseline; commit delivery/baseline.json with what init wrote. A test suite that is red stops that run and says so: read the failures, then `make ratchet-tighten` quarantines it deliberately.
+Read delivery/docs/adoption.md — what was wrapped, what that forfeits, and where each fact came from — and delivery/docs/convergence.md, where this repository stands and what is next; delivery/survey/survey.md is the survey with its evidence.
+This list scrolls away, and the sequence it names takes longer than one sitting: `slipwai adopt --next` says where you are in it, read off the tree rather than remembered.
+Agent: Claude Code (Claude Code set CLAUDECODE in the environment this ran in), recorded in project.json. `./init` projects the skills and commands into it without asking; `--integration <agent>` there changes it.
+exit 0

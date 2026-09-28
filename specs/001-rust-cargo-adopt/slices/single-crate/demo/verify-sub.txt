@@ -1,0 +1,65 @@
+make: Entering directory '/tmp/carin-sub'
+python3 delivery/scripts/ratchet.py ledger lint -- 'cd crates/ledger && cargo clippy --all-targets --message-format=short -- -D warnings && cargo fmt --check'
+    Checking ledger v0.1.0 (/tmp/carin-sub/crates/ledger)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.05s
+python3 delivery/scripts/ratchet.py ledger typecheck -- 'cd crates/ledger && cargo check --all-targets'
+    Checking ledger v0.1.0 (/tmp/carin-sub/crates/ledger)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.05s
+python3 delivery/scripts/check-imports.py
+check-imports: inward dependency rule holds
+python3 delivery/scripts/check-migrations.py
+check-migrations: every migration is additive, or a marked contraction of an earlier one; Go migrate images embed their .sql files
+python3 delivery/scripts/check-slice-scope.py
+check-slice-scope: on `master`, not a `slice/<id>` branch — nothing to hold
+python3 delivery/scripts/extensions/project.py --check
+check-extensions: no extension elected; nothing to project
+python3 delivery/scripts/agents/project.py --check
+check-agents: not initialized; no projections expected yet
+python3 delivery/scripts/agents/models.py --check && python3 delivery/scripts/agents/drive.py --check && python3 delivery/scripts/agents/cruise.py --check
+check-models: .specify/models.json names 17 stage(s) and 6 harness(es)
+check-drive: .specify/drive.json delegates per story and cycles per rule
+check-cruise: .specify/cruise.json is well-formed; /cruise is not enabled
+python3 delivery/scripts/check-speckit.py
+check-speckit: not initialized; nothing managed yet, 1 preset(s) valid
+python3 delivery/scripts/check-codegraph.py
+check-codegraph: no .codegraph/ — this project carries no code index; nothing to check
+python3 delivery/scripts/check-ux-gates.py
+check-ux-gates: not adopted (./init --extension ux-gates); nothing to check
+python3 delivery/scripts/check-constitution.py
+check-constitution: no constitution ratified yet; run /speckit-constitution (scripts/check-constitution.py --requirements prints what it must cover)
+python3 delivery/scripts/test_benchmark.py && python3 delivery/scripts/agents/benchmark.py check
+check-benchmark: 2 boundary and rendering checks pass
+check-benchmark: no record and no done slice yet — nothing to hold
+python3 delivery/scripts/check-decisions.py
+check-decisions: no decisions.md or demo-log.md under specs/ — nothing recorded yet
+python3 delivery/scripts/ratchet.py ledger test -- 'cd crates/ledger && cargo test'
+
+running 1 test
+test tests::adds_two_amounts ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling ledger v0.1.0 (/tmp/carin-sub/crates/ledger)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running unittests src/lib.rs (target/debug/deps/ledger-372c48b489db8841)
+   Doc-tests ledger
+python3 delivery/scripts/check-convergence.py
+  path-to-production: `unknown` — unrecorded: nothing has established it; /drive asks before the first slice
+  integration: `unknown` — unrecorded: nothing has established it; /drive asks before the first slice
+  safety-net: `tests-exist` — below `mutation-measured`
+  structure: `as-found` — below `typed`
+  platform: `unknown` — unrecorded: nothing has established it; /drive asks before the first slice
+  constitution: `template` — below `in-full`
+  data: `settled` — at target
+  infrastructure: `recorded` — below `settled`
+  strategy: `open` — unrecorded: nothing has established it; /drive asks before the first slice
+check-convergence: 1 of 9 axes at target; the map is delivery/docs/convergence.md
+
+verify: all gates passed
+make: Leaving directory '/tmp/carin-sub'
+exit 0

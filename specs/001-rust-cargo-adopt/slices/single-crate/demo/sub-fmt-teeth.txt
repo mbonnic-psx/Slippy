@@ -1,0 +1,14 @@
+$ (at /tmp/carin-sub root) cargo fmt --check
+exit 1 (no Cargo.toml at the root)
+$ ledger lint command, after indenting line 1 of crates/ledger/src/lib.rs
+    Checking ledger v0.1.0 (/tmp/carin-sub/crates/ledger)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.02s
+Diff in /tmp/carin-sub/crates/ledger/src/lib.rs:1:
+-   /// Adds two amounts.
+(B+/// Adds two amounts.
+(B pub fn add(a: i64, b: i64) -> i64 {
+     a + b
+ }
+exit 1
+$ same command after restoring the file
+exit 0

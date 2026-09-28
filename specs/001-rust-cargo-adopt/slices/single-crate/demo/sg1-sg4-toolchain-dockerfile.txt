@@ -1,0 +1,9 @@
+# seed: rust-crate fixture + rust-toolchain.toml (channel 1.80.0) + Dockerfile; slipwai adopt --yes --no-init
+carin-sg {"kind": "service", "path": ".", "toolchain": {"kind": "rust", "version": "", "ecosystem": "cargo"}, "provenance": {"language": "detected", "commands": "detected", "kind": "detected"}}
+## Builds
+
+- `.` — cargo, rust, from `Cargo.toml`; a service by `Dockerfile`
+
+Wrapped as: `carin-sg` (`.`).
+
+## Continuous integration

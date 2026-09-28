@@ -21,7 +21,10 @@ recorded root-relative either way, so a finding compares the same however the to
 neither, this cannot tell new findings from old: the exit code is compared instead, and the report says so. A
 command that could not run at all — its tool is not on this machine, which the shell reports as exit 127 (not
 found) or 126 (not executable) — has no findings to record: the run fails, names the tool, and writes nothing,
-because a baseline of "the build tool was missing" would pass forever on any machine that lacks it.
+because a baseline of "the build tool was missing" would pass forever on any machine that lacks it. Cargo
+reports a subcommand that is not installed (`cargo clippy` without the clippy component, `cargo fmt` without
+rustfmt) as `error: no such command: `clippy``, and exits 101 — the code a real clippy failure gives — so that
+message is read as the same thing: not runnable.
 
 `test` runs through the same ratchet, with one difference: a suite that is red on the day the method arrives is
 not quarantined behind anybody's back. The first run stops, shows the failures, and says what quarantining means;
@@ -48,6 +51,8 @@ from pathlib import Path
 RATCHETED = ("lint", "typecheck", "test")
 # What `sh -c` exits with when the command's tool is not there to run: 127 not found, 126 not executable.
 NOT_RUNNABLE = (126, 127)
+# Cargo's own "not installed" for a subcommand, printed with exit 101 — the code a failing clippy or test run gives.
+CARGO_NO_SUCH_COMMAND = re.compile(r"^error: no such command: `([^`]+)`", re.MULTILINE)
 # A token that names a file, with an optional position after it: `src/a.js:3:7`, `src/a.js(3,7)`, `Foo.cs(3,7)`.
 LOCATION = re.compile(
     r"(?P<path>(?:[\w.-]+/)*[\w.-]+\.[A-Za-z0-9]+)(?P<position>(?::\d+(?::\d+)?)|(?:\(\d+(?:,\d+)?\)))?"
@@ -193,7 +198,10 @@ def main(argv: list[str]) -> int:
     sys.stdout.write(output)
     sys.stdout.flush()
     name = f"{application} {target}"
-    if run.returncode in NOT_RUNNABLE:
+    no_such = CARGO_NO_SUCH_COMMAND.search(output) if run.returncode == 101 and tool == "cargo" else None
+    if no_such:
+        tool = f"cargo {no_such.group(1)}"
+    if run.returncode in NOT_RUNNABLE or no_such:
         print(
             f"ratchet: {name} could not run — `{tool}` is not on this machine (exit {run.returncode}), so there "
             "are no findings to hold the code to, and nothing is recorded. Install it, or change what project.json "

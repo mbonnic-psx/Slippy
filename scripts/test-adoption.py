@@ -46,6 +46,9 @@ ADOPTIONS: dict[str, tuple[list[str], str]] = {
     "python-worker": (["--command", "python-worker:test=python3 -m unittest discover -s tests -v"], "python3"),
     # A language the factory generates, so `add-service --language go` could put a generated service beside it.
     "go-module": ([], "go"),
+    # A crate with a committed lockfile and no dependencies: the survey proposes Cargo, and the fixture's own gate
+    # (clippy, fmt, test) is green where `cargo` is on the machine.
+    "rust-crate": ([], "cargo"),
     # A language the factory cannot generate, whose toolchain the gate's machine may not have.
     "dotnet-api": ([], "dotnet"),
     # CI on GitLab, a deploy job, a start script, and a test suite that is red on day one: the gate is a GitLab

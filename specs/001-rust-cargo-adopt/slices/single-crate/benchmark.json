@@ -330,6 +330,73 @@
       "signals": {
         "driver": "cruise"
       }
+    },
+    {
+      "stage": "gaps",
+      "started": "2026-09-28T23:17:52Z",
+      "planned": "gaps: strong → host model — `strong` maps to the host model",
+      "tasks": {
+        "start": {
+          "open": 6,
+          "done": 4
+        },
+        "end": {
+          "open": 9,
+          "done": 4
+        }
+      },
+      "ended": "2026-09-28T23:22:20Z",
+      "seconds": 268,
+      "span": {
+        "from": {
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/13c315f9-d3c8-4a58-9cb1-e6bfd6ce4750.jsonl": 1305702,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/13c315f9-d3c8-4a58-9cb1-e6bfd6ce4750/subagents/agent-a076a5d99009b3d29.jsonl": 323270,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/13c315f9-d3c8-4a58-9cb1-e6bfd6ce4750/subagents/agent-a5d9680c630d51ac7.jsonl": 260112,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/13c315f9-d3c8-4a58-9cb1-e6bfd6ce4750/subagents/agent-ab529379af5c9fe12.jsonl": 556823
+        },
+        "to": {
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/13c315f9-d3c8-4a58-9cb1-e6bfd6ce4750.jsonl": 1404300,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/13c315f9-d3c8-4a58-9cb1-e6bfd6ce4750/subagents/agent-a00c686029b55173d.jsonl": 431796,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/13c315f9-d3c8-4a58-9cb1-e6bfd6ce4750/subagents/agent-a076a5d99009b3d29.jsonl": 323270,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/13c315f9-d3c8-4a58-9cb1-e6bfd6ce4750/subagents/agent-a5d9680c630d51ac7.jsonl": 260112,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/13c315f9-d3c8-4a58-9cb1-e6bfd6ce4750/subagents/agent-ab529379af5c9fe12.jsonl": 556823
+        }
+      },
+      "usage": {
+        "source": "claude",
+        "session": "13c315f9-d3c8-4a58-9cb1-e6bfd6ce4750",
+        "read": "message.usage on each assistant line, once per requestId",
+        "host": {
+          "claude-opus-5-5": {
+            "input": 12,
+            "output": 6549,
+            "cache_read": 1067390,
+            "cache_creation": 11309
+          }
+        },
+        "subagents": {
+          "claude-opus-5-5": {
+            "input": 42,
+            "output": 671,
+            "cache_read": 1307819,
+            "cache_creation": 86431
+          }
+        },
+        "agents": [
+          "drive-gaps"
+        ]
+      },
+      "ran": [
+        "claude-opus-5-5"
+      ],
+      "agents": [
+        "drive-gaps"
+      ],
+      "delegated": true,
+      "signals": {
+        "gaps": 3,
+        "driver": "cruise"
+      }
     }
   ]
 }

@@ -98,3 +98,14 @@
 - **Confidence:** high · **Would reverse if:** the owner wants the database axis answered for Rust before #11
 - **Written to:** specs/001-rust-cargo-adopt/decisions.md
 - **Status:** standing
+
+## D10 — Gaps after converge: the proposed lint lets new clippy findings through the ratchet; what does lint propose?
+- **Stage:** gaps (after converge) · **Slice:** single-crate · **When:** 2026-09-29T01:55:00Z · **Iteration:** 2
+- **Question:** The adopted gate's ratchet keys a finding by a line naming a file at a position; clippy's default output puts the position on its own ` --> file:line:col` line, so every finding in a file is one key and a baselined crate passes with any number of new warnings (HIGH). SG3 and US1 scenario 2 fix the command's text.
+- **Options:** keep SG3 as written and record the hole · add `--message-format=short` to the clippy half, one line per finding (recommended by the gaps pass) · split lint and format, or run both with `;` keeping the worst exit
+- **Decision:** Lint is `cargo clippy --all-targets --message-format=short -- -D warnings && cargo fmt --check`, prefixed once as SG3 says. The `&&` stays: it is the order-and-chain the factory's own generated Rust gate uses (`src/slipwai/project/languages/rust.py:120`), and a red clippy that hides fmt drift until it is fixed is the same trade every combined lint makes. A clippy that is absent (exit 101, not 127) and the Catch-up wording are Phase 4 tasks.
+- **Why:** A maintainer who adopts a crate with existing warnings is promised that the gate only lets the count go down; with the default format that promise is false for every file that already has one warning. The short format keeps every other property of the command.
+- **Decided by:** host (stage recommendation)
+- **Confidence:** medium · **Would reverse if:** the owner wants lint and format as separate proposals, which would change the eight-target shape the survey records
+- **Written to:** specs/001-rust-cargo-adopt/spec.md, specs/001-rust-cargo-adopt/slices/single-crate/plan.md, specs/001-rust-cargo-adopt/slices/single-crate/research.md, specs/001-rust-cargo-adopt/decisions.md
+- **Status:** standing

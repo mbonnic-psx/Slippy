@@ -243,3 +243,20 @@ structure, platform or pipeline evidence.
 Handed back, not decided: `survey.DEPENDENCY_MANIFESTS` (`survey.py:80-83`) does not read `Cargo.toml`, so a
 database driver a crate names (`sqlx`, `diesel`, `tokio-postgres`) is not reported. SG's out-of-scope list names
 the manifest-keyed pages (#11) but not this one — the owner decides whether it is #11's or a task here.
+
+## Re-opened by the post-converge gaps pass (2026-09-29)
+
+- [ ] T011 [US1] **HIGH — each clippy finding is its own ratchet key** (D10; SG3 as amended). Files:
+  `src/slipwai/ecosystems/cargo.py`, `tests/test_survey_cargo.py`, a ratchet test beside the existing ones for
+  `assets/adoption/scripts/ratchet.py` (the one that already feeds other tools' output to `findings_in`),
+  `changelog.d/rust-cargo-adopt.md`. RED: the survey tests expect `--message-format=short` in every lint proposal
+  (root and subdirectory) and a ratchet test feeds `findings_in` clippy's short output with two findings in one file
+  and expects two keys — observe both fail for their own reason. GREEN: the row proposes the amended command; the
+  fragment quotes it. Sweep: every place the lint string is asserted or quoted.
+- [ ] T012 [US1] **MEDIUM (Phase 4) — a machine without the clippy or rustfmt component is not refused.** A missing
+  cargo subcommand exits 101, as a clippy `-D warnings` failure does, so the ratchet records `{exit: 101,
+  findings: []}` and passes on it after. Close it for every cargo subcommand the row proposes, in the ratchet
+  (`assets/adoption/scripts/ratchet.py`, cargo's `no such command` treated as not runnable), with its test.
+- [ ] T013 [US1] **LOW (Phase 4) — the fragment's Catch-up says refresh proposes a Cargo candidate; it reports it
+  `not wrapped`.** Reword `changelog.d/rust-cargo-adopt.md` to say what a maintainer does (`resurvey.py:174-178`,
+  `:343-347`), and add a refresh test for a Cargo root in an adopted repository after `tests/test_pin.py:117`.

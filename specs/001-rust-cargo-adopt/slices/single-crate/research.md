@@ -21,3 +21,9 @@ Every statement about Cargo below cites where it was read: `cargo help <command>
 
 The factory's own generated Rust projects (`assets/languages/rust/`) are depth 4 below this repository's root,
 past the survey's `DEPTH = 3`, so this repository's own survey does not start proposing them.
+- **`--message-format=short`** (added after the post-converge gaps pass, D10) — observed 2026-09-28 on a scratch
+  crate with two clippy findings: one line per finding, `src/lib.rs:1:32: error: unneeded \`return\` statement`,
+  where the default format puts the position on a separate ` --> src/lib.rs:1:32` line. The adopted gate's ratchet
+  (`assets/adoption/scripts/ratchet.py`, `findings_in`) keys a finding by a line naming a file at a position,
+  position dropped; with the default format every finding in one file collapses into one key, so a crate adopted
+  with one warning in `lib.rs` would let any number of new ones through.

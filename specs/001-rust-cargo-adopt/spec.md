@@ -33,7 +33,7 @@ commands from the survey output and the recorded `project.json`.
    the survey, **Then** one candidate is proposed at the root, its language is Rust, its ecosystem is Cargo, and
    its evidence is `Cargo.toml`.
 2. **Given** that candidate, **When** its commands are proposed, **Then** install is `cargo fetch --locked`,
-   typecheck is `cargo check --all-targets`, lint is `cargo clippy --all-targets -- -D warnings` followed by
+   typecheck is `cargo check --all-targets`, lint is `cargo clippy --all-targets --message-format=short -- -D warnings` followed by
    `cargo fmt --check`, test is `cargo test`, and integration and adversarial are recorded as no answer.
 3. **Given** a crate with no `deny.toml`, **When** commands are proposed, **Then** audit is recorded as no answer;
    **Given** a `deny.toml` beside the manifest, **Then** audit is `cargo deny check`.
@@ -117,9 +117,9 @@ added, each owned by this slice:
 - **SG2 — no Rust setup in the adopted CI yet.** Until `ci-toolchain`, the gate's workflow writes no setup step for
   kind `rust` (`adopted_ci.SETUP` has no row, and a kind it does not know is skipped, as today). This is a
   deliberate hole, shown under *Not working yet*, and not a fault.
-- **SG3 — the exact lint command.** At the root, lint is `cargo clippy --all-targets -- -D warnings && cargo fmt
+- **SG3 — the exact lint command.** At the root, lint is `cargo clippy --all-targets --message-format=short -- -D warnings && cargo fmt
   --check`; in a subdirectory `crates/ledger` every command is prefixed once, e.g.
-  `cd crates/ledger && cargo clippy --all-targets -- -D warnings && cargo fmt --check`, as other ecosystems
+  `cd crates/ledger && cargo clippy --all-targets --message-format=short -- -D warnings && cargo fmt --check`, as other ecosystems
   prefix theirs — the `cd` holds for both halves.
 - **SG4 — what the crate is for stays a question.** A crate's role is read only by the rules every ecosystem
   already shares — a `Dockerfile` beside it makes it a service, a directory named as a test suite makes it one —

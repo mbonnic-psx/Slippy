@@ -83,7 +83,7 @@ before the change in `delivery/survey/pinned.md`:
 | `evidence` | `prefixed(directory, "Cargo.toml")` |
 | install | `in_dir(directory, "cargo fetch --locked")` — whether or not `Cargo.lock` exists (edge case) |
 | typecheck | `in_dir(directory, "cargo check --all-targets")` |
-| lint | `in_dir(directory, "cargo clippy --all-targets -- -D warnings && cargo fmt --check")` — one prefix for both halves (SG3) |
+| lint | `in_dir(directory, "cargo clippy --all-targets --message-format=short -- -D warnings && cargo fmt --check")` — one prefix for both halves (SG3) |
 | test | `in_dir(directory, "cargo test")` |
 | integration, adversarial | `None` (FR-002) |
 | audit, mutation | `None` in this slice; `optional-tools` proposes them where configured |

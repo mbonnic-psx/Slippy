@@ -83,7 +83,7 @@ direction, at any point.
 | Axis | Stands at | Provenance | Evidence |
 |---|---|---|---|
 | Path to production | `pipeline` | `detected` | pipeline: .github/workflows/package.yml; pipeline: .github/workflows/publish-package.yml; pipeline: .github/workflows/release.yml; pipeline: .github/workflows/verify.yml; scripted: assets/targets/aws/scripts/deploy.py; scripted: assets/targets/azure/scripts/deploy.py; scripted: tests/fixtures/adopt/converging/deploy.sh; scripted: tests/fixtures/adopt/javascript-gitlab/deploy.sh; scripted: Makefile |
-| Integration | `unknown` | `unrecorded` | CI on github, gate .github/workflows/verify-delivery.yml |
+| Integration | `trunk` | `confirmed` | short-lived PR branches (most merged within an hour, 2026-09-23..28); CI does not run on the fork: zero workflow runs on mbonnic-psx/Slippy, no checks on PRs #8 and #12 (2026-09-28) |
 | Safety net | `tests-exist` | `detected` | test recorded for slipwai |
 | Structure | `named` | `detected` | slipwai: tool; not under apps/: . |
 | Platform | `supported` | `detected` | in support on 2026-09-28: Python 3.11; no audit command recorded for slipwai |

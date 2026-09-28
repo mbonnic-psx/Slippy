@@ -248,49 +248,38 @@ When in force, this principle reads:
 
 ### X. Continuous Integration on Trunk (NON-NEGOTIABLE)
 
-<!-- journey: trunk-based-integration at unknown -->
-**A target, not yet in force.** On the *integration* ladder this repository stands at `unknown`
-(`delivery/docs/convergence.md`). This principle comes into force at `trunk`; a generated project sits at
-`continuous`. Until it does, what holds here is written below, and the map's *planned* column names the slice
-that climbs.
+- Every engineer MUST integrate to trunk at least once per day. Work that has not reached trunk is
+  unintegrated no matter how often the build server ran against the branch it sits on.
+- Where branches are used they MUST be cut from trunk, MUST re-integrate to trunk, and MUST live less than
+  a day. Long-lived `develop`, `test`, integration, or per-feature branches MUST NOT exist.
+- Trunk MUST be releasable at every commit. Automated verification runs before the merge and again on
+  trunk after it.
+- **A red trunk stops the line.** While the build is failing the only permitted work is restoring it. New
+  feature work MUST NOT start on a red build, and a failure MUST NOT be carried into a later change.
+- A work item MUST be codeable, testable, reviewable, and integrable within **two days**. An item that is
+  not MUST be split before it is started — carrying it is how a two-day item becomes a two-week merge.
+- Fixes MUST travel forward through trunk. Cherry-picking a change onto a release branch MUST NOT be the
+  route to production.
+- **A stack of dependent pull requests is a symptom, not a technique.** Every branch in a stack is waiting
+  on the one below it, which means every branch in it is living longer than a day — the thing this
+  principle exists to prevent. A stack is evidence of exactly one of two defects: the work was never
+  decomposed into independently shippable slices, or review latency grew until building on unmerged work
+  looked cheaper than waiting for a merge. **The defect is the finding; the stack is the workaround.**
+  Where one is used anyway it MUST name which of the two it is compensating for, MUST be treated as
+  temporary, and MUST NOT become how the team normally ships.
 
-- [What holds here today for this principle, in a sentence or two: the practice as it is, not as it should be.]
-- [The next rung, and what has to be true for it: name the slice planned to reach it, or say none is planned yet.]
+Rationale: batch size is the variable every other guarantee here depends on. A large change is not merely
+slower to review — it defeats bisection, hides the regression it introduced among unrelated edits, and
+makes rollback an all-or-nothing decision. Integration frequency is the cheapest available control on it.
 
-When in force, this principle reads:
+Rationale for treating stacks as a symptom: the technique works, which is the problem. It makes an
+undecomposed batch comfortable enough to keep, so the decomposition never happens and the review queue
+that caused it never gets fixed. A practice that relieves the pain of a constraint without removing the
+constraint will keep the constraint indefinitely.
 
-> - Every engineer MUST integrate to trunk at least once per day. Work that has not reached trunk is
->   unintegrated no matter how often the build server ran against the branch it sits on.
-> - Where branches are used they MUST be cut from trunk, MUST re-integrate to trunk, and MUST live less than
->   a day. Long-lived `develop`, `test`, integration, or per-feature branches MUST NOT exist.
-> - Trunk MUST be releasable at every commit. Automated verification runs before the merge and again on
->   trunk after it.
-> - **A red trunk stops the line.** While the build is failing the only permitted work is restoring it. New
->   feature work MUST NOT start on a red build, and a failure MUST NOT be carried into a later change.
-> - A work item MUST be codeable, testable, reviewable, and integrable within **two days**. An item that is
->   not MUST be split before it is started — carrying it is how a two-day item becomes a two-week merge.
-> - Fixes MUST travel forward through trunk. Cherry-picking a change onto a release branch MUST NOT be the
->   route to production.
-> - **A stack of dependent pull requests is a symptom, not a technique.** Every branch in a stack is waiting
->   on the one below it, which means every branch in it is living longer than a day — the thing this
->   principle exists to prevent. A stack is evidence of exactly one of two defects: the work was never
->   decomposed into independently shippable slices, or review latency grew until building on unmerged work
->   looked cheaper than waiting for a merge. **The defect is the finding; the stack is the workaround.**
->   Where one is used anyway it MUST name which of the two it is compensating for, MUST be treated as
->   temporary, and MUST NOT become how the team normally ships.
->
-> Rationale: batch size is the variable every other guarantee here depends on. A large change is not merely
-> slower to review — it defeats bisection, hides the regression it introduced among unrelated edits, and
-> makes rollback an all-or-nothing decision. Integration frequency is the cheapest available control on it.
->
-> Rationale for treating stacks as a symptom: the technique works, which is the problem. It makes an
-> undecomposed batch comfortable enough to keep, so the decomposition never happens and the review queue
-> that caused it never gets fixed. A practice that relieves the pain of a constraint without removing the
-> constraint will keep the constraint indefinitely.
->
-> *Practice: `story-splitting` to find the vertical slice, `planning` to sequence it. Where a slice still
-> looks too large to review, that is a decomposition result, not a branching problem — go back to
-> `story-splitting` rather than reaching for `stack-pull-requests`.*
+*Practice: `story-splitting` to find the vertical slice, `planning` to sequence it. Where a slice still
+looks too large to review, that is a decomposition result, not a branching problem — go back to
+`story-splitting` rather than reaching for `stack-pull-requests`.*
 
 ### XI. One Path to Production, and the Pipeline Decides (NON-NEGOTIABLE)
 

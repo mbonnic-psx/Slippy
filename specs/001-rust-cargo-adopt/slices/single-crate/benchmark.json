@@ -99,6 +99,106 @@
       "delegated": true,
       "signals": {},
       "cut_off": "the iteration was ended by `stop --now`"
+    },
+    {
+      "stage": "release",
+      "started": "2026-09-28T22:09:26Z",
+      "planned": "release: strong → host model — `strong` maps to the host model",
+      "tasks": {
+        "start": null,
+        "end": null
+      },
+      "ended": "2026-09-28T22:10:24Z",
+      "seconds": 58,
+      "span": {
+        "from": {
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/13c315f9-d3c8-4a58-9cb1-e6bfd6ce4750.jsonl": 588734
+        },
+        "to": {
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/13c315f9-d3c8-4a58-9cb1-e6bfd6ce4750.jsonl": 676160
+        }
+      },
+      "usage": {
+        "source": "claude",
+        "session": "13c315f9-d3c8-4a58-9cb1-e6bfd6ce4750",
+        "read": "message.usage on each assistant line, once per requestId",
+        "host": {
+          "claude-opus-5-5": {
+            "input": 8,
+            "output": 5751,
+            "cache_read": 401251,
+            "cache_creation": 10135
+          }
+        },
+        "subagents": {},
+        "agents": []
+      },
+      "ran": [
+        "claude-opus-5-5"
+      ],
+      "agents": null,
+      "delegated": false,
+      "signals": {
+        "driver": "cruise"
+      }
+    },
+    {
+      "stage": "tasks",
+      "started": "2026-09-28T22:10:30Z",
+      "planned": "tasks: fast → sonnet — Claude Code: the Agent tool's `model` parameter, set per call",
+      "tasks": {
+        "start": null,
+        "end": {
+          "open": 4,
+          "done": 0
+        }
+      },
+      "ended": "2026-09-28T22:11:48Z",
+      "seconds": 78,
+      "span": {
+        "from": {
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/13c315f9-d3c8-4a58-9cb1-e6bfd6ce4750.jsonl": 685394
+        },
+        "to": {
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/13c315f9-d3c8-4a58-9cb1-e6bfd6ce4750.jsonl": 710402,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/13c315f9-d3c8-4a58-9cb1-e6bfd6ce4750/subagents/agent-a5d9680c630d51ac7.jsonl": 260112
+        }
+      },
+      "usage": {
+        "source": "claude",
+        "session": "13c315f9-d3c8-4a58-9cb1-e6bfd6ce4750",
+        "read": "message.usage on each assistant line, once per requestId",
+        "host": {
+          "claude-opus-5-5": {
+            "input": 4,
+            "output": 1696,
+            "cache_read": 217116,
+            "cache_creation": 2973
+          }
+        },
+        "subagents": {
+          "claude-sonnet-5-5": {
+            "input": 10,
+            "output": 1141,
+            "cache_read": 153453,
+            "cache_creation": 53109
+          }
+        },
+        "agents": [
+          "drive-tasks"
+        ]
+      },
+      "ran": [
+        "claude-opus-5-5",
+        "claude-sonnet-5-5"
+      ],
+      "agents": [
+        "drive-tasks"
+      ],
+      "delegated": true,
+      "signals": {
+        "driver": "cruise"
+      }
     }
   ]
 }

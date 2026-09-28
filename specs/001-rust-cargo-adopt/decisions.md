@@ -65,3 +65,25 @@
 - **Confidence:** high · **Would reverse if:** a person regenerates the targets (`./slipwai adopt --refresh`) and `make -f delivery/Makefile smoke` fails, or wants a different smoke — a task in the next slice is to confirm `make -f delivery/Makefile smoke` runs the recorded command once regenerated
 - **Written to:** delivery/survey/running.md, project.json, specs/001-rust-cargo-adopt/decisions.md
 - **Status:** standing
+
+## D7 — Release constraint: how does single-crate reach users, and what gates it?
+- **Stage:** release constraint · **Slice:** single-crate · **When:** 2026-09-28T22:30:00Z · **Iteration:** 2
+- **Question:** `release: flagged` asks every slice to land dark behind a flag seeded off, and `delivery/docs/deployment.md` says no flag mechanism is installed here; how is this slice held?
+- **Options:** releasable on merge · held behind the toggle this repository already has — the `.dev` pre-release that only `make release` turns into a release (recommended) · a coordinated deploy
+- **Decision:** Held behind the pre-release. A merge to `main` publishes `1.4.0.dev<N>`, which installers pass over unless asked; only a person's `make release` makes it a release, and a person merges the PR. No flag file is opened.
+- **Why:** That is the repository's own dark-launch: a maintainer who did not opt into snapshots never sees the change, and the adoption path it extends is labelled experimental. A code flag around one row of a recognition table would add a switch with nothing to switch between.
+- **Decided by:** host (stage recommendation)
+- **Confidence:** high · **Would reverse if:** the owner wants snapshots treated as released, so that a merge needs a flag of its own
+- **Written to:** specs/001-rust-cargo-adopt/slices/single-crate/plan.md, specs/001-rust-cargo-adopt/decisions.md
+- **Status:** standing
+
+## D8 — Implementation pre-flight: `make verify` is red in the runner's session for seven cruise tests; whose red is it?
+- **Stage:** implementation · **Slice:** single-crate · **When:** 2026-09-28T23:40:00Z · **Iteration:** 2
+- **Question:** The slice starts from a green `make verify`; inside this iteration it ends `FAILED (failures=6, errors=1)`, every one in `test_cruise_start`, `test_cruise_watch`, `test_cruise_where`, `test_cruise_index` and `test_benchmark_brackets` — tests that spawn `cruise.py` and read `CRUISE_RUNNER` / `CRUISE_ITERATION`, which the runner sets on this session.
+- **Options:** park on the gate's own output · treat the tree as green where those five modules pass with the runner's two variables unset, and run every gate this iteration that way (recommended) · change the tests to clear the variables
+- **Decision:** The tree is green: lint, typecheck and check-structure passed, and the five modules pass (16 tests, OK) under `env -u CRUISE_RUNNER -u CRUISE_ITERATION`. Every `make verify` in this run is invoked with those two variables unset. The tests are not changed in this slice.
+- **Why:** The failures are this session's environment reaching into a subprocess, not anything in the tree a maintainer would get; the gate itself is untouched, and the same command a person runs is what passes. Making those tests isolate their environment is a change to the method's own test tree, outside a Cargo slice.
+- **Decided by:** host (stage recommendation)
+- **Confidence:** high · **Would reverse if:** any of the seven fails with the variables unset, or a person wants the suite to clear them itself — a task for a later slice
+- **Written to:** specs/001-rust-cargo-adopt/decisions.md
+- **Status:** standing

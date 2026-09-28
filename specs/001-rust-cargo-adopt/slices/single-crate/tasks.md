@@ -130,6 +130,116 @@ Audit and mutation are always a written no (`optional-tools`); the toolchain ver
 (`toolchain-pin`); the adopted CI sets up no Rust (`ci-toolchain`); a workspace's members are proposed as
 candidates of their own (`workspace`). No task here fixes them.
 
+## Phase 4: Owed after convergence pass 1
+
+None of these re-opens the loop (no CRITICAL or HIGH); each is what the slice may ship without, written so it is
+not forgotten. `[P]` where the files are disjoint.
+
+- [ ] T005 [P] [US1] **MEDIUM — the `target/` guard has no teeth.** `tests/test_survey_cargo.py:65` puts its
+  `Cargo.toml` at `target/debug/build/x/`, four levels down, past the walk's `DEPTH = 3`
+  (`src/slipwai/survey.py:44`), so it passes with `"target"` removed from `SKIPPED` (`survey.py:40`) — observed
+  in pass 1 by that mutation, restored; with the same mutation a `target/debug/Cargo.toml` *is* proposed. T001
+  claimed every guard was observed to have teeth.
+  Files: `tests/test_survey_cargo.py`.
+  GREEN (the sweep): every skipped-directory case in that test — `target/`, `vendor/`, the skipped fixture
+  directory — places its `Cargo.toml` within `DEPTH`, and each is observed red by removing that one name from
+  `SKIPPED` (or the path from the `skipped` argument) and restored with `git checkout -- src/slipwai/survey.py`.
+
+- [ ] T006 [US1] **MEDIUM — nothing asserts what `adopt` records for a Rust candidate.** The harness's second
+  element in `ADOPTIONS` (`scripts/test-adoption.py:51`) is the tool the gate needs, not the ecosystem; no test
+  reads `project.json` for `rust-crate`. Pass 1 read it by hand (`--keep`): `language: rust`, `toolchain:
+  {kind: rust, version: "", ecosystem: cargo}`, the four commands and four `null`s, provenance `detected` — correct
+  today, pinned nowhere, though T002 claims it.
+  Files: `scripts/test-adoption.py` (or `tests/test_adopt.py` — the implementer names one and says why).
+  GREEN (the sweep): every `ADOPTIONS` row states the `toolchain.kind` and `toolchain.ecosystem` its adoption
+  records, and the harness fails a fixture whose `project.json` deployable disagrees — `rust-crate`'s also with an
+  empty `version` (SG1) and its eight commands exactly as `plan.md`'s Design table. Observed red by changing one
+  row's expectation, then restored.
+
+- [ ] T007 [P] [US1] **MEDIUM — the factory's own docs still describe the table before this slice.**
+  `docs/adopting.md:26` links `../src/slipwai/ecosystems.py`, which no longer exists, and its list (line 27) names
+  nine ecosystems without Cargo; `docs/maintaining.md:104` draws `ecosystems.py` as one file. Not user-visible
+  under `AGENTS.md` (docs/), so no fragment and no version change.
+  Files: `docs/adopting.md`, `docs/maintaining.md`.
+  GREEN (the sweep): `grep -rn "ecosystems\.py" docs src scripts README.md` returns nothing; every list of
+  recognised ecosystems under `docs/` names Cargo, tried last; the tree in `maintaining.md` shows the package's
+  four modules.
+
+- [ ] T008 [P] [US1] **MEDIUM — "overridable" (spec, Assumptions) is claimed, not proved.** A directory with
+  `package.json` beside `Cargo.toml` is surveyed as Node (`test_survey_cargo.py:73`); the spec says the maintainer
+  may override that. With the cargo row in `ECOSYSTEMS`, `survey.toolchain_as` (`survey.py:305`) now returns the
+  Rust toolchain for `--language <app>=rust`, and `confirm.py:80` records it — by construction, untested.
+  Files: `tests/test_adopt.py` (the precedent is `test_flags_override_the_survey_and_the_record_says_so`).
+  GREEN (the sweep): for every language the survey can recognise in a mixed Node-and-other directory — here the
+  new one, Rust — overriding `--language` records that ecosystem's toolchain (`kind: rust`, `ecosystem: cargo`)
+  with provenance `toolchain: overridden`, and `adopt --refresh` afterwards is a no-op.
+
+- [ ] T009 [P] [US1] **LOW — a dead helper.** `tests/test_survey.py:33` adds `only`, which no test in that file
+  calls (the Cargo suite defines its own at `test_survey_cargo.py:17`).
+  Files: `tests/test_survey.py`, `tests/test_survey_cargo.py`.
+  GREEN (the sweep): no helper in `tests/test_survey*.py` is defined without a caller; one `only` if both suites
+  use it (imported, as `write` is), none in `test_survey.py` otherwise.
+
+- [ ] T010 [US1] **LOW — SG2's deliberate hole is not pinned.** Pass 1 adopted a copy of the fixture with a
+  `.github/workflows/ci.yml`: `verify-delivery.yml` is written with checkout and `make -f delivery/Makefile verify`
+  and no Rust step (`adopted_ci.py:57` skips the unknown kind), as SG2 says. No test holds it, so `ci-toolchain`
+  has no pin to invert. May be taken as `ci-toolchain`'s own Pin stage instead; say which.
+  Files: `tests/test_adopt.py`.
+  GREEN (the sweep): for every toolchain kind an `ECOSYSTEMS` row can record and `SETUP` (`adopted_ci.py:18-26`)
+  has no row for — today only `rust` — the GitHub gate workflow is written without a setup step and without error,
+  and the GitLab job (`adopted_ci.py:115-130`; no `GITLAB_IMAGES` entry) names the kind in its "needs" line; the
+  test derives the kinds from the two tables, so a later row without a setup is caught too.
+
 ## Convergence
 
-_To be written by the convergence pass._
+**Pass 1 (2026-09-28): converged.** No CRITICAL or HIGH owed; T005–T010 are MEDIUM and LOW and do not re-open the
+loop. Reviewed diff `80362b6..HEAD`. `make test TESTS="test_survey test_survey_cargo test_adopt"`: 20 tests, OK.
+`scripts/test-adoption.py --only rust-crate` (cargo on PATH): adopted, re-survey a no-op, verify green on day one
+and after `migrate` to 99.0.0. The full gate was not re-run (green on `2ae4f22`; HEAD changed only this file).
+
+Per level:
+
+- **Survey table** (`src/slipwai/ecosystems/`) — the cargo row (`cargo.py:10-22`) matches every row of
+  `plan.md`'s Design table; it is last in `ECOSYSTEMS` (`__init__.py:24-26`). The nine rows and `aggregates` were
+  compared function by function (AST source segments) against `80362b6:src/slipwai/ecosystems.py`: all ten
+  identical. The helpers and `Detected` moved to `common.py` unchanged save `rust` in the toolchain docstring.
+  Every importer (`confirm`, `platform`, `programme`, `survey`, `cli_adopt`, `delivery_facts`, `wrappers`,
+  `structure`, `quick_wins`, two tests) imports only names `__init__.py` re-exports. Gap: T005.
+- **Use case** (`survey.survey` / `buildable`, `adopt`) — detection, commands, subdirectory prefix, malformed
+  manifest, no lockfile, mixed directory, fuzz crate, role are proved at the survey boundary
+  (`test_survey_cargo.py:22-95`). What `adopt` records was observed, not asserted: T006. The override path the
+  Assumptions promise: T008.
+- **Delivery adapter** (`cli_adopt.py`) — the refusal names `Cargo.toml` (`cli_adopt.py:38`), asserted with a
+  non-zero exit and stderr at `test_adopt.py:341`. The report for a Cargo candidate prints `. (rust; what it is
+  for is not recorded), 4 of 8 targets have a command` — the shared template, as for every ecosystem; the survey
+  page carries `cargo, rust, from Cargo.toml`.
+- **Screen** — none; a CLI.
+- **Published contract** — the adopted `project.json`, `delivery/Makefile` (the three ratchet lines and
+  `cargo fetch --locked`) and `verify-delivery.yml` with no Rust setup (SG2, deliberate) were read from real
+  adoptions. Unpinned: T006, T010.
+
+Constitution:
+
+- **I** — additive: the nine answers unchanged (above), Cargo tried last so SC-004 holds
+  (`test_survey_cargo.py:73`); fragment `changelog.d/rust-cargo-adopt.md:1` claims `MINOR` and says experimental
+  (line 7); `VERSION:1` reads `1.4.0.dev0`, already the MINOR over `1.3.0` (`tests/test_changelog.py` in the
+  green gate); adopted migration is one clean merge, own files untouched (`test-adoption`, rust-crate).
+- **II** — `adopt --refresh` on the adopted Rust fixture is a no-op, proved by `scripts/test-adoption.py:220-223`
+  over the row at `:49-51`; the slice adds no writing command.
+- **III** — the package split is justified against the structure budget at `plan.md:127-131`
+  (`MODULE_BUDGET = 350`, `scripts/check-structure.py:68`; `ecosystems.py` was 350, 365 with the row); the tier
+  entry `"ecosystems"` (`check-structure.py:44`) covers every submodule by prefix, so no gate was changed; no new
+  abstraction — four plain modules, and it stays in `src/slipwai/` (leave-it, line 107).
+- **V (as it holds today, lines 149-152)** — every new test enters at the survey boundary over a fixture tree
+  (`buildable` / `survey`) or through `slipwai adopt` in the harness; no mock anywhere in the diff.
+- **VII** — the refusal still goes to stderr with a non-zero exit (`test_adopt.py:338-341`).
+- **VIII** — `rust` / `cargo` are new values, and readers skip an unknown kind (`adopted_ci.py:57`), observed.
+- IV, VI, IX–XI — not touched.
+
+`make -f delivery/Makefile check-convergence`: 1 of 9 axes at target, unchanged. No row this slice reached should
+move: it adds a survey row and tests; nothing measures mutation (safety-net stays `tests-exist`) or changes the
+structure, platform or pipeline evidence.
+
+Handed back, not decided: `survey.DEPENDENCY_MANIFESTS` (`survey.py:80-83`) does not read `Cargo.toml`, so a
+database driver a crate names (`sqlx`, `diesel`, `tokio-postgres`) is not reported. SG's out-of-scope list names
+the manifest-keyed pages (#11) but not this one — the owner decides whether it is #11's or a task here.

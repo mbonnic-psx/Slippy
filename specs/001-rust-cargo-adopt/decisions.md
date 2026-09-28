@@ -87,3 +87,14 @@
 - **Confidence:** high · **Would reverse if:** any of the seven fails with the variables unset, or a person wants the suite to clear them itself — a task for a later slice
 - **Written to:** specs/001-rust-cargo-adopt/decisions.md
 - **Status:** standing
+
+## D9 — Converge: should the survey read database drivers out of `Cargo.toml` in this feature?
+- **Stage:** convergence · **Slice:** single-crate · **When:** 2026-09-29T01:35:00Z · **Iteration:** 2
+- **Question:** `survey.DEPENDENCY_MANIFESTS` does not list `Cargo.toml`, so a driver a crate declares (`sqlx`, `diesel`, `tokio-postgres`) is not reported on the database axis; a task here, or issue #11?
+- **Options:** a task in this slice · left to issue #11 with the other Rust axis answers (the specification's out-of-scope line)
+- **Decision:** Left to issue #11. The survey still proposes the candidate and its commands, which is what this feature promises; which database a crate talks to is an axis answer, and the Assumptions and the slice's gaps review put every Rust axis answer in #11.
+- **Why:** The specification answers it outright (Assumptions: axis answers for Rust are issue #11), which is the recommendation taken. A maintainer adopting a crate gets its build and gate from this feature; the database row reads `none` for them exactly as it does for any ecosystem whose drivers the survey does not read yet, and they can place it with `/ground`.
+- **Decided by:** host (stage recommendation)
+- **Confidence:** high · **Would reverse if:** the owner wants the database axis answered for Rust before #11
+- **Written to:** specs/001-rust-cargo-adopt/decisions.md
+- **Status:** standing

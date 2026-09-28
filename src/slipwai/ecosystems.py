@@ -36,7 +36,7 @@ class Detected:
     language: str
     evidence: str
     commands: Commands
-    # `kind` names the runtime a CI job sets up (`node`, `python`, `go`, `java`, `dotnet`, `php`, `ruby`);
+    # `kind` names the runtime a CI job sets up (`node`, `python`, `go`, `java`, `dotnet`, `php`, `ruby`, `rust`);
     # `version` is the pin the tree carries, or empty where it carries none.
     toolchain: dict[str, str]
     # What the build packages, where that decides which rung of the ladder is next: `war` for a Maven build that
@@ -329,10 +329,25 @@ def ruby(root: Path, directory: str) -> Detected | None:
     )
 
 
+def cargo(root: Path, directory: str) -> Detected | None:
+    if not (root / directory / "Cargo.toml").is_file():
+        return None
+    return Detected(
+        "cargo", "rust", prefixed(directory, "Cargo.toml"),
+        complete(
+            install=in_dir(directory, "cargo fetch --locked"),
+            typecheck=in_dir(directory, "cargo check --all-targets"),
+            lint=in_dir(directory, "cargo clippy --all-targets -- -D warnings && cargo fmt --check"),
+            test=in_dir(directory, "cargo test"),
+        ),
+        {"kind": "rust", "version": ""},
+    )
+
+
 # In the order tried, so a directory with a `package.json` beside a `pyproject.toml` is reported once, as Node,
 # and a `pom.xml` beside a leftover `build.xml` as Maven; the survey says which file decided it.
 ECOSYSTEMS: tuple[Callable[[Path, str], Detected | None], ...] = (
-    node, python, go, maven, gradle, ant, dotnet, php, ruby,
+    node, python, go, maven, gradle, ant, dotnet, php, ruby, cargo,
 )
 
 

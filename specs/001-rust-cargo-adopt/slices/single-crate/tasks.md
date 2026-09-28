@@ -246,7 +246,7 @@ the manifest-keyed pages (#11) but not this one — the owner decides whether it
 
 ## Re-opened by the post-converge gaps pass (2026-09-29)
 
-- [ ] T011 [US1] **HIGH — each clippy finding is its own ratchet key** (D10; SG3 as amended). Files:
+- [x] T011 [US1] **HIGH — each clippy finding is its own ratchet key** (D10; SG3 as amended). Files:
   `src/slipwai/ecosystems/cargo.py`, `tests/test_survey_cargo.py`, a ratchet test beside the existing ones for
   `assets/adoption/scripts/ratchet.py` (the one that already feeds other tools' output to `findings_in`),
   `changelog.d/rust-cargo-adopt.md`. RED: the survey tests expect `--message-format=short` in every lint proposal

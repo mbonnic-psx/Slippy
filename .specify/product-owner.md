@@ -1,4 +1,4 @@
-# [PROJECT_NAME] — the product owner's brief
+# slipwai (fork mbonnic-psx/Slippy) — the product owner's brief
 
 `/cruise` runs `/drive` with nobody at the wheel, and this page is the owner it decides for. The `drive-skipper`
 delegate reads it before every product decision, after the specification and the constitution and before the
@@ -42,10 +42,10 @@ taken; the skipper cites it rather than re-taking it.]
 
 ## Always ask a person
 
-[Questions that park a run however clearly the specification seems to answer them — a price, a legal
-wording, anything that reaches a real customer, a release with no flag holding it back. The skipper records
-these as `unavailable` and the run parks with the exact question; `.specify/cruise.stop` and `.specify/cruise.json` say how a run
-stops and what it may decide.]
+- **Merging a pull request.** Push branches and open pull requests freely, always on the fork
+  `mbonnic-psx/Slippy` (`origin`); never merge one — a person merges. A slice ends at an open PR.
+- **Anything aimed at upstream** `ROBCOATVG/slipwai`: no issues, PRs or pushes there.
+- Cutting a release (`make release`, a `v*` tag) or publishing a package.
 
 ## What the record looks like
 

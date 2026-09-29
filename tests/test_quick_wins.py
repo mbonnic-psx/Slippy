@@ -9,16 +9,23 @@ the tree stops showing. Experimental, with the rest of adoption (experimental).
 from __future__ import annotations
 
 import json
+import os
+import resource
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 
-from test_adopt import repository, slipwai
+from test_adopt import git, repository, slipwai
 
+from slipwai.assets import ROOT
+from slipwai.ecosystems import read
 from slipwai.quick_wins import KINDS, quick_wins
 from slipwai.survey import survey
 
+# What a hostile tree's reads may cost, held by the kernel: were a device read without end again, the run fails
+# here with a MemoryError instead of the host's OOM killer taking every other process with it (issue #13).
+CEILING = 2 * 1024 ** 3
 KEY = "SG." + "a" * 22 + "." + "b" * 43
 FILES = {
     "pom.xml": "<project><repositories><repository><id>x</id><url>http://repo.example.com/m2</url></repository>"
@@ -121,3 +128,52 @@ class QuickWinsTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipUnless(Path("/dev/zero").exists(), "needs a device that never ends")
+class HostileFilesTest(unittest.TestCase):
+    """A tracked symlink to `/dev/zero` reports a size of 0 and never ends: on 2026-09-28 the secrets scan passed
+    it as empty, read it until the machine ran out of memory, and took WSL down with it (issue #13)."""
+
+    def test_read_says_nothing_for_what_is_not_a_regular_file_of_bounded_size(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            here = Path(directory)
+            (here / "zero").symlink_to("/dev/zero")
+            (here / "gone").symlink_to(here / "nowhere")
+            os.mkfifo(here / "pipe")
+            (here / "room").mkdir()
+            (here / "door.xml").symlink_to(here / "room")
+            (here / "big.txt").write_text("x" * 11)
+            (here / "ok.txt").write_text("password = hunter22\n")
+            self.addCleanup(resource.setrlimit, resource.RLIMIT_AS, resource.getrlimit(resource.RLIMIT_AS))
+            mapped = int(Path("/proc/self/statm").read_text().split()[0]) * resource.getpagesize()
+            resource.setrlimit(resource.RLIMIT_AS, (mapped + CEILING, resource.getrlimit(resource.RLIMIT_AS)[1]))
+            self.assertEqual(read(here / "zero"), "", "a device is not read, however small it says it is")
+            self.assertEqual(read(here / "gone"), "")
+            self.assertEqual(read(here / "pipe"), "", "a FIFO nobody writes to neither blocks the open nor the read")
+            self.assertEqual(read(here / "door.xml"), "", "a link to a directory is no text either")
+            self.assertEqual(read(here / "big.txt", 10), "", "one byte past the limit is too big")
+            self.assertEqual(read(here / "big.txt", 11), "x" * 11)
+            self.assertEqual(read(here / "ok.txt"), "password = hunter22\n")
+
+    def test_adopt_survives_tracked_symlinks_to_a_device_that_never_ends(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = repository(Path(directory), "hostile", {
+                "package.json": '{"name": "shop", "private": true, "scripts": {"test": "node --test"}}\n',
+                "package-lock.json": "{}\n", "test/a.test.js": "test('a', () => {});\n",
+            })
+            # A config suffix, a source suffix and a manifest name — each reached by a different read — and a
+            # broken link, whose `stat()` the old size check raised on.
+            for link in ("devz/Cargo.toml", ".env", "src/Main.java", "config/app.yml"):
+                (repo / link).parent.mkdir(parents=True, exist_ok=True)
+                (repo / link).symlink_to("/dev/zero")
+            (repo / "config/old.properties").symlink_to(repo / "config/removed.properties")
+            git(repo, "add", "-A")
+            git(repo, "-c", "user.name=t", "-c", "user.email=t@local", "commit", "-q", "-m", "hostile")
+            result = subprocess.run(
+                [str(ROOT / "slipwai"), "adopt", "--yes"], cwd=repo, text=True, capture_output=True,
+                stdin=subprocess.DEVNULL, timeout=300,
+                preexec_fn=lambda: resource.setrlimit(resource.RLIMIT_AS, (CEILING, CEILING)),
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertNotIn("secret-in-tree", result.stdout)

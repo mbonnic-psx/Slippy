@@ -18,6 +18,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from .bounded_read import read
+
 # The eight targets, in the order a service's recipes spell them (`project/native_commands.py`).
 TARGETS = ("install", "typecheck", "lint", "test", "integration", "adversarial", "audit", "mutation")
 # What a wrapped application may record beside the eight, each with a target of its own and never proposed by the
@@ -47,13 +49,6 @@ class Detected:
 def complete(**given: str | None) -> Commands:
     """Every target, in order; the ones not given are written no's."""
     return {target: given.get(target) for target in TARGETS}
-
-
-def read(path: Path) -> str:
-    try:
-        return path.read_text(errors="replace")
-    except OSError:
-        return ""
 
 
 def first_line(path: Path) -> str:

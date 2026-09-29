@@ -98,11 +98,13 @@ def secrets_in(root: Path, paths: list[str], written: set[str]) -> list[Finding]
         suffix = path.suffix.lower()
         name = path.name.lower()
         is_config = suffix in CONFIG_SUFFIXES or name.startswith(".env")
-        if relative in written or not (is_config or suffix in SOURCE_SUFFIXES) or path.stat().st_size > MAX_TEXT:
+        if relative in written or not (is_config or suffix in SOURCE_SUFFIXES):
             continue
         if relative.endswith((".lock", "-lock.json")) or name in ("mvnw", "gradlew", "package-lock.json"):
             continue
-        for number, line in enumerate(read(path).splitlines(), start=1):
+        # `read` says nothing for a file past `MAX_TEXT` or one that is not a regular file — a device, a FIFO, a
+        # broken symlink — where a size check through `stat()` followed the link and passed `/dev/zero` as empty.
+        for number, line in enumerate(read(path, MAX_TEXT).splitlines(), start=1):
             shaped = next((label for label, pattern in SHAPES if pattern.search(line)), None)
             if shaped:
                 found.append(Finding(

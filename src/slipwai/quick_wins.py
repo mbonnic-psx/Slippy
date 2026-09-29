@@ -22,9 +22,10 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from .ecosystems import read
+from .naming import SAFE_NAME, escaped
 
 KINDS = ("secret-in-tree", "ide-or-build-output-tracked", "insecure-dependency-source", "no-lockfile",
-         "archive-tracked")
+         "archive-tracked", "unsafe-path")
 CONFIG_SUFFIXES = {".xml", ".properties", ".yml", ".yaml", ".json", ".env", ".ini", ".cfg", ".conf", ".toml"}
 SOURCE_SUFFIXES = {".java", ".py", ".js", ".ts", ".go", ".cs", ".rb", ".php", ".kt", ".scala", ".sh"}
 # `password=...`, `api_key: "..."`, `secret = '...'`, `<... password="...">` — the key names a credential, and the
@@ -202,6 +203,25 @@ def archives_tracked(paths: list[str]) -> list[Finding]:
     )]
 
 
+def unsafe_paths(paths: list[str]) -> list[Finding]:
+    """Directories named so that the shell or make would read part of the name as code, the first named escaped."""
+    hits = sorted({
+        "/".join(parts[:index + 1])
+        for parts in (path.split("/")[:-1] for path in paths)
+        for index, part in enumerate(parts) if not SAFE_NAME.fullmatch(part)
+        if all(SAFE_NAME.fullmatch(p) for p in parts[:index])
+    })
+    if not hits:
+        return []
+    shown = escaped(hits[0])
+    return [Finding(
+        "unsafe-path", shown + (f" (+{len(hits) - 1} more)" if len(hits) > 1 else ""),
+        f"{len(hits)} directory name(s) the shell or make would read as code, so nothing under them is surveyed",
+        "rename it to letters, digits and `._+-`; until then no command is proposed for what it holds, and a "
+        "name like this in a commit you did not write is worth asking about",
+    )]
+
+
 def quick_wins(root: Path, paths: list[str], written: set[str], delivery: str = ".") -> list[Finding]:
     """Everything above, over what Git tracks — or over `paths`, the survey's own listing, where there is no Git —
     leaving out what the factory wrote (`written`) and the delivery directory, which are not theirs."""
@@ -210,5 +230,5 @@ def quick_wins(root: Path, paths: list[str], written: set[str], delivery: str = 
               and not p.startswith((".specify/", "specs/"))]
     return [
         *secrets_in(root, theirs, written), *noise_tracked(theirs), *insecure_sources(root, theirs),
-        *missing_lockfiles(root, theirs), *archives_tracked(theirs),
+        *missing_lockfiles(root, theirs), *archives_tracked(theirs), *unsafe_paths(theirs),
     ]

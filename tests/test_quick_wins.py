@@ -43,6 +43,7 @@ FILES = {
     "web/package.json": '{"name": "web", "private": true, "scripts": {"test": "node --test"}}\n',
     ".idea/workspace.xml": "<project/>\n", "Shop.iml": "<module/>\n", "lib/legacy.jar": "PK\x03\x04",
     "mvnw": "MVNW_PASSWORD='' ;;\n",
+    "tools/$(id)/go.mod": "module x\n",
 }
 
 
@@ -76,6 +77,7 @@ class QuickWinsTest(unittest.TestCase):
             self.assertIn("no lockfile beside `package.json`", found["no-lockfile", "web/package.json"].what)
             self.assertEqual(found["archive-tracked", "lib/legacy.jar"].what,
                              "1 binary archive(s) under version control")
+            self.assertIn("would read as code", found["unsafe-path", "tools/$(id)"].what)
 
             # The survey carries them; a tree with nothing has none.
             self.assertEqual(len(survey(repo).quick_wins), len(found))
@@ -177,3 +179,49 @@ class HostileFilesTest(unittest.TestCase):
             )
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertNotIn("secret-in-tree", result.stdout)
+
+    def test_a_directory_named_to_be_read_as_code_is_not_surveyed_and_is_said(self) -> None:
+        """A directory name reaches `cd <dir> && …` and `delivery/Makefile`: a newline there ends the line and makes
+        `$(shell …)` top-level make, run while make parses; a `;` or `$(…)` reaches `sh -c`. Such a directory is
+        never proposed, and the report names it escaped (GHSA-3fpx-wg55-c4qj)."""
+        newline, semicolon = "a\n$(shell touch PWNED_MAKE)\n#", "x;touch PWNED_SH;y"
+        with tempfile.TemporaryDirectory() as directory:
+            repo = repository(Path(directory), "hostile", {
+                "package.json": '{"name": "shop", "private": true, "scripts": {"test": "node --test"}}\n',
+                "package-lock.json": "{}\n", "test/a.test.js": "test('a', () => {});\n",
+                f"{newline}/go.mod": "module a\n\ngo 1.22\n", f"{semicolon}/go.mod": "module x\n\ngo 1.22\n",
+                "sp ace/go.mod": "module s\n\ngo 1.22\n", "ok-name_1.2/go.mod": "module ok\n\ngo 1.22\n",
+            })
+            self.assertEqual([r.path for r in survey(repo).roots], [".", "ok-name_1.2"])
+            result = slipwai(repo, "adopt", "--yes")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("unsafe-path", result.stdout)
+            wins = json.loads((repo / "project.json").read_text())["survey"]["quickWins"]
+            unsafe = [w for w in wins if w["kind"] == "unsafe-path"]
+            self.assertEqual(len(unsafe), 1)
+            self.assertNotIn("\n", unsafe[0]["where"], "the name is written escaped, never as it is")
+            makefile = (repo / "delivery/Makefile").read_text()
+            self.assertNotIn("PWNED", makefile)
+            self.assertNotIn("sp ace", makefile)
+            make = subprocess.run(["make", "-f", "delivery/Makefile", "help"], cwd=repo, capture_output=True,
+                                  text=True, timeout=120)
+            self.assertEqual(make.returncode, 0, make.stderr)
+            self.assertEqual(sorted(p.name for p in repo.glob("PWNED*")), [])
+
+    def test_a_path_recorded_before_the_rule_is_refused_rather_than_written(self) -> None:
+        """A repository adopted before the rule may already record such a path; reading it back refuses, naming it
+        escaped, instead of writing it into `delivery/Makefile` again."""
+        with tempfile.TemporaryDirectory() as directory:
+            repo = repository(Path(directory), "shop", {
+                "package.json": '{"name": "shop", "private": true, "scripts": {"test": "node --test"}}\n',
+                "package-lock.json": "{}\n", "tools/go.mod": "module t\n\ngo 1.22\n",
+            })
+            self.assertEqual(slipwai(repo, "adopt", "--yes").returncode, 0)
+            document = json.loads((repo / "project.json").read_text())
+            document["deployables"]["tools"]["path"] = "x\n$(shell touch PWNED)\n#"
+            (repo / "project.json").write_text(json.dumps(document, indent=2) + "\n")
+            refreshed = slipwai(repo, "adopt", "--refresh")
+            self.assertNotEqual(refreshed.returncode, 0)
+            self.assertIn("deployable 'tools' is at `x\\n$(shell touch PWNED)\\n#`", refreshed.stderr)
+            self.assertNotIn("PWNED", (repo / "delivery/Makefile").read_text())
+            self.assertEqual(list(repo.glob("PWNED*")), [])

@@ -8,9 +8,12 @@ imports inside it, the event model's documented paths — needs the same answer 
 Node needs no entry here: an npm package name is the project's name and a hyphen is legal in it, so
 `tooling.package_name` spells that where the rest of a service's build is spelled. Go needs none either:
 a module path is a URL-shaped string that takes the name as it is.
+
+Last, the one rule a directory's name must meet before it is written into a shell command or a Makefile.
 """
 from __future__ import annotations
 
+import json
 import re
 
 
@@ -34,3 +37,19 @@ def python_package_name(project_name: str) -> str:
     """
     package = re.sub(r"[^a-z0-9_]", "_", project_name)
     return f"project_{package}" if package[0].isdigit() else package
+
+
+# A directory name written into `cd <dir> && …` and `delivery/Makefile` as it is: nothing the shell or make reads as
+# syntax — no whitespace or newline, `;`, `$`, quote, backtick or `|` — and no leading `-` that `cd` takes as an
+# option. A newline in one ended a Makefile line and made `$(shell …)` top-level make (GHSA-3fpx-wg55-c4qj).
+SAFE_NAME = re.compile(r"[A-Za-z0-9_.][A-Za-z0-9_.+-]*")
+
+
+def safe_path(path: str) -> bool:
+    """Whether every part of a relative posix path may be written into a shell command or a Makefile as it is."""
+    return path == "." or all(SAFE_NAME.fullmatch(part) for part in path.split("/"))
+
+
+def escaped(path: str) -> str:
+    """A path as a report may print it: every control character, quote, backtick and `|` escaped."""
+    return json.dumps(path, ensure_ascii=True)[1:-1].replace("|", "\\|").replace("`", "\\`")

@@ -21,7 +21,7 @@ import subprocess
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from .ecosystems import read
+from .ecosystems import declares_workspace, read
 from .naming import SAFE_NAME, escaped
 
 KINDS = ("secret-in-tree", "ide-or-build-output-tracked", "insecure-dependency-source", "no-lockfile",
@@ -172,12 +172,25 @@ def insecure_sources(root: Path, paths: list[str]) -> list[Finding]:
     return found
 
 
+def member_of_workspace(root: Path, paths: list[str], path: Path) -> bool:
+    """Whether a `Cargo.toml` declares no workspace itself and one above it does: Cargo writes one `Cargo.lock` at
+    the workspace root, so that root's own path is where a missing lock is judged, not each member's."""
+    if declares_workspace(root / path):
+        return False
+    return any(
+        str(manifest) in paths and declares_workspace(root / manifest)
+        for manifest in (parent / "Cargo.toml" for parent in path.parent.parents)
+    )
+
+
 def missing_lockfiles(root: Path, paths: list[str]) -> list[Finding]:
     found = []
     for relative in paths:
         path = Path(relative)
         locks = LOCKFILES.get(path.name)
         if not locks or any(str(path.with_name(lock)) in paths for lock in locks):
+            continue
+        if path.name == "Cargo.toml" and member_of_workspace(root, paths, path):
             continue
         found.append(Finding(
             "no-lockfile", relative, f"no lockfile beside `{path.name}` ({' / '.join(locks[:2])})",

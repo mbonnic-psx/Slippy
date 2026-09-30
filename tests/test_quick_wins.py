@@ -242,8 +242,36 @@ class MissingLockfilesTest(unittest.TestCase):
     def test_a_package_json_with_no_lock_is_reported(self) -> None:
         self.assertEqual(self.reported({"web/package.json": "{}\n"}), ["web/package.json"])
 
-    def test_a_member_below_a_workspace_root_with_a_lock_is_reported_for_want_of_one_beside_it(self) -> None:
+    def test_a_member_below_a_workspace_root_with_a_lock_is_not_reported_its_lock_is_the_roots(self) -> None:
         self.assertEqual(self.reported({
             "Cargo.toml": '[workspace]\nmembers = ["a"]\n', "Cargo.lock": "",
             "a/Cargo.toml": '[package]\nname = "a"\n',
-        }), ["a/Cargo.toml"])
+        }), [])
+
+    def test_a_workspace_root_with_no_lock_is_reported_once_at_the_root_and_not_for_each_member(self) -> None:
+        self.assertEqual(self.reported({
+            "Cargo.toml": '[workspace]\nmembers = ["crates/*"]\n',
+            "crates/a/Cargo.toml": '[package]\nname = "a"\n', "crates/b/Cargo.toml": '[package]\nname = "b"\n',
+        }), ["Cargo.toml"])
+
+    def test_a_workspace_below_a_workspace_root_with_no_lock_of_its_own_is_still_reported(self) -> None:
+        self.assertEqual(self.reported({
+            "Cargo.toml": '[workspace]\nmembers = ["a"]\n', "Cargo.lock": "", "a/Cargo.toml": '[package]\n',
+            "fuzz/Cargo.toml": '[package]\nname = "f"\n[workspace]\n',
+        }), ["fuzz/Cargo.toml"])
+
+    def test_a_crate_below_a_plain_crate_with_no_lock_beside_it_is_still_reported(self) -> None:
+        self.assertEqual(self.reported({
+            "Cargo.toml": '[package]\nname = "a"\n', "Cargo.lock": "", "tools/Cargo.toml": '[package]\n',
+        }), ["tools/Cargo.toml"])
+
+    def test_the_other_ecosystems_members_are_still_reported(self) -> None:
+        self.assertEqual(self.reported({
+            "package.json": '{"workspaces": ["p/*"]}', "package-lock.json": "{}", "p/a/package.json": "{}",
+            "Gemfile": "", "composer.json": "{}",
+        }), ["Gemfile", "composer.json", "p/a/package.json"])
+
+    def test_a_package_json_below_a_cargo_workspace_root_is_still_reported(self) -> None:
+        self.assertEqual(self.reported({
+            "Cargo.toml": '[workspace]\n', "Cargo.lock": "", "web/package.json": "{}",
+        }), ["web/package.json"])

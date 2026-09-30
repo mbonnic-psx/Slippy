@@ -15,7 +15,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 
-from .cargo import cargo
+from .cargo import cargo, declares_workspace
 from .common import EXTRA, TARGETS, Commands, Detected, prefixed, read
 from .rows import aggregates, ant, dotnet, go, gradle, maven, node, php, python, ruby
 
@@ -25,4 +25,4 @@ ECOSYSTEMS: tuple[Callable[[Path, str], Detected | None], ...] = (
     node, python, go, maven, gradle, ant, dotnet, php, ruby, cargo,
 )
 
-__all__ = ["ECOSYSTEMS", "EXTRA", "TARGETS", "Commands", "Detected", "aggregates", "prefixed", "read"]
+__all__ = ["ECOSYSTEMS", "EXTRA", "TARGETS", "Commands", "Detected", "aggregates", "declares_workspace", "prefixed", "read"]

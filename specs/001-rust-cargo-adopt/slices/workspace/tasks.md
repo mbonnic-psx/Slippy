@@ -467,7 +467,7 @@ GREEN through a failing test where it is behaviour, under a new `implement` entr
 quoted-header cases (named in the fragment instead, T017); G4 and G5's product halves (below, for a person); G8
 (`delivery/survey/pinned.md` rows, not this slice's file).
 
-- [ ] T015 [US3] **HIGH (W1, D15) — a Cargo workspace in a directory an outer owner hides is proposed as Cargo.**
+- [x] T015 [US3] **HIGH (W1, D15) — a Cargo workspace in a directory an outer owner hides is proposed as Cargo.**
   Files: `src/slipwai/survey.py`, `tests/test_survey_cargo_workspace.py` (or a new suite beside it if the budget
   needs). RED: root `package.json` with `"workspaces": ["packages/*"]`, `packages/native/package.json`,
   `packages/native/Cargo.toml` `[workspace] members = ["a"]`, `packages/native/a/Cargo.toml` plain → `buildable` is
@@ -476,11 +476,11 @@ quoted-header cases (named in the fragment instead, T017); G4 and G5's product h
   there and propose it where its manifest declares a workspace. Sweep: the same under a Maven `<modules>` root and a
   Gradle settings root; guards — an owned npm package with a plain `Cargo.toml` (no workspace) stays hidden, an owned
   npm package with a `go.mod` stays hidden (SC-004), `missing_lockfiles` agrees on each tree.
-- [ ] T016 [US3] **MEDIUM (W2, G2) — a BOM before the header.** Files: `src/slipwai/ecosystems/cargo.py`,
+- [x] T016 [US3] **MEDIUM (W2, G2) — a BOM before the header.** Files: `src/slipwai/ecosystems/cargo.py`,
   `tests/test_survey_cargo_workspace.py`. RED: a root `﻿[workspace]` with a member is one candidate with
   `--workspace`, and no `no-lockfile` for the member. GREEN: a leading U+FEFF counts as leading space, on the first
   line only or anywhere, as the implementer chooses and says.
-- [ ] T017 [US3] **MEDIUM (G1, G6, W3, G5's statement) — the fragment and docs say what the code does.** Files:
+- [x] T017 [US3] **MEDIUM (G1, G6, W3, G5's statement) — the fragment and docs say what the code does.** Files:
   `changelog.d/rust-cargo-adopt.md`, `docs/adopting.md`, `tests/test_survey_cargo_workspace.py`. G1: the snapshot
   Catch-up says a root whose commands were *detected* (`adopt --yes`) is refreshed, and one confirmed or overridden
   is reported as a disagreement and edited in `project.json` by hand; add the WG9 example with `confirmed`
@@ -489,12 +489,12 @@ quoted-header cases (named in the fragment instead, T017); G4 and G5's product h
   header" says `[workspace]` or `[workspace.<x>]`. W3: *What stays out* adds a quoted `["workspace"]` header and a
   top-level `workspace.members` key. G5: the override sentence says the Node or Python gate is replaced by the
   commands given, so a maintainer who wants both writes a command that runs both. D15's case in one clause.
-- [ ] T018 [US3] **LOW (W4, G7) — each manifest read once per survey.** Files: `src/slipwai/ecosystems/cargo.py`,
+- [x] T018 [US3] **LOW (W4, G7) — each manifest read once per survey.** Files: `src/slipwai/ecosystems/cargo.py`,
   `src/slipwai/survey.py`, `src/slipwai/quick_wins.py`, a test. GREEN: `declares_workspace` answers from a per-call
   memo (no module-level state that outlives a survey), and `missing_lockfiles` tests membership against a set. Test:
   a counting fake of the read (a function in the test tree passed through a seam, never a mock) proves one read per
   manifest for a root with many members.
-- [ ] T019 [US3] **LOW (G3) — the fixture proves one deployable and that `--workspace` matters.** Files:
+- [x] T019 [US3] **LOW (G3) — the fixture proves one deployable and that `--workspace` matters.** Files:
   `tests/fixtures/adopt/rust-workspace/Cargo.toml`, `scripts/test-adoption.py`. `default-members =
   ["crates/ledger"]` in the fixture (research: without `--workspace` a virtual root then tests only `ledger`), and
   `recorded()` asserts the Rust fixtures' `deployables` are exactly `[name]`. Observe red by dropping `--workspace`
@@ -506,3 +506,11 @@ For a person (not decided here, LOW):
   there. Should a `Cargo.lock` beside a crate below a workspace root make it a candidate of its own?
 - **G5** — whether the survey should ever propose a combined Node-and-Cargo command for a mixed directory, rather
   than the fragment only saying the override replaces one gate with the other (T017 says the latter).
+
+Done 2026-09-30 (`f01a9ec`, `570143d`, `0f20431`, `dc16d44`, `13a5f1c`), RED observed for T015, T016 and T018 (T018
+stub-first, so an assertion and not a TypeError); T017's confirmed-provenance example is a pin (the behaviour already
+held), observed to bite by switching it to `detected`. W1, W2 and W4 fixed; the log's rows say so below. Still open,
+LOW: T019 holds the recorded commands and the one-deployable shape, but nothing in `scripts/test-adoption.py` reads
+the fixture's own test output, so dropping `--workspace` from both the row and the harness's table would still verify
+green (only `ledger`'s test runs). The survey tests assert the command text, and `research.md` holds what the flag
+does; an output check in the harness is the next step if wanted.

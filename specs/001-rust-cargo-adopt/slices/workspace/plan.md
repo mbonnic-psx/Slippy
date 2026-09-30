@@ -11,9 +11,9 @@ workspace's). What Cargo does is in [research.md](research.md), every row observ
 
 A maintainer adopting a Cargo workspace is offered one candidate at the workspace root whose commands cover every
 member, and no candidate per member. Three things change, all inside the survey: the Cargo row reads whether its
-manifest declares a workspace and, where it does, proposes `--workspace` on check, clippy and test; `aggregates`
-says a Cargo workspace root owns the crates below it; and a Cargo workspace root is never itself owned by an outer
-one (D12). The "no lockfile" quick win stops reporting members (D13). No other ecosystem's detection, commands or
+manifest declares a workspace and, where it does, proposes `--workspace` on check, clippy and test; a Cargo crate
+is owned by any workspace root above it, whichever ecosystem reports that directory (D14), and a workspace root is
+never itself owned (D12). The "no lockfile" quick win stops reporting members (D13). No other ecosystem's detection, commands or
 ownership changes.
 
 ## Release constraint
@@ -42,7 +42,8 @@ Every run under `systemd-run --user --scope -p MemoryMax=4G -p MemorySwapMax=0`,
 **Target Platform / Project Type**: the `slipwai` CLI, wherever it runs.
 
 **Performance Goals / Constraints / Scale**: one bounded read of each `Cargo.toml` the walk meets (the row already
-stats it); the lockfile rule reads each tracked `Cargo.toml` at most once.
+stats it); each manifest is read once per survey (T018: a memo per call, and a set for the tracked paths — the
+first cut re-read every ancestor per member, adversary W4).
 
 ## Constitution Check
 
@@ -55,7 +56,7 @@ stats it); the lockfile rule reads each tracked `Cargo.toml` at most once.
 - **II. Re-running is safe** — holds. No new writing command; WG8 proves `adopt --refresh` on the adopted workspace
   fixture changes nothing, and WG9 that a member recorded by an earlier snapshot is reported, never removed.
 - **III. Simplicity** — holds. One regular expression, one function that says whether a manifest declares a
-  workspace, one predicate beside `aggregates`, one guard in `buildable`'s ownership test.
+  workspace, one membership predicate shared by the survey and the lockfile rule, one branch in `buildable`.
 - **V (as it holds today)** — every new test enters at the survey's boundary or through `slipwai adopt`; fakes
   only, no mock.
 - **VIII** — no new value in `project.json`; commands are strings the record already carries.
@@ -90,17 +91,20 @@ dated 2026-09-30, seams `survey.buildable` and `quick_wins.missing_lockfiles`, t
 | `declares_workspace(manifest: Path) -> bool` | the header is in the manifest's bounded read; `False` for a file that cannot be read |
 | `cargo(root, directory)` | as today, with `flag = " --workspace" if declares_workspace(manifest) else ""` in typecheck `cargo check{flag} --all-targets`, lint `cargo clippy{flag} --all-targets --message-format=short -- -D warnings && cargo fmt --check`, test `cargo test{flag}`. Install and the fmt half unchanged (research). No feature flag (D11). |
 
-`src/slipwai/ecosystems/rows.py`:
+`member_of_workspace(root, manifest, present=None) -> bool` (in `cargo.py`, added at T010 for D14) — a
+`Cargo.toml` that declares no workspace itself, with an ancestor `Cargo.toml` (inside the root; `present` says which
+count: the files on disk, or the ones Git tracks) that declares one. It is the one membership rule: `buildable` and
+`missing_lockfiles` both ask it.
 
-| Name | What |
-|---|---|
-| `aggregates` | gains `if found.ecosystem == "cargo": return declares_workspace(here)`; docstring names Cargo workspaces |
-| `stands_alone(root, found) -> bool` (new) | whether a build is a root of its own even below an owner of its ecosystem: a Cargo workspace root, which Cargo never lets be a member (D12). `found.ecosystem == "cargo" and aggregates(root, found)`; `False` for every other ecosystem |
+`src/slipwai/ecosystems/__init__.py` re-exports `declares_workspace` and `member_of_workspace`. `rows.py` is
+unchanged: the first design here gave `aggregates` a Cargo branch and added `stands_alone`, and both were removed at
+T010, because an owner recorded only for a directory *detected* as Cargo missed a workspace root in a directory
+reported as Node or Python first (D14).
 
-`src/slipwai/ecosystems/__init__.py` re-exports `declares_workspace` and `stands_alone`.
-
-`src/slipwai/survey.py` `buildable`: `owned = not stands_alone(root, found) and any(…as today…)`; the docstring and
-the module docstring name Cargo workspaces beside npm, Maven, Gradle and .NET.
+`src/slipwai/survey.py` `buildable`: a Cargo candidate is owned exactly when `member_of_workspace` says so, whichever
+ecosystem reports the owning root's directory (D14); every other ecosystem's ownership as before. Where a directory's
+first detection is owned by an outer build of its ecosystem and its `Cargo.toml` declares a workspace, the directory is
+proposed as the Cargo candidate (D15, T015). The docstrings name Cargo workspaces.
 
 `src/slipwai/quick_wins.py` `missing_lockfiles` (D13, WG7): for `Cargo.toml` only, where no `Cargo.lock` is beside it,
 the manifest is skipped when it declares no workspace itself and some ancestor directory's tracked `Cargo.toml`
@@ -122,7 +126,6 @@ specs/001-rust-cargo-adopt/slices/workspace/
 
 ```text
 src/slipwai/ecosystems/cargo.py            # WORKSPACE, declares_workspace, --workspace in the row
-src/slipwai/ecosystems/rows.py             # aggregates' Cargo branch; stands_alone
 src/slipwai/ecosystems/__init__.py         # re-exports
 src/slipwai/survey.py                      # buildable: a Cargo workspace root is never owned
 src/slipwai/quick_wins.py                  # a member's lockfile is its workspace root's

@@ -76,6 +76,12 @@ class WorkspaceCommandsTest(unittest.TestCase):
                 self.assertEqual(self.proposed(manifest), {**PLAIN, **{t: None for t in (
                     "integration", "adversarial", "audit", "mutation")}})
 
+    def test_a_table_whose_name_only_starts_with_workspace_is_not_a_root(self) -> None:
+        for header in ("[workspacefoo]", "[workspace-x]", "[workspaces]", "[workspace_x]", "[ workspace x ]"):
+            with self.subTest(header):
+                self.assertEqual(self.proposed(f'[package]\nname = "a"\n\n{header}\nx = 1\n')["test"],
+                                 "cargo test")
+
     def test_a_malformed_manifest_is_flagged_exactly_when_a_header_line_is_in_it(self) -> None:
         self.assertEqual(self.proposed("[workspace\nmembers = \n[workspace]\n = = \n")["test"],
                          "cargo test --workspace")

@@ -275,3 +275,10 @@ class MissingLockfilesTest(unittest.TestCase):
         self.assertEqual(self.reported({
             "Cargo.toml": '[workspace]\n', "Cargo.lock": "", "web/package.json": "{}",
         }), ["web/package.json"])
+
+    def test_a_workspace_root_git_does_not_track_does_not_own_a_tracked_member(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = write(Path(directory), {
+                "Cargo.toml": '[workspace]\nmembers = ["a"]\n', "a/Cargo.toml": '[package]\nname = "a"\n',
+            })
+            self.assertEqual([f.where for f in missing_lockfiles(root, ["a/Cargo.toml"])], ["a/Cargo.toml"])

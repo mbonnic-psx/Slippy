@@ -153,3 +153,14 @@
 - **Confidence:** high · **Would reverse if:** the owner wants the Rust in a mixed directory proposed with Cargo's own commands without an override — option (b), taken as its own feature
 - **Written to:** specs/001-rust-cargo-adopt/slices/workspace/tasks.md, specs/001-rust-cargo-adopt/decisions.md
 - **Status:** standing
+
+## D15 — Adversary: a Cargo workspace whose directory another ecosystem's owner hides; what is proposed?
+- **Stage:** adversary · **Slice:** workspace · **When:** 2026-09-30T20:05:00Z · **Iteration:** 3
+- **Question:** A directory holding a `package.json` and a `Cargo.toml` that declares a workspace, inside an npm workspace (a napi-rs package in a monorepo), is owned by the npm root and never proposed; since D14 its Cargo members are owned by it, so the Rust vanishes from the survey altogether (adversary W1, a regression against `0e3bab3`).
+- **Options:** propose the Cargo workspace at that directory as a candidate of its own when its first detection is owned (recommended) · go back to proposing each member · name it under *Not working yet*
+- **Decision:** Where a directory's first detection is owned by an outer build of its ecosystem and the directory's `Cargo.toml` declares a workspace, the directory is proposed as the Cargo candidate, with the workspace commands, and owns its members. Nothing else changes: a directory whose first detection is not owned stays that ecosystem (D14), an owned directory without a Cargo workspace stays hidden as today, and no other pair of ecosystems gains a fallback (SC-004).
+- **Why:** The promise every Cargo decision in this slice rests on (D12, D14) is that each build is covered by a proposal or visible to decline; the npm root's commands do not build Rust, so the workspace is a build nobody else covers. It is the narrowest change that keeps FR-006 (no member proposed) and SC-004.
+- **Decided by:** host (stage recommendation)
+- **Confidence:** medium · **Would reverse if:** the owner wants the fallback for every ecosystem pair, not only a Cargo workspace — a change to existing answers, a slice of its own
+- **Written to:** specs/001-rust-cargo-adopt/slices/workspace/tasks.md, specs/001-rust-cargo-adopt/adversary-log.md, specs/001-rust-cargo-adopt/decisions.md
+- **Status:** standing

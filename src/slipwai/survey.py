@@ -31,7 +31,16 @@ from .delivery_facts import (
     remote_host,
     role_of,
 )
-from .ecosystems import ECOSYSTEMS, Detected, aggregates, cargo, declares_workspace, member_of_workspace, read
+from .ecosystems import (
+    ECOSYSTEMS,
+    Detected,
+    Reader,
+    aggregates,
+    cargo,
+    declares_workspace,
+    member_of_workspace,
+    read,
+)
 from .naming import SAFE_NAME
 from .origin import FORGES, RELEASE_PATHS
 from .quick_wins import quick_wins
@@ -221,7 +230,7 @@ def files(root: Path, depth: int = EVIDENCE_DEPTH, skipped: frozenset[str] = fro
     return found
 
 
-def buildable(root: Path, skipped: frozenset[str] = frozenset()) -> tuple[Root, ...]:
+def buildable(root: Path, skipped: frozenset[str] = frozenset(), reader: Reader = read) -> tuple[Root, ...]:
     """Every directory that builds, by path, each recognised once and none inside a build of its own ecosystem
     that owns it — a Go module under an npm workspace is still a root; a workspace package is not. A Cargo crate is
     owned by any workspace root above it, whichever ecosystem reports that directory (`member_of_workspace`); a
@@ -229,16 +238,21 @@ def buildable(root: Path, skipped: frozenset[str] = frozenset()) -> tuple[Root, 
     directory an outer build owns is still proposed, as Cargo, where its `Cargo.toml` declares a workspace."""
     roots: list[Root] = []
     owners: list[tuple[str, str]] = []
+    memo: dict[Path, bool] = {}
     for directory in directories(root, DEPTH, skipped):
         for detect in ECOSYSTEMS:
             found = detect(root, directory)
             if found is None:
                 continue
-            owned = member_of_workspace(root, Path(found.evidence)) if found.ecosystem == "cargo" else any(
+            owned = member_of_workspace(
+                root, Path(found.evidence), None, memo, reader,
+            ) if found.ecosystem == "cargo" else any(
                 ecosystem == found.ecosystem and (owner == "." or directory.startswith(f"{owner}/"))
                 for owner, ecosystem in owners
             )
-            if owned and found.ecosystem != "cargo" and declares_workspace(root / directory / "Cargo.toml"):
+            if owned and found.ecosystem != "cargo" and declares_workspace(
+                root / directory / "Cargo.toml", memo, reader,
+            ):
                 # An outer build hides this directory, and its commands do not build Rust (D15).
                 found, owned = cargo(root, directory) or found, False
             if not owned:

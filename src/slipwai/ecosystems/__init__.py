@@ -26,6 +26,6 @@ ECOSYSTEMS: tuple[Callable[[Path, str], Detected | None], ...] = (
 )
 
 __all__ = [
-    "ECOSYSTEMS", "EXTRA", "TARGETS", "Commands", "Detected", "aggregates", "declares_workspace", "member_of_workspace",
-    "prefixed", "read",
+    "ECOSYSTEMS", "EXTRA", "TARGETS", "Commands", "Detected", "aggregates", "cargo", "declares_workspace",
+    "member_of_workspace", "prefixed", "read",
 ]

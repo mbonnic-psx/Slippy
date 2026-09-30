@@ -31,7 +31,7 @@ from .delivery_facts import (
     remote_host,
     role_of,
 )
-from .ecosystems import ECOSYSTEMS, Detected, aggregates, member_of_workspace, read
+from .ecosystems import ECOSYSTEMS, Detected, aggregates, cargo, declares_workspace, member_of_workspace, read
 from .naming import SAFE_NAME
 from .origin import FORGES, RELEASE_PATHS
 from .quick_wins import quick_wins
@@ -225,7 +225,8 @@ def buildable(root: Path, skipped: frozenset[str] = frozenset()) -> tuple[Root, 
     """Every directory that builds, by path, each recognised once and none inside a build of its own ecosystem
     that owns it — a Go module under an npm workspace is still a root; a workspace package is not. A Cargo crate is
     owned by any workspace root above it, whichever ecosystem reports that directory (`member_of_workspace`); a
-    workspace root is never a member, since Cargo lets none be one of another, so one below another is its own."""
+    workspace root is never a member, since Cargo lets none be one of another, so one below another is its own. A
+    directory an outer build owns is still proposed, as Cargo, where its `Cargo.toml` declares a workspace."""
     roots: list[Root] = []
     owners: list[tuple[str, str]] = []
     for directory in directories(root, DEPTH, skipped):
@@ -237,6 +238,9 @@ def buildable(root: Path, skipped: frozenset[str] = frozenset()) -> tuple[Root, 
                 ecosystem == found.ecosystem and (owner == "." or directory.startswith(f"{owner}/"))
                 for owner, ecosystem in owners
             )
+            if owned and found.ecosystem != "cargo" and declares_workspace(root / directory / "Cargo.toml"):
+                # An outer build hides this directory, and its commands do not build Rust (D15).
+                found, owned = cargo(root, directory) or found, False
             if not owned:
                 roots.append(Root(directory, found, *role_of(root, directory, found)))
                 if aggregates(root, found):

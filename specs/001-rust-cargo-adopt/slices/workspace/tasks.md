@@ -514,3 +514,18 @@ LOW: T019 holds the recorded commands and the one-deployable shape, but nothing 
 the fixture's own test output, so dropping `--workspace` from both the row and the harness's table would still verify
 green (only `ledger`'s test runs). The survey tests assert the command text, and `research.md` holds what the flag
 does; an output check in the harness is the next step if wanted.
+
+## Mutation (2026-09-30)
+
+**Not run: no mutation tool is configured here.** `project.json` records `commands.mutation: null` for `slipwai`, and
+neither `mutmut` nor `cosmic-ray` is installed (`.python-tools/` carries ruff and mypy only) — the same setup
+decision single-crate left for a person. The evidence gate stands on hand mutation: T011 closed every conjunct of
+`WORKSPACE`, `declares_workspace` and `member_of_workspace`; converge pass 2 ran ten targeted mutants over the same
+and the lockfile rule, all killed; T015–T019 each observed their guard's teeth by the sanctioned route.
+
+## Final gate (2026-09-30, `7e240ce`)
+
+`make verify`: lint, typecheck (312 source files), check-structure (152 modules) green; Ran 875 tests,
+`FAILED (failures=1, skipped=7)` — the one failure the environmental
+`test_changelog.test_every_release_this_repository_has_ever_tagged_has_an_entry`. `make test-adoption`: 8 fixtures
+adopted, re-surveyed, verified and migrated; `rust-workspace` green on day one and after `migrate`.

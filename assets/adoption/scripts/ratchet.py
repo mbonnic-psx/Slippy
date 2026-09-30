@@ -25,7 +25,10 @@ because a baseline of "the build tool was missing" would pass forever on any mac
 reports a subcommand that is not installed (`cargo clippy` without the clippy component, `cargo fmt` without
 rustfmt) as `error: no such command: `clippy``, and exits 101 — the code a real clippy failure gives — and rustup's
 proxy, for a toolchain without the component, as `error: 'cargo-clippy' is not installed for …` with exit 1; both
-are read as the same thing, not runnable, colour or not and past a leading `cd <dir> &&`.
+are read as the same thing, not runnable, colour or not and past a leading `cd <dir> &&`. So is a build that
+stops in a package's build script (`error: failed to run custom build command for `libdbus-sys v0.2.7``, exit
+101): the lint, the type check or the suite never reached the code, usually because the machine lacks a system
+library the script looks for, and a baseline of that exit code would pass every later run that gets no further.
 
 `test` runs through the same ratchet, with one difference: a suite that is red on the day the method arrives is
 not quarantined behind anybody's back. The first run stops, shows the failures, and says what quarantining means;
@@ -58,6 +61,10 @@ NOT_RUNNABLE = (126, 127)
 CARGO_NO_SUCH_COMMAND = re.compile(
     r"^error: (?:no such command: `(?P<sub>[^`]+)`|'cargo-(?P<component>[\w-]+)' is not installed for )", re.MULTILINE
 )
+# A package's build script that did not finish — most often `pkg-config` not finding a system library (`dbus-1`,
+# `openssl`, `gtk+-3.0`) — which cargo reports, and exits 101 on, before a line of the repository's code is checked
+# (cargo 1.98, a Tauri crate without libdbus's headers, observed 2026-09-30).
+CARGO_BUILD_SCRIPT = re.compile(r"^error: failed to run custom build command for `(?P<package>[^`]+)`", re.MULTILINE)
 # Terminal colour, which `CARGO_TERM_COLOR=always` (the usual Rust CI setting) puts inside the words matched here.
 ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 # A test binary killed by a signal: cargo prints where it ran and the signal, no file and no test, and exits 101 — as
@@ -250,6 +257,17 @@ def main(argv: list[str]) -> int:
             f"ratchet: {name} could not run — `{tool}` is not on this machine (exit {run.returncode}), so there "
             "are no findings to hold the code to, and nothing is recorded. Install it, or change what project.json "
             f"records for {name} to what this repository does run (null is a written no).",
+            file=sys.stderr,
+        )
+        return 1
+    stopped = CARGO_BUILD_SCRIPT.search(ANSI.sub("", output)) if run.returncode else None
+    if stopped:
+        print(
+            f"ratchet: {name} could not run — the build script of `{stopped.group('package')}` did not finish (exit "
+            f"{run.returncode}), so {target} never reached this repository's code; there are no findings to hold it "
+            "to, and nothing is recorded. Its output above says what it looked for, usually a system library to "
+            f"install; or change what project.json records for {name} to a command this machine can build (null is a "
+            "written no).",
             file=sys.stderr,
         )
         return 1

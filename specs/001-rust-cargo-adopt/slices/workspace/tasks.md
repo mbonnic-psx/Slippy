@@ -281,6 +281,9 @@ here fixes them.
   predicate shared by `buildable`'s ownership and `missing_lockfiles`, so no tree can have a crate that is a member
   for one and a build for the other. Files (once decided): `src/slipwai/survey.py`, `src/slipwai/ecosystems/rows.py`,
   `src/slipwai/quick_wins.py`, the two suites, `changelog.d/rust-cargo-adopt.md`.
+  **Decided (D14): option (a)** — the directory stays one candidate as the ecosystem tried first and is also a Cargo
+  owner where its `Cargo.toml` declares a workspace; no member is proposed; one membership predicate for both rules;
+  nothing new on the survey page. The sweep carries a member directory that also holds a `package.json` and stays Node.
 
 - [ ] T011 **MEDIUM** [US3] **Two conjuncts of the new rules have no test that fails without them** (Principle V's
   evidence gate). Evidence, by the sanctioned route, each file restored with `git checkout -- <path>` before the next:

@@ -30,7 +30,10 @@ of the eight Make targets a service owes (`install lint typecheck test integrati
 workspace root (npm, Maven, Gradle, .NET, Cargo) owns its members and is proposed once, except that a Cargo workspace
 nested below another is a candidate of its own. A Cargo workspace root owns the crates below it even where another
 manifest tried first decides the directory's language (a napi-rs or maturin crate): that directory is one candidate,
-no member is proposed, and the Rust is gated when you override the language and commands. A target
+no member is proposed as Cargo, and the Rust is gated when you override the language and commands — which replace
+that Node or Python gate rather than join it, so a maintainer who wants both writes a command that runs both. Where
+an outer build of that ecosystem owns the directory and its `Cargo.toml` declares a workspace, it is proposed as
+Cargo. A target
 the ecosystem has no answer for is `null`: a written no, never a guess. It also reads whether CI, containers
 and infrastructure code are here, whether a database schema is versioned here and with what, and which
 database drivers the dependency manifests name. Every fact carries the file that said so.

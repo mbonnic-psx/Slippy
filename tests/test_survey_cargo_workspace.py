@@ -220,6 +220,25 @@ class RecordedBeforeTheRuleTest(unittest.TestCase):
         )
         self.assertEqual(after["ledger"], member, "the member's record is left exactly as written")
 
+    def test_a_root_whose_commands_were_confirmed_is_reported_as_a_disagreement_and_left_standing(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = repository(Path(directory), "shop", {**VIRTUAL, "README.md": "# shop\n"})
+            self.assertEqual(slipwai(repo, "adopt", "--yes").returncode, 0)
+            record = json.loads((repo / "project.json").read_text())
+            root = record["deployables"]["shop"]
+            for target in ("typecheck", "lint", "test"):
+                root["commands"][target] = root["commands"][target].replace(" --workspace", "")
+            root["provenance"]["commands"] = "confirmed"
+            stands = json.loads(json.dumps(root["commands"]))
+            (repo / "project.json").write_text(json.dumps(record, indent=2) + "\n")
+            refreshed = slipwai(repo, "adopt", "--refresh")
+            self.assertEqual(refreshed.returncode, 0, refreshed.stderr)
+            after = json.loads((repo / "project.json").read_text())["deployables"]
+        self.assertIn("shop: commands was confirmed as", refreshed.stdout)
+        self.assertIn("the record stands until you decide", refreshed.stdout)
+        self.assertNotIn("shop: commands refreshed", refreshed.stdout)
+        self.assertEqual(after["shop"]["commands"], stands, "a confirmed answer is edited by hand, not refreshed")
+
 
 NESTED = {
     "Cargo.toml": '[workspace]\nmembers = ["crates/*"]\n',

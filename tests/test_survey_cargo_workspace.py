@@ -8,6 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from test_adopt import repository, slipwai
 from test_survey import write
 
 from slipwai.survey import buildable, survey
@@ -103,6 +104,92 @@ class WorkspaceCommandsTest(unittest.TestCase):
             " && cargo fmt --check",
         )
         self.assertEqual(commands["test"], "cd crates/site && cargo test --workspace")
+
+
+class WorkspaceOwnsItsMembersTest(unittest.TestCase):
+    def paths(self, files: dict[str, str]) -> list[str]:
+        with tempfile.TemporaryDirectory() as directory:
+            return [r.path for r in buildable(write(Path(directory), files))]
+
+    def test_a_virtual_workspace_is_one_candidate_at_its_root(self) -> None:
+        self.assertEqual(self.paths(VIRTUAL), ["."], "no member is proposed")
+
+    def test_a_root_that_is_a_workspace_and_a_package_is_still_one_candidate(self) -> None:
+        files = {
+            "Cargo.toml": '[workspace]\nmembers = ["helper"]\n\n[package]\nname = "app"\n',
+            "helper/Cargo.toml": '[package]\nname = "helper"\n',
+        }
+        self.assertEqual(self.paths(files), ["."])
+
+    def test_a_member_is_owned_wherever_it_sits_below_the_root_and_members_is_not_read(self) -> None:
+        files = {
+            "Cargo.toml": '[workspace]\nmembers = ["elsewhere"]\n',
+            "a/b/Cargo.toml": '[package]\nname = "deep"\n',
+            "other/Cargo.toml": '[package]\nname = "other"\n',
+        }
+        self.assertEqual(self.paths(files), ["."])
+
+    def test_a_plain_root_crate_with_a_fuzz_crate_keeps_two_candidates(self) -> None:
+        files = {"Cargo.toml": '[package]\nname = "a"\n', "fuzz/Cargo.toml": '[package]\nname = "a-fuzz"\n'}
+        self.assertEqual(self.paths(files), [".", "fuzz"])
+
+
+TAURI = {
+    "package.json": json.dumps({"name": "cairn", "private": True, "scripts": {"test": "node --test"}}),
+    "package-lock.json": "{}\n", "README.md": "# cairn\n",
+    "src-tauri/Cargo.toml": (
+        '[workspace]\nmembers = ["helper"]\n\n[workspace.package]\nedition = "2021"\n\n'
+        '[workspace.dependencies]\nserde = "1"\n\n[package]\nname = "cairn"\n\n[lib]\nname = "cairn_lib"\n\n'
+        '[[bin]]\nname = "cairn"\n\n[features]\napp = []\n'
+    ),
+    "src-tauri/helper/Cargo.toml": '[package]\nname = "helper"\n',
+}
+
+
+class TauriShapeTest(unittest.TestCase):
+    def test_a_crate_with_its_members_below_a_node_root_is_proposed_once_beside_node(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            roots = buildable(write(Path(directory), TAURI))
+        self.assertEqual([(r.path, r.found.ecosystem, r.found.evidence) for r in roots], [
+            (".", "node", "package.json"), ("src-tauri", "cargo", "src-tauri/Cargo.toml"),
+        ])
+        commands = roots[1].found.commands
+        self.assertEqual(commands["typecheck"], "cd src-tauri && cargo check --workspace --all-targets")
+        self.assertEqual(commands["test"], "cd src-tauri && cargo test --workspace")
+
+    def test_adopting_it_records_exactly_those_two_deployables(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = repository(Path(directory), "cairn", TAURI)
+            result = slipwai(repo, "adopt", "--yes")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            deployables = json.loads((repo / "project.json").read_text())["deployables"]
+        self.assertEqual(sorted(d["path"] for d in deployables.values()), [".", "src-tauri"])
+
+
+class RecordedBeforeTheRuleTest(unittest.TestCase):
+    def test_a_refresh_updates_the_root_and_reports_a_member_recorded_by_an_earlier_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = repository(Path(directory), "shop", {**VIRTUAL, "README.md": "# shop\n"})
+            self.assertEqual(slipwai(repo, "adopt", "--yes").returncode, 0)
+            record = json.loads((repo / "project.json").read_text())
+            root = record["deployables"]["shop"]
+            for target in ("typecheck", "lint", "test"):
+                root["commands"][target] = root["commands"][target].replace(" --workspace", "")
+            member = json.loads(json.dumps(root))
+            member["path"] = "crates/ledger"
+            member["commands"] = {t: f"cd crates/ledger && {c}" if c else None for t, c in root["commands"].items()}
+            record["deployables"]["ledger"] = member
+            (repo / "project.json").write_text(json.dumps(record, indent=2) + "\n")
+            refreshed = slipwai(repo, "adopt", "--refresh")
+            self.assertEqual(refreshed.returncode, 0, refreshed.stderr)
+            after = json.loads((repo / "project.json").read_text())["deployables"]
+        self.assertIn("shop: commands refreshed from `Cargo.toml`", refreshed.stdout)
+        self.assertEqual(after["shop"]["commands"]["test"], "cargo test --workspace")
+        self.assertIn(
+            "ledger: nothing the survey recognises builds at `crates/ledger` any more; its record stands as written",
+            refreshed.stdout,
+        )
+        self.assertEqual(after["ledger"], member, "the member's record is left exactly as written")
 
 
 class NpmWorkspaceRegressionTest(unittest.TestCase):

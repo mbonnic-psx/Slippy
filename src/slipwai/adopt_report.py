@@ -297,9 +297,9 @@ def ci_lines(adoption: Adoption, layout: Layout) -> list[str]:
         "gitea": f"CI: {gate} runs the gate on Gitea Actions ({ci.get('provenance')}, from {ci.get('evidence')}).",
         "gitlab": f"CI: {gate} is a GitLab job; add `include: [local: {gate}]` to .gitlab-ci.yml and it runs the gate.",
         "other": f"CI: no configuration written — the forge is `other` ({ci.get('evidence')}); have your CI "
-        f"run `{layout.make} verify`.",
+        f"run `{layout.make} install`, then `{layout.make} verify`.",
         "none": f"CI: none found in this repository, so nothing was written; when there is one, have it run "
-        f"`{layout.make} verify`.",
+        f"`{layout.make} install`, then `{layout.make} verify`.",
     }[forge]
     path = release.get("path", "unknown")
     evidence = ", ".join(release.get("evidence") or [])

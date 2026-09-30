@@ -77,6 +77,10 @@ class App:
     # For a wrapped one, what its build runs on: `kind` and `version` (what CI sets up), `ecosystem`, `packaging`.
     toolchain: Mapping[str, str] | None = None
     structure: str | None = None  # `hexagonal` where a wrapped application declares the layers the gate checks
+    # For a wrapped one, what the CI runner needs beyond its toolchain: apt `packages` its build links against, and
+    # whether its `smoke` needs a `display` (a desktop app opens a window). Recorded as `runner` in `project.json`.
+    packages: tuple[str, ...] = ()
+    display: bool = False
     # Where each recorded fact came from — `detected`, `confirmed` or `overridden`, per field — for an
     # application the factory described rather than chose. Empty for a generated one: its facts are answers.
     provenance: Mapping[str, str] = field(default_factory=dict)
@@ -144,10 +148,20 @@ class App:
             **({"commands": dict(self.commands)} if not self.generated and self.commands is not None else {}),
             **({"toolchain": dict(self.toolchain)} if not self.generated and self.toolchain else {}),
             **({"layout": self.structure} if not self.generated and self.structure else {}),
+            **({"runner": self.runner} if not self.generated and self.runner else {}),
             **({"purpose": self.purpose} if (self.is_service or not self.generated) and self.purpose else {}),
             **({"contexts": list(self.contexts)} if (self.is_service or not self.generated) and self.contexts else {}),
             **({"api": self.api} if not self.is_service and self.api else {}),
             **({"provenance": dict(self.provenance)} if self.provenance else {}),
+        }
+
+    @property
+    def runner(self) -> dict:
+        """What `project.json` records under `runner`: only what was said, so an application that needs nothing
+        records nothing."""
+        return {
+            **({"packages": list(self.packages)} if self.packages else {}),
+            **({"display": True} if self.display else {}),
         }
 
     @property
@@ -283,16 +297,6 @@ def needs_environment(apps: list[App]) -> bool:
     return any(has_feature(apps, feature) for feature in ENV_FEATURES)
 
 
-def next_port(apps: list[App]) -> int:
-    """The next service port: one above the highest a service already has — 3000, 3001, … — so nothing is
-    reassigned. The browser apps' 5173, 5174, … are a sequence of their own."""
-    return max((app.port for app in services_of(apps)), default=SERVICE_PORT - 1) + 1
-
-
-def next_web_port(apps: list[App]) -> int:
-    return max((app.port for app in web_apps(apps)), default=WEB_PORT - 1) + 1
-
-
 def check_name(apps: list[App], name: str) -> None:
     if not SERVICE_NAME.fullmatch(name):
         raise GenerationError(
@@ -316,35 +320,3 @@ def checked_contexts(names: Sequence[str] | None) -> tuple[str, ...]:
     for name in names or ():
         check_context(name)
     return tuple(dict.fromkeys(names or ()))
-
-
-def add_web(apps: list[App], name: str, api: str | None) -> list[App]:
-    """The list with one more browser app on it, proxying `/api` to `api` (the first service by default)."""
-    check_name(apps, name)
-    services = services_of(apps)
-    if not services:
-        raise GenerationError(
-            "this project has no service the factory made for a browser app to proxy to; add one with add-service first"
-        )
-    api = services[0].name if api is None else api
-    if api not in {service.name for service in services}:
-        raise GenerationError(
-            f"'{api}' is not a service of this project; the browser app can proxy to "
-            f"{', '.join(service.name for service in services)}"
-        )
-    return [*apps, web_app(name, next_web_port(apps), api)]
-
-
-def add_service(
-    apps: list[App], name: str, backend: str, selection: Selection,
-    purpose: str | None = None, contexts: Sequence[str] | None = None,
-) -> list[App]:
-    """The list with one more service on it, refusing a name that cannot be a service here."""
-    check_name(apps, name)
-    # The first service the factory makes takes the role (`make dev`, `PORT`) even beside pre-existing ones.
-    first = not services_of(apps)
-    return [
-        *apps,
-        service_app(name, backend, next_port(apps), selection, first=first, purpose=purpose, contexts=contexts),
-    ]
-

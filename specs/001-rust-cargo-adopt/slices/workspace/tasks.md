@@ -55,7 +55,7 @@ Three trees, each written on disk by a named test (helper `write` from `tests/te
 
 ## Phase 1: Setup — the Pin
 
-- [ ] T001 **Pin — observe today's answers green before any production change** (plan *Pin* rows 1 and 2; SC-004).
+- [x] T001 **Pin — observe today's answers green before any production change** (plan *Pin* rows 1 and 2; SC-004).
   Files: `tests/test_survey_cargo_workspace.py` (new; holds this slice's survey tests), `tests/test_quick_wins.py`.
   No production file is touched. Not a RED-GREEN increment: a characterisation is green by design.
   - First run `make test TESTS="test_survey test_survey_cargo test_quick_wins"` and confirm green, so a later red is
@@ -76,7 +76,7 @@ every member, and none per member; a separate workspace below it is a candidate 
 
 **Independent test**: survey the three example trees; adopt the committed `rust-workspace` fixture end to end.
 
-- [ ] T002 [US3] **Rule WG1 + WG2 (+ WG3) — a manifest with a workspace header is proposed the workspace commands,
+- [x] T002 [US3] **Rule WG1 + WG2 (+ WG3) — a manifest with a workspace header is proposed the workspace commands,
   and any other manifest keeps its commands** (scenario 2; D11; FR-008; WG1, WG2, WG3). Depends on T001.
   Files: `tests/test_survey_cargo_workspace.py`, `src/slipwai/ecosystems/cargo.py`,
   `src/slipwai/ecosystems/__init__.py`.
@@ -100,7 +100,7 @@ every member, and none per member; a separate workspace below it is a candidate 
   - REFACTOR: the module docstring of `cargo.py` says the row reads one fact from the manifest; no behaviour change,
     suite green.
 
-- [ ] T003 [US3] **Rule WG4 (+ WG5, WG9) — a Cargo workspace root owns the crates below it, so no member is proposed**
+- [x] T003 [US3] **Rule WG4 (+ WG5, WG9) — a Cargo workspace root owns the crates below it, so no member is proposed**
   (scenarios 1 and 3; FR-006; SC-002; WG4, WG5, WG9). Depends on T002.
   Files: `tests/test_survey_cargo_workspace.py`, `src/slipwai/ecosystems/rows.py`,
   `src/slipwai/ecosystems/__init__.py` (only if a name is re-exported).
@@ -125,7 +125,7 @@ every member, and none per member; a separate workspace below it is a candidate 
     addition to this task.
   - REFACTOR: none expected beyond the docstring; suite green.
 
-- [ ] T004 [US3] **Rule WG6 — a Cargo workspace root is never owned by an outer owner; it is a candidate of its own**
+- [x] T004 [US3] **Rule WG6 — a Cargo workspace root is never owned by an outer owner; it is a candidate of its own**
   (D12; the reworded edge case; WG6; SC-004). Depends on T003 (same files, and its RED needs `aggregates` to own the
   members first).
   Files: `tests/test_survey_cargo_workspace.py`, `src/slipwai/ecosystems/rows.py`,
@@ -145,7 +145,7 @@ every member, and none per member; a separate workspace below it is a candidate 
   - REFACTOR: none expected; suite green, and `python3 scripts/check-structure.py` holds the new suite under the
     350-line budget (split by example tree if not).
 
-- [ ] T005 [P] [US3] **Rule WG7 — a member's lockfile is its workspace root's** (D13; WG7; SC-004). Depends on T001
+- [x] T005 [P] [US3] **Rule WG7 — a member's lockfile is its workspace root's** (D13; WG7; SC-004). Depends on T001
   (the pin it inverts) and T002 (`declares_workspace`); it reads nothing T003 or T004 write.
   Files: `tests/test_quick_wins.py`, `src/slipwai/quick_wins.py`.
   - RED: invert T001's member assertion — a `Cargo.toml` that declares no workspace, below a tracked `Cargo.toml`
@@ -160,7 +160,7 @@ every member, and none per member; a separate workspace below it is a candidate 
     `Gemfile` or `composer.json` (other ecosystems unchanged).
   - REFACTOR: none expected; suite green.
 
-- [ ] T006 [US3] **Rule WG8 — an adopted Cargo workspace is recorded once, left alone by a second adopt, passes its
+- [x] T006 [US3] **Rule WG8 — an adopted Cargo workspace is recorded once, left alone by a second adopt, passes its
   own gate and survives a newer factory's `migrate`** (US3 independent test; SC-002, SC-003). Depends on T004.
   Files: `tests/fixtures/adopt/rust-workspace/Cargo.toml`, `tests/fixtures/adopt/rust-workspace/Cargo.lock`,
   `tests/fixtures/adopt/rust-workspace/crates/ledger/Cargo.toml`,
@@ -187,7 +187,7 @@ every member, and none per member; a separate workspace below it is a candidate 
     green (`--only rust-crate`).
   - If the harness needs anything in `src/slipwai/` beyond T002–T004, stop and report: it is a plan contradiction.
 
-- [ ] T007 [P] [US3] **Changelog fragment extended** (FR-009; `changelog.d/README.md`; plan *Constitution Check* I).
+- [x] T007 [P] [US3] **Changelog fragment extended** (FR-009; `changelog.d/README.md`; plan *Constitution Check* I).
   Files: `changelog.d/rust-cargo-adopt.md`.
   Not a RED-GREEN increment: a fragment is a document and `tests/test_changelog.py` is its check. Keep the first line
   `MINOR`, keep it saying experimental and `VERSION` at `1.4.0.dev0`. Replace "This covers one crate" and the
@@ -200,7 +200,7 @@ every member, and none per member; a separate workspace below it is a candidate 
   removes that record from `project.json` if they want it gone. Run
   `python3 -m pytest tests/test_changelog.py` under the safety wrapper.
 
-- [ ] T008 [P] [US3] **One docs clause** (plan *Source Code*; not user-visible under `AGENTS.md`, so no fragment).
+- [x] T008 [P] [US3] **One docs clause** (plan *Source Code*; not user-visible under `AGENTS.md`, so no fragment).
   Files: `docs/adopting.md`.
   Not a RED-GREEN increment. In the survey paragraph's list of builds that own what is below them, say a Cargo
   workspace owns its members like npm, Maven, Gradle and .NET do, and that a workspace nested below another is its own

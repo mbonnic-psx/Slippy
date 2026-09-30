@@ -61,7 +61,8 @@ configuration is written **for the forge found** — `.github/workflows/verify-d
 (which run the same workflows), setting up the toolchains the wrapped applications recorded;
 `delivery/ci/verify-delivery.gitlab-ci.yml` for GitLab, a job to `include:` from their own `.gitlab-ci.yml`;
 nothing at all for Jenkins, Azure, Bitbucket or another (`other`), or where the repository has no CI (`none`),
-and the report says to have that CI run `make -f delivery/Makefile verify`. Never a GitHub workflow into a
+and the report says to have that CI run `make -f delivery/Makefile install`, then `make -f delivery/Makefile
+verify`. Every job runs `install` first: a fresh checkout has none of what the recorded commands need. Never a GitHub workflow into a
 repository whose CI is somewhere else — beside whatever CI the repository already has, never in its place. Three root files are the repository's
 own and are never written over: `README.md` is left alone, and `AGENTS.md` and `.gitignore` each receive a
 marked block, appended once. `.claude/settings.json` is written only where there is none. The whole
@@ -332,7 +333,10 @@ recommendation and the way to decide rather than a rule.
 - One deployable per wrapped directory, recorded `"generated": false`: its `kind` — `service`, `library`,
   `tool`, `tests`, or `application` where nothing said — its `language` (catalog or not), its `commands`, its
   `toolchain` (`kind`, `version`, `ecosystem`, and `packaging` where a Maven build makes a WAR), its `purpose`,
-  and `provenance` per field. No `selection`, no `port`, no skeleton.
+  and `provenance` per field. No `selection`, no `port`, no skeleton. Where the CI runner needs more than the
+  toolchain, `runner` says what: `packages`, apt package names the gate's workflow installs before `install`
+  (each held to Debian's package-name rule, since it reaches a shell line on the runner), and `display: true`
+  where the smoke opens a window, which runs it under `xvfb-run`. A GitLab job names them for its image instead.
 - `why`, the business trigger, recorded like a service's purpose because it decides the change strategy more
   than the code does.
 - `database` — `schema` as `here`, `elsewhere`, `unmanaged` or `none`, the schema tools and drivers found,

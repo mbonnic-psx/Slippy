@@ -43,9 +43,10 @@ from .errors import GenerationError
 from .layout import layout_of
 from .manifest import apps_from_manifest, check_known, read_manifest, wrote_here
 from .origin import adoption_of
+from .roster import add_service, add_web
 from .scaffold import project_files
 from .selection import Selection, resolve_selection
-from .services import App, add_service, add_web, checked_contexts, contexts_phrase, frontend_of, services_of
+from .services import App, checked_contexts, contexts_phrase, frontend_of, services_of
 from .targets import managed, offered_backends
 from .toolkit import executable_paths
 

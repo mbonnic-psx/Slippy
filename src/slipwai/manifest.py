@@ -9,6 +9,7 @@ not understand is refused.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from .assets import VERSION
@@ -67,6 +68,29 @@ def recorded_toolchain(record: dict) -> dict[str, str] | None:
     ):
         raise TypeError("'toolchain' as a map of strings")
     return dict(toolchain)
+
+
+# A Debian package name (Debian Policy 5.6.1): lower case, digits, `+`, `-` and `.`, at least two characters, starting
+# with a letter or digit. The names reach an `apt-get install` line on the CI runner, so this is also what keeps a
+# recorded name from being read as an option or as shell.
+APT_PACKAGE = re.compile(r"[a-z0-9][a-z0-9+.-]+")
+
+
+def recorded_runner(record: dict) -> tuple[tuple[str, ...], bool]:
+    """What a wrapped application's CI runner needs beyond its toolchain: apt `packages`, and a `display` for its
+    smoke. Nothing where the manifest says nothing; anything else in `runner` is refused rather than dropped."""
+    runner = record.get("runner", {})
+    if not isinstance(runner, dict) or not set(runner) <= {"packages", "display"}:
+        raise TypeError("'runner' as a map with `packages` and `display`, and nothing else")
+    packages, display = runner.get("packages", []), runner.get("display", False)
+    named = isinstance(packages, list) and all(
+        isinstance(name, str) and APT_PACKAGE.fullmatch(name) for name in packages
+    )
+    if not named:
+        raise TypeError("'runner' with `packages` as a list of Debian package names")
+    if not isinstance(display, bool):
+        raise TypeError("'runner' with `display` as true or false")
+    return tuple(dict.fromkeys(packages)), display
 
 
 def recorded_structure(record: dict) -> str | None:
@@ -155,6 +179,8 @@ def apps_from_manifest(document: dict, allow_empty: bool = False) -> list[App]:
                     commands=wrapped_commands(record) if not generated else None,
                     toolchain=recorded_toolchain(record) if not generated else None,
                     structure=recorded_structure(record) if not generated else None,
+                    packages=recorded_runner(record)[0] if not generated else (),
+                    display=recorded_runner(record)[1] if not generated else False,
                     provenance=recorded_provenance(record),
                 )
             )

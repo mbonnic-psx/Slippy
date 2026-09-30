@@ -69,9 +69,38 @@ def setup_steps(apps: list[App]) -> str:
     return steps
 
 
+def packages_of(apps: list[App], smoke: bool = False) -> list[str]:
+    """The apt packages the wrapped applications record under `runner`, once each, in the order first said; the smoke
+    job adds `xvfb` where one of them needs a display."""
+    wrapped = wrapped_of(apps)
+    names = [name for app in wrapped for name in app.packages]
+    if smoke and any(app.display for app in wrapped):
+        names.append("xvfb")
+    return list(dict.fromkeys(names))
+
+
+def packages_step(apps: list[App], smoke: bool = False) -> str:
+    """The step that installs them, before `install`: what the recorded build links against is on no runner image.
+    The names were held to Debian's package-name rule when `project.json` was read (`manifest.recorded_runner`)."""
+    names = packages_of(apps, smoke)
+    if not names:
+        return ""
+    return f"      - run: sudo apt-get update -q && sudo apt-get install -y -q {' '.join(names)}  # runner.packages\n"
+
+
+def smoke_command(apps: list[App], layout: Layout) -> str:
+    """`make smoke`, under a virtual display where a wrapped application's smoke opens a window."""
+    display = any(app.display for app in wrapped_of(apps))
+    return f"{'xvfb-run -a ' if display else ''}{layout.make} smoke"
+
+
 def delivery_workflow(apps: list[App], layout: Layout, branch: str = "main") -> str:
     """`.github/workflows/verify-delivery.yml`: the delivery gate, beside whatever CI the repository already runs, on
-    pushes to the branch the repository actually lands on (`ci.branch`, read from `.git`) and on every pull request."""
+    pushes to the branch the repository actually lands on (`ci.branch`, read from `.git`) and on every pull request.
+
+    Every job runs `install` before anything else. A fresh checkout has no `node_modules`, no fetched crates and
+    no projected agent files, and without them the first recorded lint cannot run, which the ratchet refuses under
+    `CI`. The GitLab job below does the same."""
     return f"""name: verify delivery
 # Written by slipwai adopt (experimental). Runs the delivery gate — the recorded commands of the applications
 # that were here, and the method's own checks — from the Makefile under {layout.delivery}/. The repository's
@@ -87,7 +116,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-{setup_steps(apps)}      - run: {layout.make} verify
+{setup_steps(apps)}{packages_step(apps)}      - run: {layout.make} install
+      - run: {layout.make} verify
 {smoke_job(apps, layout)}"""
 
 
@@ -108,7 +138,8 @@ def smoke_job(apps: list[App], layout: Layout) -> str:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-{setup_steps(apps)}      - run: {layout.make} smoke
+{setup_steps(apps)}{packages_step(apps, smoke=True)}      - run: {layout.make} install
+      - run: {smoke_command(apps, layout)}
 """
 
 
@@ -129,6 +160,11 @@ def gitlab_job(apps: list[App], layout: Layout) -> str:
     else:
         needed = ", ".join(sorted(f"{kind} {version}".strip() for kind, version in toolchains)) or "nothing recorded"
         image = f"  # image: choose one that carries `make` and {needed}, or install them in before_script\n"
+    names = packages_of(apps)
+    if names:
+        # The image is theirs to choose, and not every image has apt, so the packages are named rather than installed.
+        image += f"  # the image must carry these system packages: {' '.join(names)}\n"
+    display = "  # and xvfb, since a smoke here opens a window\n" if any(app.display for app in wrapped_of(apps)) else ""
     include = layout.under(GITLAB_GATE)
     return f"""# Written by slipwai adopt (experimental). The delivery gate as a GitLab CI job: the recorded commands of the
 # applications that were here, and the method's own checks, from the Makefile under {layout.delivery}/. The
@@ -139,6 +175,7 @@ def gitlab_job(apps: list[App], layout: Layout) -> str:
 verify-delivery:
   stage: test
 {image}  script:
+    - {layout.make} install
     - {layout.make} verify
 """ + (f"""
 # Each application that recorded a `smoke` command, started by it and proved to answer — apart from the gate,
@@ -146,6 +183,7 @@ verify-delivery:
 smoke-delivery:
   stage: test
   needs: [verify-delivery]
-{image}  script:
-    - {layout.make} smoke
+{image}{display}  script:
+    - {layout.make} install
+    - {smoke_command(apps, layout)}
 """ if smokes(apps) else "")

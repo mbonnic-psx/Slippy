@@ -45,6 +45,7 @@ def with_override(root: Path, app: App, **changes: object) -> App:
         toolchain=changes.get("toolchain", app.toolchain),  # type: ignore[arg-type]
         purpose=changes.get("purpose", app.purpose),  # type: ignore[arg-type]
         structure=changes.get("structure", app.structure),  # type: ignore[arg-type]
+        packages=app.packages, display=app.display,
         provenance=provenance,
     )
 

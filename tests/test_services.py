@@ -18,11 +18,10 @@ from slipwai.assets import VERSION
 from slipwai.catalog import axis_default
 from slipwai.errors import GenerationError
 from slipwai.manifest import MANIFEST_SCHEMA, apps_from_manifest
+from slipwai.roster import add_service, add_web
 from slipwai.scaffold import project_files, write_project
 from slipwai.selection import Selection, resolve_selection
 from slipwai.services import (
-    add_service,
-    add_web,
     contexts_of,
     default_apps,
     described,

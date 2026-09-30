@@ -326,7 +326,11 @@ which the `run-the-app` skill points to — including the run that failed and wh
 the application and proves it answers, exiting non-zero when it does not, as `smoke` under the application's
 `commands` in `project.json`, with `provenance.commands` `confirmed`: `make smoke` and the gate's smoke job run it
 from then on, `verify` never does. An application nobody can start anywhere but production is a written `null`
-with the reason in the same file — never a key left unwritten, which reads as a question still open.
+with the reason in the same file — never a key left unwritten, which reads as a question still open. What the start
+needed that no toolchain setup installs goes under the application's `runner`: `packages`, the apt packages it
+builds against (a desktop app's WebKitGTK), and `display: true` where its smoke opens a window. The gate's CI
+installs them, and runs the smoke under `xvfb-run`; left unrecorded, the smoke job is red on a runner that has
+neither.
 
 ## Then
 

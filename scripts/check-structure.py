@@ -46,9 +46,9 @@ TIERS: tuple[tuple[str, tuple[str, ...]], ...] = (
     # how a written manifest reads back into that list, how a canonical toolkit file reaches a project, where
     # the delivery material lives — and the build wrapper a wrapped Java application runs through, written
     # where its repository has none.
-    ("answers", ("selection", "services", "capabilities", "manifest", "tooling", "toolkit", "layout", "survey",
-                 "delivery_facts", "origin", "wrappers", "convergence", "structure", "platform", "strategy",
-                 "quick_wins", "programme", "uncommitted")),
+    ("answers", ("selection", "services", "roster", "capabilities", "manifest", "tooling", "toolkit", "layout",
+                 "survey", "delivery_facts", "origin", "wrappers", "convergence", "structure", "platform",
+                 "strategy", "quick_wins", "programme", "uncommitted")),
     # One module per part of the repository being generated.
     ("parts", ("project",)),
     # The whole of a project, assembled and written — one more service added to one that exists — and the

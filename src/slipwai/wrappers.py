@@ -4,7 +4,7 @@ A Maven or Gradle repository that builds from the IDE often has no `mvnw` or `gr
 as `mvn …` or `gradle …` then need a Maven or Gradle on every machine that runs the gate — the laptop that
 adopts it, the CI runner — where `command not found` is the first thing `verify` says. The wrapper is the
 ecosystem's own answer: a committed script that fetches its pinned build tool on first use, so the machine
-needs a JDK and nothing else. So the survey (`ecosystems.py`) proposes the wrapper form — `./mvnw`,
+needs a JDK and nothing else. So the survey (`ecosystems/`) proposes the wrapper form — `./mvnw`,
 `./gradlew` — for every Maven and Gradle build, whether or not the wrapper is there yet, and `adopt` and
 `adopt --refresh` write it beside the build file where it is missing and the recorded commands run it: the
 same Maven Wrapper every generated Java project carries (`assets/languages/java/build/`), and the Gradle

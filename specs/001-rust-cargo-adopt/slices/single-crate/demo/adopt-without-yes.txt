@@ -1,0 +1,16 @@
+usage: slipwai adopt [-h] [--yes] [--refresh] [--next] [--confirm NAME]
+                     [--decline NAME] [--as NAME=NEW] [--integration AGENT]
+                     [--init | --no-init] [--name NAME]
+                     [--profile {standard,event-modelling}]
+                     [--target {existing,none}] [--delivery DIR] [--why TEXT]
+                     [--skip NAME] [--language NAME=LANGUAGE]
+                     [--purpose NAME=TEXT] [--kind NAME=KIND]
+                     [--command NAME:TARGET=COMMAND] [--hexagonal NAME]
+                     [--database {here,elsewhere,unmanaged,none}]
+                     [--database-repository URL]
+                     [--infrastructure {here,elsewhere,unmanaged,none}]
+                     [--infrastructure-repository URL]
+                     [--forge {github,gitea,gitlab,other,none}]
+                     [--release {pipeline,scripted,manual,unknown}]
+slipwai adopt: error: nothing to ask on; pass --yes to accept the survey, with flags for what to change
+exit 2

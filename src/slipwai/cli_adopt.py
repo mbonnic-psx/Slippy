@@ -35,9 +35,10 @@ from .survey import survey
 
 NOTHING_FOUND = (
     "nothing here starts a build the survey can read — a package.json, pyproject.toml or requirements.txt, go.mod, "
-    "pom.xml, build.gradle, build.xml, a .sln or .csproj, composer.json or Gemfile, at the root or up to three "
-    "directories down — so there is no application to wrap, and adoption installs the method around applications. "
-    "A build this repository does have and the survey cannot read is a gap in the factory: raise it, naming the file."
+    "pom.xml, build.gradle, build.xml, a .sln or .csproj, composer.json, Gemfile or Cargo.toml, at the root or up "
+    "to three directories down — so there is no application to wrap, and adoption installs the method around "
+    "applications. A build this repository does have and the survey cannot read is a gap in the factory: raise it, "
+    "naming the file."
 )
 NOTHING_LEFT = "every application the survey found was skipped or left unwrapped; nothing is left to install around"
 # What `--confirm` and `--decline` have no use for: every flag that describes the adoption itself rather than

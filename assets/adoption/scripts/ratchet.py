@@ -21,7 +21,11 @@ recorded root-relative either way, so a finding compares the same however the to
 neither, this cannot tell new findings from old: the exit code is compared instead, and the report says so. A
 command that could not run at all — its tool is not on this machine, which the shell reports as exit 127 (not
 found) or 126 (not executable) — has no findings to record: the run fails, names the tool, and writes nothing,
-because a baseline of "the build tool was missing" would pass forever on any machine that lacks it.
+because a baseline of "the build tool was missing" would pass forever on any machine that lacks it. Cargo
+reports a subcommand that is not installed (`cargo clippy` without the clippy component, `cargo fmt` without
+rustfmt) as `error: no such command: `clippy``, and exits 101 — the code a real clippy failure gives — and rustup's
+proxy, for a toolchain without the component, as `error: 'cargo-clippy' is not installed for …` with exit 1; both
+are read as the same thing, not runnable, colour or not and past a leading `cd <dir> &&`.
 
 `test` runs through the same ratchet, with one difference: a suite that is red on the day the method arrives is
 not quarantined behind anybody's back. The first run stops, shows the failures, and says what quarantining means;
@@ -48,6 +52,18 @@ from pathlib import Path
 RATCHETED = ("lint", "typecheck", "test")
 # What `sh -c` exits with when the command's tool is not there to run: 127 not found, 126 not executable.
 NOT_RUNNABLE = (126, 127)
+# A subcommand that is not installed, which is not the same as one that fails: cargo's own `no such command`, printed
+# with exit 101 — the code a failing clippy or test run gives — and rustup's proxy for a toolchain without the
+# component (`cargo-clippy`, `cargo-fmt`), printed with exit 1 (rustup 1.29.0, observed 2026-09-29).
+CARGO_NO_SUCH_COMMAND = re.compile(
+    r"^error: (?:no such command: `(?P<sub>[^`]+)`|'cargo-(?P<component>[\w-]+)' is not installed for )", re.MULTILINE
+)
+# Terminal colour, which `CARGO_TERM_COLOR=always` (the usual Rust CI setting) puts inside the words matched here.
+ANSI = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+# A test binary killed by a signal: cargo prints where it ran and the signal, no file and no test, and exits 101 — as
+# a quarantined red suite does. The crash is a finding of its own, keyed by the signal, so it is new against a
+# baseline that did not have it rather than passing on the exit code alone.
+CRASH = re.compile(r"^\s*process didn't exit successfully: .*\(signal: \d+, (SIG\w+)")
 # A token that names a file, with an optional position after it: `src/a.js:3:7`, `src/a.js(3,7)`, `Foo.cs(3,7)`.
 LOCATION = re.compile(
     r"(?P<path>(?:[\w.-]+/)*[\w.-]+\.[A-Za-z0-9]+)(?P<position>(?::\d+(?::\d+)?)|(?:\(\d+(?:,\d+)?\)))?"
@@ -58,6 +74,7 @@ LOCATION = re.compile(
 # `[ERROR] Failed to execute goal` lines do not have), Gradle's `ShopTest > adds FAILED`, `dotnet test`'s
 # `Failed Shop.Adds [3 ms]`, Jest's `● Shop › adds`, Vitest's `× Shop > adds 3ms` and node's spec reporter's
 # `✖ adds (1.06ms)` — the reporter node picks on a terminal, and from 23 everywhere, where TAP was the default before.
+# libtest's `test tests::adds ... FAILED` is cargo test's, and the only line a test returning `Err` prints.
 # The finding is the name alone: what stays the same from run to run, and from reporter to reporter, while the
 # message and the duration beside it change.
 TEST_FAILURES = (
@@ -68,13 +85,16 @@ TEST_FAILURES = (
     re.compile(r"^(\S+ > \S+) FAILED$"),
     re.compile(r"^\s*Failed (\S+)(?: \[[^\]]*\])?$"),
     re.compile(r"^\s*[●×✕✗✖✘] (.+?)(?:\s+\(?\d+(?:\.\d+)?\s?ms\)?)?$"),
+    re.compile(r"^test (.+?) \.\.\. FAILED$"),
 )
 # Node's spec reporter points at where a failed test is defined — `test at test/a.test.js:2:1` — under every `✖`. A
 # file at a position, so it would read as a finding of its own; it says nothing the `✖` line does not, and TAP, the
 # reporter node picks off a terminal, never prints it, so a baseline recorded under one reporter would be red under
 # the other for the same one failing test. The same reporter heads its detail with `✖ failing tests:`, which is not
 # a test either.
-NOT_A_FINDING = re.compile(r"^\s*test at \S+:\d+|^\s*✖ failing tests:$")
+# libtest's panic line, `thread 'tests::a' (520735) panicked at src/lib.rs:7:22:`, names the OS thread, which differs
+# every run; the failure is keyed by its `test tests::a ... FAILED` line instead, which a test returning `Err` has too.
+NOT_A_FINDING = re.compile(r"^\s*test at \S+:\d+|^\s*✖ failing tests:$|^thread '[^']*' (?:\(\d+\) )?panicked at ")
 
 
 def project_root(script: Path) -> Path:
@@ -122,8 +142,13 @@ def findings_in(output: str, root: Path, where: Path | None = None) -> list[str]
     and compares the same however the tool that reported it spelled it.
     """
     found: list[str] = []
-    for line in output.splitlines():
+    for line in ANSI.sub("", output).splitlines():
         if NOT_A_FINDING.match(line):
+            continue
+        crash = CRASH.match(line)
+        if crash:
+            if f"crash: {crash.group(1)}" not in found:
+                found.append(f"crash: {crash.group(1)}")
             continue
         names_a_file = False
 
@@ -177,6 +202,30 @@ def relative(path: Path) -> str:
     return path.relative_to(ROOT).as_posix()
 
 
+def tool_of(shell: str) -> str:
+    """The program a recorded shell line runs, past what only sets it up: a leading `cd <dir> &&` (or `;`), a
+    `NAME=value` assignment, and `env` with its options and assignments — `cd ledger && cargo clippy`, the survey's
+    own command for a crate one level down, runs `cargo` as much as `cargo clippy` does."""
+    try:
+        words = shlex.split(shell)
+    except ValueError:
+        return shell
+    index = 0
+    while index < len(words):
+        word = words[index]
+        if word == "cd":
+            index += 3 if index + 2 < len(words) and words[index + 2] in ("&&", ";") else 2
+        elif word in ("&&", ";") or re.fullmatch(r"[A-Za-z_]\w*=.*", word):
+            index += 1
+        elif word == "env":
+            index += 1
+            while index < len(words) and words[index].startswith("-"):
+                index += 2 if words[index] in ("-u", "--unset", "-C", "--chdir") else 1
+        else:
+            return word
+    return shell
+
+
 def main(argv: list[str]) -> int:
     if len(argv) < 4 or argv[2] != "--":
         print(__doc__.strip().splitlines()[2].strip(), file=sys.stderr)
@@ -186,14 +235,17 @@ def main(argv: list[str]) -> int:
     # `cd apps/shop && npm run lint` included. Several words are an older recipe's, and are re-quoted rather than
     # joined with spaces so that a recorded `sh -c 'test -n "$HOME"'` reaches the second shell as three words.
     shell = command[0] if len(command) == 1 else shlex.join(command)
-    tool = next((word for word in shlex.split(shell) if word not in ("cd", "&&", ";", "env") and "/" not in word
-                 and "=" not in word), shell) if shell.startswith("cd ") else shlex.split(shell)[0]
+    tool = tool_of(shell)
     run = subprocess.run(["sh", "-c", shell], cwd=ROOT, text=True, capture_output=True)
     output = run.stdout + run.stderr
     sys.stdout.write(output)
     sys.stdout.flush()
     name = f"{application} {target}"
-    if run.returncode in NOT_RUNNABLE:
+    missing = run.returncode in (1, 101) and tool == "cargo"
+    no_such = CARGO_NO_SUCH_COMMAND.search(ANSI.sub("", output)) if missing else None
+    if no_such:
+        tool = f"cargo {no_such.group('sub') or no_such.group('component')}"
+    if run.returncode in NOT_RUNNABLE or no_such:
         print(
             f"ratchet: {name} could not run — `{tool}` is not on this machine (exit {run.returncode}), so there "
             "are no findings to hold the code to, and nothing is recorded. Install it, or change what project.json "

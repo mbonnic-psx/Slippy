@@ -1,4 +1,4 @@
-<!-- convergence: 80cb965d5dfab79f -->
+<!-- convergence: 7099d7d5f26bd32d -->
 # Where `slipwai` stands
 
 > **Experimental.** Brownfield adoption is new and will change shape while real repositories teach it what it got wrong: the files under the delivery directory, the facts `project.json` records and the questions `adopt` asks may change in a MINOR release, and `slipwai migrate` brings each change here with a note saying what to do. Every place this reaches you says so until it stops being true. What surprised you — a detection that was wrong, a gate that went red, a sentence this page should have had — belongs on the public issue tracker.
@@ -6,7 +6,7 @@
 A generated project starts at the top of every ladder below and the method keeps it there. This repository
 started wherever it was; this page says where that is, axis by axis, and the loop climbs one rung per slice
 until nothing here differs from a generated project — at which point `slipwai converge` makes it one. **1** of
-9 axes are at their target, **7** below it, **1** unrecorded.
+9 axes are at their target, **8** below it, **0** unrecorded.
 
 Every row is a fact `project.json` holds under `convergence`, with where it came from: `detected` from the tree,
 `confirmed` or `overridden` by a person, `unrecorded` where nothing has said. Nothing is a default. To move a
@@ -18,7 +18,7 @@ first slice and offers the next unplanned row as a method slice beside the produ
 | Axis | Where it stands | Target | Evidence | Planned as | Provenance |
 |---|---|---|---|---|---|
 | Path to production | `pipeline` | `pipeline-decides` | pipeline: .github/workflows/package.yml; pipeline: .github/workflows/publish-package.yml; pipeline: .github/workflows/release.yml; pipeline: .github/workflows/verify.yml; scripted: assets/targets/aws/scripts/deploy.py; scripted: assets/targets/azure/scripts/deploy.py; scripted: tests/fixtures/adopt/converging/deploy.sh; scripted: tests/fixtures/adopt/javascript-gitlab/deploy.sh; scripted: Makefile | *not yet* | `detected` |
-| Integration | `unknown` | `continuous` | CI on github, gate .github/workflows/verify-delivery.yml | *not yet* | `unrecorded` |
+| Integration | `trunk` | `continuous` | short-lived PR branches (most merged within an hour, 2026-09-23..28); CI does not run on the fork: zero workflow runs on mbonnic-psx/Slippy, no checks on PRs #8 and #12 (2026-09-28) | *not yet* | `confirmed` |
 | Safety net | `tests-exist` | `mutation-measured` | test recorded for slipwai | *not yet* | `detected` |
 | Structure | `named` | `typed` | slipwai: tool; not under apps/: . | *not yet* | `detected` |
 | Platform | `supported` | `audited` | in support on 2026-09-28: Python 3.11; no audit command recorded for slipwai | *not yet* | `detected` |

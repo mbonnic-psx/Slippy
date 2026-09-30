@@ -1,69 +1,12 @@
-"""What a build ecosystem's files say about the code they build, and how its own tools answer the Make targets.
-
-The table behind `survey.py` (brownfield adoption; experimental as `AGENTS.md` defines the word). One
-row per ecosystem the survey can recognise — by the manifest file that starts its build — with the language
-it is written in, how to tell its toolchain's version, and the command its own tools run for each of the
-eight Make targets a service owes. A target the ecosystem has no answer for is `None`, which the manifest
-records as a written `null` and the Makefile runs as a line that says so; it is never guessed at.
-
-Deliberately not `catalog.json`: the catalog is the contract for what the factory can *generate*, and a C#
-row there would be a claim nothing behind it keeps. These rows say only what can be *recognised*, and every
-command here is a proposal the person confirms or overrides — `survey.py` records which.
-"""
+"""The ecosystems the survey recognised before Cargo — Node, Python, Go, Maven, Gradle, Ant, .NET, PHP and Ruby —
+one function per row, and which of their builds own the builds below them."""
 from __future__ import annotations
 
 import json
 import re
-import shlex
-from collections.abc import Callable
-from dataclasses import dataclass
 from pathlib import Path
 
-from .bounded_read import read
-
-# The eight targets, in the order a service's recipes spell them (`project/native_commands.py`).
-TARGETS = ("install", "typecheck", "lint", "test", "integration", "adversarial", "audit", "mutation")
-# What a wrapped application may record beside the eight, each with a target of its own and never proposed by the
-# survey: `test-full`, a suite too slow for `verify`; `smoke`, the one command that starts the application and proves
-# it answers — the fact the day-one gate cannot compose from the eight, and the floor beside the build
-# (`programme.py`), because every false green the first adoptions shipped was a change nothing had started.
-EXTRA = ("test-full", "smoke")
-Commands = dict[str, str | None]
-
-
-@dataclass(frozen=True)
-class Detected:
-    """One buildable directory, as its files describe it."""
-
-    ecosystem: str
-    language: str
-    evidence: str
-    commands: Commands
-    # `kind` names the runtime a CI job sets up (`node`, `python`, `go`, `java`, `dotnet`, `php`, `ruby`);
-    # `version` is the pin the tree carries, or empty where it carries none.
-    toolchain: dict[str, str]
-    # What the build packages, where that decides which rung of the ladder is next: `war` for a Maven build that
-    # makes one.
-    packaging: str | None = None
-
-
-def complete(**given: str | None) -> Commands:
-    """Every target, in order; the ones not given are written no's."""
-    return {target: given.get(target) for target in TARGETS}
-
-
-def first_line(path: Path) -> str:
-    text = read(path).strip()
-    return text.splitlines()[0].strip().lstrip("v") if text else ""
-
-
-def in_dir(directory: str, command: str) -> str:
-    """A command run inside `directory`, from the repository root — as is when the directory is the root."""
-    return command if directory == "." else f"cd {shlex.quote(directory)} && {command}"
-
-
-def prefixed(directory: str, path: str) -> str:
-    return path if directory == "." else f"{directory}/{path}"
+from .common import Detected, complete, first_line, in_dir, prefixed, read
 
 
 def node(root: Path, directory: str) -> Detected | None:
@@ -323,13 +266,6 @@ def ruby(root: Path, directory: str) -> Detected | None:
         ),
         {"kind": "ruby", "version": first_line(here / ".ruby-version")},
     )
-
-
-# In the order tried, so a directory with a `package.json` beside a `pyproject.toml` is reported once, as Node,
-# and a `pom.xml` beside a leftover `build.xml` as Maven; the survey says which file decided it.
-ECOSYSTEMS: tuple[Callable[[Path, str], Detected | None], ...] = (
-    node, python, go, maven, gradle, ant, dotnet, php, ruby,
-)
 
 
 def aggregates(root: Path, found: Detected) -> bool:

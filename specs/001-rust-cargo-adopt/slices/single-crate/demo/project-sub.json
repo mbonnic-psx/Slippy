@@ -1,0 +1,204 @@
+{
+  "schema": 2,
+  "generator": {
+    "name": "slipwai",
+    "generatedWith": "1.4.0.dev0",
+    "updatedWith": "1.4.0.dev0"
+  },
+  "speckitSource": "git+https://github.com/github/spec-kit.git@v1.0.8",
+  "origin": "adopted",
+  "name": "carin-sub",
+  "profile": "standard",
+  "frontend": "none",
+  "target": "existing",
+  "capabilities": [
+    "continuous-delivery"
+  ],
+  "deployables": {
+    "ledger": {
+      "kind": "application",
+      "generated": false,
+      "path": "crates/ledger",
+      "language": "rust",
+      "commands": {
+        "install": "cd crates/ledger && cargo fetch --locked",
+        "typecheck": "cd crates/ledger && cargo check --all-targets",
+        "lint": "cd crates/ledger && cargo clippy --all-targets --message-format=short -- -D warnings && cargo fmt --check",
+        "test": "cd crates/ledger && cargo test",
+        "integration": null,
+        "adversarial": null,
+        "audit": null,
+        "mutation": null
+      },
+      "toolchain": {
+        "kind": "rust",
+        "version": "",
+        "ecosystem": "cargo"
+      },
+      "provenance": {
+        "language": "detected",
+        "commands": "detected",
+        "kind": "unrecorded"
+      },
+      "eventSourced": false,
+      "capabilities": []
+    }
+  },
+  "layout": {
+    "applications": "apps",
+    "packages": "packages",
+    "delivery": "delivery"
+  },
+  "database": {
+    "schema": "none",
+    "tools": [],
+    "drivers": [],
+    "provenance": "detected"
+  },
+  "infrastructure": {
+    "home": "unmanaged",
+    "describedBy": [],
+    "provenance": "detected"
+  },
+  "ci": {
+    "forge": "none",
+    "gate": null,
+    "branch": "master",
+    "evidence": "no CI configuration in the tree",
+    "provenance": "detected"
+  },
+  "release": {
+    "path": "unknown",
+    "evidence": [],
+    "provenance": "unrecorded"
+  },
+  "platform": {
+    "snapshot": "2026-09-08",
+    "dated": "2026-09-28",
+    "products": [],
+    "provenance": "detected"
+  },
+  "strategy": {
+    "recommended": "leave-it",
+    "trigger": null,
+    "because": [
+      "no business trigger is recorded, so nothing is asking for the architecture to change; the delivery rungs below pay off whatever the trigger turns out to be"
+    ],
+    "before": [
+      "a pipeline that deploys on a passing `verify` \u2014 the path to production is `unknown`",
+      "a green suite in the gate \u2014 the safety net is `tests-exist`",
+      "every application's role recorded \u2014 the structure is `as-found`"
+    ],
+    "stop": "now, as far as the architecture goes; record `why` in `project.json` when there is one",
+    "decided": null,
+    "adr": null,
+    "finished": false,
+    "programme": [
+      {
+        "kind": "run",
+        "step": "`ledger`: how it starts is not proven \u2014 run it once the way the README, container file or CI config says, write what was proven (the command, the port, the seed, the runtime it needs and the ones it cannot run on) in `survey/running.md`, and record the one command that starts it and proves it answers as `commands.smoke` in `project.json` (`null` is a written no, with the reason there); `make smoke` and the gate's smoke job run it from then on",
+        "pacing": "next, after the build and before any slice changes code that was here, whatever the strategy: a change to an application nothing has started is a change nobody has seen run, and a suite that never builds the context cannot tell a constructor the container can call from one it cannot",
+        "evidence": "commands.smoke: unrecorded for crates/ledger"
+      },
+      {
+        "kind": "rung",
+        "step": "Runtime (rung 4): no container image is built here \u2014 a first `Dockerfile`, and `make verify` grows a step that builds it",
+        "pacing": "depends on the strategy \u2014 decide it first (`/ground`)",
+        "evidence": "survey: no Dockerfile or Compose file"
+      },
+      {
+        "kind": "rung",
+        "step": "Host (rung 5): the infrastructure is described nowhere anyone can read \u2014 describe it here or in a named repository (`delivery/docs/deployment.md`)",
+        "pacing": "depends on the strategy \u2014 decide it first (`/ground`)",
+        "evidence": "infrastructure.home: unmanaged"
+      }
+    ],
+    "provenance": "detected"
+  },
+  "convergence": [
+    {
+      "axis": "path-to-production",
+      "rung": "unknown",
+      "target": "pipeline-decides",
+      "evidence": "release.path in project.json",
+      "provenance": "unrecorded",
+      "planned": null
+    },
+    {
+      "axis": "integration",
+      "rung": "unknown",
+      "target": "continuous",
+      "evidence": "no CI gate is written for this repository",
+      "provenance": "unrecorded",
+      "planned": null
+    },
+    {
+      "axis": "safety-net",
+      "rung": "tests-exist",
+      "target": "mutation-measured",
+      "evidence": "test recorded for ledger",
+      "provenance": "detected",
+      "planned": null
+    },
+    {
+      "axis": "structure",
+      "rung": "as-found",
+      "target": "typed",
+      "evidence": "ledger: application; role not established for ledger",
+      "provenance": "detected",
+      "planned": null
+    },
+    {
+      "axis": "platform",
+      "rung": "unknown",
+      "target": "audited",
+      "evidence": "no runtime pin, framework version or image the survey can date",
+      "provenance": "unrecorded",
+      "planned": null
+    },
+    {
+      "axis": "constitution",
+      "rung": "template",
+      "target": "in-full",
+      "evidence": ".specify/memory/constitution.md",
+      "provenance": "detected",
+      "planned": null
+    },
+    {
+      "axis": "data",
+      "rung": "settled",
+      "target": "settled",
+      "evidence": "schema: none",
+      "provenance": "detected",
+      "planned": null
+    },
+    {
+      "axis": "infrastructure",
+      "rung": "recorded",
+      "target": "settled",
+      "evidence": "home: unmanaged",
+      "provenance": "detected",
+      "planned": null
+    },
+    {
+      "axis": "strategy",
+      "rung": "open",
+      "target": "done",
+      "evidence": "no business trigger recorded",
+      "provenance": "unrecorded",
+      "planned": null
+    }
+  ],
+  "survey": {
+    "ci": [],
+    "containers": [],
+    "makefile": false,
+    "readme": false,
+    "quickWins": []
+  },
+  "agent": {
+    "harness": "claude",
+    "evidence": "Claude Code set CLAUDECODE in the environment this ran in",
+    "provenance": "detected"
+  }
+}

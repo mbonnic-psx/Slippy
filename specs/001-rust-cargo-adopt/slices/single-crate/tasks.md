@@ -135,7 +135,7 @@ candidates of their own (`workspace`). No task here fixes them.
 None of these re-opens the loop (no CRITICAL or HIGH); each is what the slice may ship without, written so it is
 not forgotten. `[P]` where the files are disjoint.
 
-- [ ] T005 [P] [US1] **MEDIUM — the `target/` guard has no teeth.** `tests/test_survey_cargo.py:65` puts its
+- [x] T005 [P] [US1] **MEDIUM — the `target/` guard has no teeth.** `tests/test_survey_cargo.py:65` puts its
   `Cargo.toml` at `target/debug/build/x/`, four levels down, past the walk's `DEPTH = 3`
   (`src/slipwai/survey.py:44`), so it passes with `"target"` removed from `SKIPPED` (`survey.py:40`) — observed
   in pass 1 by that mutation, restored; with the same mutation a `target/debug/Cargo.toml` *is* proposed. T001
@@ -145,7 +145,7 @@ not forgotten. `[P]` where the files are disjoint.
   directory — places its `Cargo.toml` within `DEPTH`, and each is observed red by removing that one name from
   `SKIPPED` (or the path from the `skipped` argument) and restored with `git checkout -- src/slipwai/survey.py`.
 
-- [ ] T006 [US1] **MEDIUM — nothing asserts what `adopt` records for a Rust candidate.** The harness's second
+- [x] T006 [US1] **MEDIUM — nothing asserts what `adopt` records for a Rust candidate.** The harness's second
   element in `ADOPTIONS` (`scripts/test-adoption.py:51`) is the tool the gate needs, not the ecosystem; no test
   reads `project.json` for `rust-crate`. Pass 1 read it by hand (`--keep`): `language: rust`, `toolchain:
   {kind: rust, version: "", ecosystem: cargo}`, the four commands and four `null`s, provenance `detected` — correct
@@ -156,7 +156,7 @@ not forgotten. `[P]` where the files are disjoint.
   empty `version` (SG1) and its eight commands exactly as `plan.md`'s Design table. Observed red by changing one
   row's expectation, then restored.
 
-- [ ] T007 [P] [US1] **MEDIUM — the factory's own docs still describe the table before this slice.**
+- [x] T007 [P] [US1] **MEDIUM — the factory's own docs still describe the table before this slice.**
   `docs/adopting.md:26` links `../src/slipwai/ecosystems.py`, which no longer exists, and its list (line 27) names
   nine ecosystems without Cargo; `docs/maintaining.md:104` draws `ecosystems.py` as one file. Not user-visible
   under `AGENTS.md` (docs/), so no fragment and no version change.
@@ -165,7 +165,7 @@ not forgotten. `[P]` where the files are disjoint.
   recognised ecosystems under `docs/` names Cargo, tried last; the tree in `maintaining.md` shows the package's
   four modules.
 
-- [ ] T008 [P] [US1] **MEDIUM — "overridable" (spec, Assumptions) is claimed, not proved.** A directory with
+- [x] T008 [P] [US1] **MEDIUM — "overridable" (spec, Assumptions) is claimed, not proved.** A directory with
   `package.json` beside `Cargo.toml` is surveyed as Node (`test_survey_cargo.py:73`); the spec says the maintainer
   may override that. With the cargo row in `ECOSYSTEMS`, `survey.toolchain_as` (`survey.py:305`) now returns the
   Rust toolchain for `--language <app>=rust`, and `confirm.py:80` records it — by construction, untested.
@@ -174,13 +174,13 @@ not forgotten. `[P]` where the files are disjoint.
   new one, Rust — overriding `--language` records that ecosystem's toolchain (`kind: rust`, `ecosystem: cargo`)
   with provenance `toolchain: overridden`, and `adopt --refresh` afterwards is a no-op.
 
-- [ ] T009 [P] [US1] **LOW — a dead helper.** `tests/test_survey.py:33` adds `only`, which no test in that file
+- [x] T009 [P] [US1] **LOW — a dead helper.** `tests/test_survey.py:33` adds `only`, which no test in that file
   calls (the Cargo suite defines its own at `test_survey_cargo.py:17`).
   Files: `tests/test_survey.py`, `tests/test_survey_cargo.py`.
   GREEN (the sweep): no helper in `tests/test_survey*.py` is defined without a caller; one `only` if both suites
   use it (imported, as `write` is), none in `test_survey.py` otherwise.
 
-- [ ] T010 [US1] **LOW — SG2's deliberate hole is not pinned.** Pass 1 adopted a copy of the fixture with a
+- [x] T010 [US1] **LOW — SG2's deliberate hole is not pinned.** Pass 1 adopted a copy of the fixture with a
   `.github/workflows/ci.yml`: `verify-delivery.yml` is written with checkout and `make -f delivery/Makefile verify`
   and no Rust step (`adopted_ci.py:57` skips the unknown kind), as SG2 says. No test holds it, so `ci-toolchain`
   has no pin to invert. May be taken as `ci-toolchain`'s own Pin stage instead; say which.
@@ -253,11 +253,11 @@ the manifest-keyed pages (#11) but not this one — the owner decides whether it
   (root and subdirectory) and a ratchet test feeds `findings_in` clippy's short output with two findings in one file
   and expects two keys — observe both fail for their own reason. GREEN: the row proposes the amended command; the
   fragment quotes it. Sweep: every place the lint string is asserted or quoted.
-- [ ] T012 [US1] **MEDIUM (Phase 4) — a machine without the clippy or rustfmt component is not refused.** A missing
+- [x] T012 [US1] **MEDIUM (Phase 4) — a machine without the clippy or rustfmt component is not refused.** A missing
   cargo subcommand exits 101, as a clippy `-D warnings` failure does, so the ratchet records `{exit: 101,
   findings: []}` and passes on it after. Close it for every cargo subcommand the row proposes, in the ratchet
   (`assets/adoption/scripts/ratchet.py`, cargo's `no such command` treated as not runnable), with its test.
-- [ ] T013 [US1] **LOW (Phase 4) — the fragment's Catch-up says refresh proposes a Cargo candidate; it reports it
+- [x] T013 [US1] **LOW (Phase 4) — the fragment's Catch-up says refresh proposes a Cargo candidate; it reports it
   `not wrapped`.** Reword `changelog.d/rust-cargo-adopt.md` to say what a maintainer does (`resurvey.py:174-178`,
   `:343-347`), and add a refresh test for a Cargo root in an adopted repository after `tests/test_pin.py:117`.
 
@@ -295,3 +295,57 @@ Constitution this pass touched:
 - **V (as it holds today, `.specify/memory/constitution.md:149-152`)** — the new test enters at the survey
   boundary over a fixture tree and calls the ratchet's own function loaded from the shipped script; no mock.
 - III, IV, VI–XI — not touched by this diff.
+
+## Mutation (2026-09-29)
+
+**Not run: no mutation tool is configured here.** `project.json` records `commands.mutation: null` for `slipwai`,
+and neither `mutmut` nor `cosmic-ray` is installed (`.python-tools/` carries ruff and mypy only). The setup
+decision a person owes: choose a Python mutation tool, record it as `commands.mutation`, and scope it to changed
+paths. Until then the evidence gate stands on what the teeth checks recorded above show — each Cargo test observed
+failing against a deliberate break of `cargo.py`, `survey.py` or `ratchet.py` and restored (T001, T005, T008,
+T011 pass 2, T012) — which is recorded reachability, not a mutation score.
+
+## Owed after the adversary pass (2026-09-29)
+
+From `specs/001-rust-cargo-adopt/adversary-log.md`, rows R1–R5. Each task is RED → GREEN through a failing test,
+under a new `implement` entry. S1/S2, the directory name that reaches the shell or the Makefile, predates this
+slice and is fixed off `main` on its own branch (`fix-unsafe-candidate-paths`, GHSA-3fpx-wg55-c4qj). Merge that
+first; S3 falls with it, because a name with a space is no longer proposed. R6–R8 and S4 stay open in the log.
+
+- [x] T014 [US1] **HIGH (R1) — the tool is read past `cd <dir> &&`, `VAR=… ` and `env …`.** `ratchet.py`
+  takes the first word after `cd` as the tool, so the survey's own `cd ledger && cargo clippy …`, for any crate
+  one level down, is never matched as `cargo`, and a missing clippy is baselined. Files:
+  `assets/adoption/scripts/ratchet.py`, `tests/test_ratchet_cargo.py`. RED: a stub `cargo` on PATH printing
+  ``error: no such command: `clippy` `` with exit 101, run through the ratchet as `cd sub && cargo clippy`,
+  `RUSTFLAGS=-Dwarnings cargo clippy` and `env RUSTFLAGS=x cargo clippy`; each is refused with nothing recorded,
+  exactly as the bare `cargo clippy` already is. Reproduced by the host on 2026-09-29.
+- [x] T015 [US1] **HIGH (R2) — rustup's "component not installed" is not runnable either.** Confirmed by the host
+  on 2026-09-29 against a linked toolchain holding only `cargo` and `rustc`, with rustup 1.29.0: `cargo clippy`
+  and `cargo fmt --check` print ``error: 'cargo-clippy' is not installed for the … toolchain …`` (and
+  `'cargo-fmt'`) and exit **1**. Files: `ratchet.py`, `tests/test_ratchet_cargo.py`. RED: a stub printing that
+  line with exit 1 is refused, naming `cargo clippy` / `cargo fmt`; the fragment and the docstring say both
+  forms.
+- [x] T016 [US1] **HIGH (R3) — a Rust test failure is keyed without the thread id.** libtest prints
+  `thread 'tests::known_red' (520735) panicked at src/lib.rs:7:22:`, and the id changes every run. Key it by
+  the test name, which is stable: a `TEST_FAILURES` pattern for libtest's `---- <name> stdout ----` or
+  `test <name> ... FAILED` (this also closes R7). Files: `ratchet.py`, `tests/test_ratchet_cargo.py`. RED: two
+  runs of the same failing output that differ only in the thread id give the same key, and a quarantined suite
+  passes its second run.
+- [x] T017 [US1] **HIGH (R4) — a crash is a new finding against a quarantined suite.** A test binary killed by a
+  signal prints ``process didn't exit successfully: `…` (signal: 6, SIGABRT…)`` with exit 101 and no location,
+  and the exit-code comparison accepts it. Files: `ratchet.py`, `tests/test_ratchet_cargo.py`. RED: with a
+  quarantined baseline that has findings, an output with no findings at all and that `signal:` line fails as new.
+  Decide and write down: does "no finding and a baseline that had some" always fail, or only on a signal?
+  **Decided (2026-09-30): only the signal.** `CRASH` makes cargo's ``process didn't exit successfully: … (signal:
+  N, SIGX…)`` a finding of its own, `crash: SIGX`, compared like any other. A known crash stays known. The general
+  rule is unchanged, because other ecosystems' baselines rest on it.
+- [x] T018 [US1] **MEDIUM (R5) — ANSI colour is stripped before `no such command` is matched.** With
+  `CARGO_TERM_COLOR=always`, the line starts with `\e[1m\e[91merror`. Files: `ratchet.py`,
+  `tests/test_ratchet_cargo.py`. RED: the coloured bytes (as recorded in the adversary log) with exit 101 are
+  refused; strip the escapes before matching, not only for this pattern.
+
+Done 2026-09-30, RED observed for every one of the ten new cases (`tests/test_ratchet_cargo.py`: tool past `cd`,
+an assignment and `env` ×4; rustup's form ×2; colour; the same failure on another thread; a non-panicking failure;
+a crash). GREEN in `assets/adoption/scripts/ratchet.py`: `tool_of`, `CARGO_NO_SUCH_COMMAND` with the rustup form
+at exit 1 or 101, `ANSI` stripped before any match, libtest's `... FAILED` line in `TEST_FAILURES`, its panic line
+in `NOT_A_FINDING`, and `CRASH`. R7 closed with R3. Every test run under `systemd-run … MemoryMax=4G`.

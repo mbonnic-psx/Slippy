@@ -10,9 +10,13 @@ integration and adversarial are written as no answer. This covers one crate; the
 What stays out, and comes later: a toolchain pin read from `rust-toolchain.toml`, Rust set up in the adopted CI,
 and Cargo workspaces.
 
-The ratchet also reads cargo's `error: no such command` — a machine without the clippy or rustfmt component —
-as the tool not being there (exit 101 otherwise looks like a clippy failure), so it refuses and records nothing
-instead of baselining the missing component. This holds for every cargo subcommand a repository records.
+The ratchet also reads a missing clippy or rustfmt component as the tool not being there, so it refuses and
+records nothing instead of baselining it. That covers cargo's `error: no such command` (exit 101, which otherwise
+looks like a clippy failure) and rustup's `error: 'cargo-clippy' is not installed for …` (exit 1). It holds with
+colour on, past a leading `cd <dir> &&`, `NAME=value` or `env`, and for every cargo subcommand a repository records.
+A quarantined `cargo test` is keyed by each failing test's name on libtest's `test … ... FAILED` line, not by the
+panic line, which names the OS thread and so differs every run. A test binary killed by a signal is a finding of
+its own, `crash: SIGABRT`, so a crash fails a quarantined suite instead of passing on the exit code alone.
 
 **Catch-up.** None is needed. An already-adopted repository has no Cargo candidate recorded, and `slipwai adopt
 --refresh` does not propose one: it reports the directory as `not wrapped: ... builds (cargo, rust ...) and has no

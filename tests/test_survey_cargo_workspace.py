@@ -13,7 +13,6 @@ from test_survey import write
 
 from slipwai.survey import buildable, survey
 
-
 VIRTUAL = {
     "Cargo.toml": '[workspace]\nmembers = ["crates/*"]\nresolver = "2"\n',
     "crates/ledger/Cargo.toml": '[package]\nname = "ledger"\n',
@@ -190,6 +189,33 @@ class RecordedBeforeTheRuleTest(unittest.TestCase):
             refreshed.stdout,
         )
         self.assertEqual(after["ledger"], member, "the member's record is left exactly as written")
+
+
+NESTED = {
+    "Cargo.toml": '[workspace]\nmembers = ["crates/*"]\n',
+    "crates/ledger/Cargo.toml": '[package]\nname = "ledger"\n',
+    "fuzz/Cargo.toml": '[package]\nname = "ledger-fuzz"\n\n[workspace]\nmembers = ["."]\n',
+}
+
+
+class NestedWorkspaceTest(unittest.TestCase):
+    def test_a_workspace_below_a_workspace_root_is_a_candidate_of_its_own(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            roots = buildable(write(Path(directory), NESTED))
+        self.assertEqual([r.path for r in roots], [".", "fuzz"], "the member is owned, the nested root is not")
+        commands = roots[1].found.commands
+        self.assertEqual(commands["typecheck"], "cd fuzz && cargo check --workspace --all-targets")
+        self.assertEqual(commands["test"], "cd fuzz && cargo test --workspace")
+
+    def test_the_nested_root_owns_what_is_below_it(self) -> None:
+        files = {**NESTED, "fuzz/targets/Cargo.toml": '[package]\nname = "t"\n'}
+        with tempfile.TemporaryDirectory() as directory:
+            self.assertEqual([r.path for r in buildable(write(Path(directory), files))], [".", "fuzz"])
+
+    def test_a_plain_member_with_no_header_stays_owned_under_a_root_beside_a_nested_one(self) -> None:
+        files = {**NESTED, "crates/ledger/tools/Cargo.toml": '[package]\nname = "tools"\n'}
+        with tempfile.TemporaryDirectory() as directory:
+            self.assertEqual([r.path for r in buildable(write(Path(directory), files))], [".", "fuzz"])
 
 
 class NpmWorkspaceRegressionTest(unittest.TestCase):

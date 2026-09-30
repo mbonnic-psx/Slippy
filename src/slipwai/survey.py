@@ -10,8 +10,8 @@ said, `confirmed` for what the person accepted and `overridden` for what they ch
 
 Bounded on purpose. The walk stops a few levels down and skips dependency and build output, a directory that
 builds is not searched for builds inside it when its manifest says it owns them (npm workspaces, Maven
-modules, a Gradle settings file, a .NET solution), and a signal this cannot read is reported as absent, not
-guessed. `ecosystems/` is the table of what can be recognised.
+modules, a Gradle settings file, a .NET solution, a Cargo workspace), and a signal this cannot read is reported as
+absent, not guessed. `ecosystems/` is the table of what can be recognised.
 """
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ from .delivery_facts import (
     remote_host,
     role_of,
 )
-from .ecosystems import ECOSYSTEMS, Detected, aggregates, read
+from .ecosystems import ECOSYSTEMS, Detected, aggregates, read, stands_alone
 from .naming import SAFE_NAME
 from .origin import FORGES, RELEASE_PATHS
 from .quick_wins import quick_wins
@@ -223,7 +223,8 @@ def files(root: Path, depth: int = EVIDENCE_DEPTH, skipped: frozenset[str] = fro
 
 def buildable(root: Path, skipped: frozenset[str] = frozenset()) -> tuple[Root, ...]:
     """Every directory that builds, by path, each recognised once and none inside a build of its own ecosystem
-    that owns it — a Go module under an npm workspace is still a root; a workspace package is not."""
+    that owns it — a Go module under an npm workspace is still a root; a workspace package is not. A Cargo workspace
+    root is the exception: Cargo never lets one be a member of another, so one below an owner is a root of its own."""
     roots: list[Root] = []
     owners: list[tuple[str, str]] = []
     for directory in directories(root, DEPTH, skipped):
@@ -231,7 +232,7 @@ def buildable(root: Path, skipped: frozenset[str] = frozenset()) -> tuple[Root, 
             found = detect(root, directory)
             if found is None:
                 continue
-            owned = any(
+            owned = not stands_alone(root, found) and any(
                 ecosystem == found.ecosystem and (owner == "." or directory.startswith(f"{owner}/"))
                 for owner, ecosystem in owners
             )

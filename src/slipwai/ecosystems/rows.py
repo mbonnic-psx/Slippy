@@ -283,3 +283,9 @@ def aggregates(root: Path, found: Detected) -> bool:
     if found.ecosystem == "gradle":
         return any((directory / f).is_file() for f in ("settings.gradle", "settings.gradle.kts"))
     return found.ecosystem == "dotnet" and here.suffix == ".sln"
+
+
+def stands_alone(root: Path, found: Detected) -> bool:
+    """Whether a build is a root of its own even below an owner of its ecosystem: a Cargo workspace root, which
+    Cargo never lets be a member of another workspace, so the outer root's commands do not cover it."""
+    return found.ecosystem == "cargo" and aggregates(root, found)

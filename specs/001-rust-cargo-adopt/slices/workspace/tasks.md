@@ -216,13 +216,16 @@ No white box in this slice: no event model, no screen states to write back; `che
 
 ## Phase 3: Polish
 
-- [ ] T009 [US3] **Run the gate.** Depends on T001–T008. No files written.
+- [x] T009 [US3] **Run the gate.** Depends on T001–T008. No files written.
   Run `make verify` as the detached unit the safety rules give, poll it to completion, then `make test-adoption`
   under the wrapper; both green (`cargo` is at `~/.cargo/bin/cargo`, so the fixtures' `verify` runs and is not
   skipped). The one failure `test_changelog.test_every_release_this_repository_has_ever_tagged_has_an_entry` is
   environmental (upstream tags this clone has and the fork lacks) and is noted, not fixed; any other failure is real.
   Report each command's outcome. Do not commit red; do not touch any file not named above to make it pass — hand the
   failure back.
+
+
+T009 done 2026-09-30 at `cb1b4ca`: `make verify` ran lint, typecheck, check-structure (152 modules) and 854 tests, `FAILED (failures=1, skipped=7)`; the one failure is `test_changelog.test_every_release_this_repository_has_ever_tagged_has_an_entry`, environmental (upstream's tags in this clone). `make test-adoption`: 8 fixtures adopted, re-surveyed, verified and migrated; `rust-workspace` and `rust-crate` verify green on day one and after `migrate`. Both under `systemd-run … MemoryMax=4G`.
 
 ## Dependencies & execution order
 

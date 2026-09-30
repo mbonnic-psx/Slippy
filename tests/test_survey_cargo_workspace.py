@@ -112,6 +112,29 @@ class WorkspaceCommandsTest(unittest.TestCase):
         self.assertEqual(commands["test"], "cd crates/site && cargo test --workspace")
 
 
+class ByteOrderMarkTest(unittest.TestCase):
+    """Cargo reads a manifest that starts with U+FEFF; a header after one is still a header (adversary W2)."""
+
+    FILES = {**VIRTUAL, "Cargo.toml": "\ufeff" + VIRTUAL["Cargo.toml"]}
+
+    def test_a_root_whose_header_follows_a_byte_order_mark_is_one_candidate_with_the_workspace_commands(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = write(Path(directory), self.FILES)
+            self.assertEqual([r.path for r in buildable(root)], ["."])
+            self.assertEqual(commands_of(root)["test"], "cargo test --workspace")
+
+    def test_its_members_are_not_reported_as_lacking_a_lockfile(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = write(Path(directory), self.FILES)
+            found = [f.where for f in missing_lockfiles(root, sorted(self.FILES))]
+        self.assertEqual(found, ["Cargo.toml"], "the root needs its lock; the members do not")
+
+    def test_a_mark_before_a_comment_or_a_plain_table_declares_nothing(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = write(Path(directory), {"Cargo.toml": "\ufeff# [workspace]\n[package]\nname = \"a\"\n"})
+            self.assertEqual(commands_of(root)["test"], "cargo test")
+
+
 class WorkspaceOwnsItsMembersTest(unittest.TestCase):
     def paths(self, files: dict[str, str]) -> list[str]:
         with tempfile.TemporaryDirectory() as directory:

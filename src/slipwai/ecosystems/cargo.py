@@ -11,8 +11,9 @@ from .common import Detected, complete, in_dir, prefixed, read
 
 # A `[workspace]` or `[workspace.<x>]` table header at the start of a line: a workspace root. Not `workspace = true`
 # in a dependency, `package.workspace = "…"` or a comment, which are a member pointing at a root, and not a
-# `[[workspace…]]` array table.
-WORKSPACE = re.compile(r"(?m)^[ \t]*\[[ \t]*workspace[ \t]*[.\]]")
+# `[[workspace…]]` array table. A U+FEFF counts as leading space on any line, not only the first: Cargo reads a
+# manifest that begins with a byte order mark, and a match that is slightly wider than Cargo's is the safe way round.
+WORKSPACE = re.compile(r"(?m)^[ \t\ufeff]*\[[ \t]*workspace[ \t]*[.\]]")
 
 
 def declares_workspace(manifest: Path) -> bool:

@@ -164,6 +164,71 @@ class MissingSubcommandTest(unittest.TestCase):
             self.assertIn("could not run — `cargo clippy`", run.stderr)
 
 
+# What cargo 1.98 printed, and exited 101 on, for `cargo clippy` over a Tauri crate on a machine without libdbus's
+# headers (an adoption of a Rust desktop app, 2026-09-30), trimmed of the build script's pkg-config detail.
+BUILD_SCRIPT = """\
+    Checking serde_spanned v1.1.1
+error: failed to run custom build command for `libdbus-sys v0.2.7`
+
+Caused by:
+  process didn't exit successfully: `/w/target/debug/build/libdbus-sys-a5ad98f7/build-script-build` (exit status: 101)
+  --- stderr
+  The system library `dbus-1` required by crate `libdbus-sys` was not found.
+
+  thread 'main' (1476261) panicked at /home/u/.cargo/registry/src/index.crates.io/libdbus-sys-0.2.7/build.rs:25:9:
+  explicit panic
+warning: build failed, waiting for other jobs to finish...
+"""
+
+
+class BuildScriptTest(unittest.TestCase):
+    """A build that stops in a dependency's build script never reached the code, so it is no baseline: recorded, its
+    exit code would pass every later run that got no further."""
+
+    def test_a_build_script_that_did_not_finish_is_not_runnable_and_never_baselined(self) -> None:
+        for target, command in (
+            ("lint", "cd sub && cargo clippy --all-targets --message-format=short -- -D warnings && cargo fmt --check"),
+            ("typecheck", "cd sub && cargo check --all-targets"),
+            ("test", "cd sub && cargo test"),
+        ):
+            with self.subTest(target), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / "sub").mkdir()
+                run = gate(root, f"cat <<'E' >&2\n{BUILD_SCRIPT}E\nexit 101\n", command, target=target)
+                self.assertEqual(run.returncode, 1, run.stdout + run.stderr)
+                self.assertIn("could not run — the build script of `libdbus-sys v0.2.7` did not finish (exit 101)",
+                              run.stderr)
+                self.assertIn(f"{target} never reached this repository's code", run.stderr)
+                self.assertFalse((root / "delivery/baseline.json").exists(), "a build that stopped is no baseline")
+
+    def test_ratchet_tighten_does_not_record_it_either(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            run = gate(root, f"cat <<'E' >&2\n{BUILD_SCRIPT}E\nexit 101\n", "cargo test", {"RATCHET_TIGHTEN": "1"},
+                       target="test")
+            self.assertEqual(run.returncode, 1, run.stdout + run.stderr)
+            self.assertFalse((root / "delivery/baseline.json").exists())
+
+    def test_a_baseline_already_recorded_from_one_does_not_pass_it_on_the_exit_code(self) -> None:
+        """The baseline an earlier ratchet wrote for exactly this output: exit 101, no findings."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "delivery").mkdir()
+            (root / "delivery/baseline.json").write_text('{"shop": {"lint": {"exit": 101, "findings": []}}}\n')
+            run = gate(root, f"cat <<'E' >&2\n{BUILD_SCRIPT}E\nexit 101\n", "cargo clippy")
+            self.assertEqual(run.returncode, 1, run.stdout + run.stderr)
+            self.assertIn("did not finish", run.stderr)
+
+    def test_colour_does_not_hide_it(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            body = ("printf '\\033[1m\\033[91merror\\033[0m\\033[1m:\\033[0m failed to run custom build command for "
+                    "`openssl-sys v0.9.103`\\n' >&2\nexit 101\n")
+            run = gate(root, body, "cargo check")
+            self.assertEqual(run.returncode, 1, run.stdout + run.stderr)
+            self.assertIn("the build script of `openssl-sys v0.9.103` did not finish", run.stderr)
+
+
 def cargo_test(failing: tuple[str, ...], thread: int, crash: bool = False) -> str:
     """What `cargo test` prints (1.98, libtest) for these failing tests; a crash cuts the run short."""
     lines = ["running 3 tests"] + [f"test {name} ... FAILED" for name in failing] + ["test tests::ok ... ok", ""]

@@ -118,6 +118,9 @@ def recorded(repo: Path, name: str, expected: tuple[str, str]) -> None:
     """The adopted `project.json` names the fixture's one deployable with the toolchain kind and ecosystem its row
     expects — and, for the Rust fixtures, no version and exactly the commands the survey table gives."""
     deployables = json.loads((repo / "project.json").read_text())["deployables"]
+    if name in RUST_EXPECTED and list(deployables) != [name]:
+        raise SystemExit(f"test-adoption: {name}: project.json records deployables {list(deployables)}, "
+                         f"exactly [{name!r}] was expected — a workspace's members are not deployables")
     deployable = deployables.get(name) or {}
     toolchain = deployable.get("toolchain") or {}
     if (toolchain.get("kind"), toolchain.get("ecosystem")) != expected:

@@ -1,3 +1,5 @@
 [workspace]
 members = ["crates/*"]
+# Without `--workspace` a virtual root tests only these, so the flag is what makes `report` run.
+default-members = ["crates/ledger"]
 resolver = "2"

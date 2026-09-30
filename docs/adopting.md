@@ -24,9 +24,16 @@ safe for an agent to attempt.
 **Survey.** It reads the tree and proposes what it finds — and where nothing in the tree starts a build it can
 read, it says so by name, lists the manifests it does read, and stops before asking a question ([`src/slipwai/survey.py`](../src/slipwai/survey.py),
 with the package [`ecosystems/`](../src/slipwai/ecosystems/__init__.py) as the table of what it can recognise): every directory
-that builds — Node, Python, Go, Maven, Gradle, Ant, .NET, PHP, Ruby, Rust (Cargo, tried last), by the manifest that starts the build — with
-its language, the toolchain pin the tree carries, and the command its own tools run for each of the eight
-Make targets a service owes (`install lint typecheck test integration adversarial audit mutation`). A target
+that builds — Node, Python, Go, Maven, Gradle, Ant, .NET, PHP, Ruby, Rust (Cargo, tried last), by the manifest that
+starts the build — with its language, the toolchain pin the tree carries, and the command its own tools run for each
+of the eight Make targets a service owes (`install lint typecheck test integration adversarial audit mutation`). A
+workspace root (npm, Maven, Gradle, .NET, Cargo) owns its members and is proposed once, except that a Cargo workspace
+nested below another is a candidate of its own. A Cargo workspace root owns the crates below it even where another
+manifest tried first decides the directory's language (a napi-rs or maturin crate): that directory is one candidate,
+no member is proposed as Cargo, and the Rust is gated when you override the language and commands — which replace
+that Node or Python gate rather than join it, so a maintainer who wants both writes a command that runs both. Where
+an outer build of that ecosystem owns the directory and its `Cargo.toml` declares a workspace, it is proposed as
+Cargo. A target
 the ecosystem has no answer for is `null`: a written no, never a guess. It also reads whether CI, containers
 and infrastructure code are here, whether a database schema is versioned here and with what, and which
 database drivers the dependency manifests name. Every fact carries the file that said so.

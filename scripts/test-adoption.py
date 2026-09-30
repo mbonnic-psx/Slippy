@@ -53,6 +53,9 @@ ADOPTIONS: dict[str, tuple[list[str], str, tuple[str, str]]] = {
     # A crate with a committed lockfile and no dependencies: the survey proposes Cargo, and the fixture's own gate
     # (clippy, fmt, test) is green where `cargo` is on the machine.
     "rust-crate": ([], "cargo", ("rust", "cargo")),
+    # A virtual workspace of two crates and one lockfile at its root: the survey proposes the workspace once, at `.`,
+    # with `--workspace` on check, clippy and test, and the fixture's own gate runs both members' tests.
+    "rust-workspace": ([], "cargo", ("rust", "cargo")),
     # A language the factory cannot generate, whose toolchain the gate's machine may not have.
     "dotnet-api": ([], "dotnet", ("dotnet", "dotnet")),
     # CI on GitLab, a deploy job, a start script, and a test suite that is red on day one: the gate is a GitLab
@@ -83,6 +86,14 @@ RUST_COMMANDS = {
     "test": "cargo test",
     "integration": None, "adversarial": None, "audit": None, "mutation": None,
 }
+# The same for the virtual workspace: check, clippy and test cover every member (`--workspace`), the rest as a crate's.
+RUST_WORKSPACE_COMMANDS = {
+    **RUST_COMMANDS,
+    "typecheck": "cargo check --workspace --all-targets",
+    "lint": "cargo clippy --workspace --all-targets --message-format=short -- -D warnings && cargo fmt --check",
+    "test": "cargo test --workspace",
+}
+RUST_EXPECTED = {"rust-crate": RUST_COMMANDS, "rust-workspace": RUST_WORKSPACE_COMMANDS}
 
 
 def run(*command: str, cwd: Path, env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
@@ -105,17 +116,20 @@ def own_files(fixture: Path) -> dict[str, bytes]:
 
 def recorded(repo: Path, name: str, expected: tuple[str, str]) -> None:
     """The adopted `project.json` names the fixture's one deployable with the toolchain kind and ecosystem its row
-    expects — and, for the Rust crate, no version and exactly the commands the survey table gives."""
+    expects — and, for the Rust fixtures, no version and exactly the commands the survey table gives."""
     deployables = json.loads((repo / "project.json").read_text())["deployables"]
+    if name in RUST_EXPECTED and list(deployables) != [name]:
+        raise SystemExit(f"test-adoption: {name}: project.json records deployables {list(deployables)}, "
+                         f"exactly [{name!r}] was expected — a workspace's members are not deployables")
     deployable = deployables.get(name) or {}
     toolchain = deployable.get("toolchain") or {}
     if (toolchain.get("kind"), toolchain.get("ecosystem")) != expected:
         raise SystemExit(
             f"test-adoption: {name}: project.json records toolchain {toolchain}, expected kind and ecosystem {expected}"
         )
-    if name == "rust-crate" and (toolchain.get("version") != "" or deployable.get("commands") != RUST_COMMANDS):
+    if name in RUST_EXPECTED and (toolchain.get("version") != "" or deployable.get("commands") != RUST_EXPECTED[name]):
         raise SystemExit(f"test-adoption: {name}: project.json records {toolchain} and {deployable.get('commands')}, "
-                         f"not an empty version and {RUST_COMMANDS}")
+                         f"not an empty version and {RUST_EXPECTED[name]}")
 
 
 def newer_factory(into: Path) -> Path:

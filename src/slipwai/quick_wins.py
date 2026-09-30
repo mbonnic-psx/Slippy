@@ -21,7 +21,7 @@ import subprocess
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from .ecosystems import read
+from .ecosystems import Reader, member_of_workspace, read
 from .naming import SAFE_NAME, escaped
 
 KINDS = ("secret-in-tree", "ide-or-build-output-tracked", "insecure-dependency-source", "no-lockfile",
@@ -172,12 +172,17 @@ def insecure_sources(root: Path, paths: list[str]) -> list[Finding]:
     return found
 
 
-def missing_lockfiles(root: Path, paths: list[str]) -> list[Finding]:
+def missing_lockfiles(root: Path, paths: list[str], reader: Reader = read) -> list[Finding]:
     found = []
+    tracked, memo = set(paths), dict[Path, bool]()
     for relative in paths:
         path = Path(relative)
         locks = LOCKFILES.get(path.name)
-        if not locks or any(str(path.with_name(lock)) in paths for lock in locks):
+        if not locks or any(str(path.with_name(lock)) in tracked for lock in locks):
+            continue
+        if path.name == "Cargo.toml" and member_of_workspace(
+            root, path, lambda manifest: str(manifest) in tracked, memo, reader,
+        ):
             continue
         found.append(Finding(
             "no-lockfile", relative, f"no lockfile beside `{path.name}` ({' / '.join(locks[:2])})",

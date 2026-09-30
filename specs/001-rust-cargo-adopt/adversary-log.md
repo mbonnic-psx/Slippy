@@ -38,3 +38,30 @@ Findings:
 | R6 | MEDIUM | confirmed — agent | open | A failing test whose captured stdout prints `error: no such command: …` makes the whole run "could not run", false red, and cannot be quarantined. |
 | R7 | LOW | confirmed — agent | fixed (with T016) | libtest's `test x ... FAILED` / `failures:` names match no `TEST_FAILURES` pattern: an `Err`-returning failure has no key. Masked by R3 today. |
 | R8 | LOW | confirmed — agent | open | Output is buffered whole and findings are de-duplicated in a list (quadratic): 80k findings 16.8 s, ~140 MB output 498 MB RSS. Held under the cap. |
+
+## workspace · 44de220 · 2026-09-30
+
+| Trigger | Status | Evidence |
+|---|---|---|
+| driving adapter (HTTP route, CLI command, queue consumer) | widened | `src/slipwai/ecosystems/cargo.py` (`WORKSPACE`, `declares_workspace`, `member_of_workspace`) and `src/slipwai/survey.py` `buildable` — `slipwai adopt` now reads the *content* of an untrusted tree's `Cargo.toml` files, and of their ancestors, to decide which directories become recorded commands and which are hidden; `src/slipwai/quick_wins.py` `missing_lockfiles` |
+| driven adapter or the provider types behind one | not present | the ratchet and the adopted Makefile are unchanged; the commands gain `--workspace` only |
+| authorisation decision (who can reach one that already exists) | not present | no identity or permission in the diff |
+| concurrency, idempotency, ordering, retention, or time | already covered | `adopt --refresh` a no-op on the new shapes is proved by `scripts/test-adoption.py` (`rust-workspace`) and was re-checked by the pass on the Tauri and nested shapes |
+
+Every probe ran under `systemd-run --user --scope -p MemoryMax=4G -p MemorySwapMax=0`, `TMPDIR` on disk, trees under
+`$HOME/.cache/slippy-ws-tmp/adv/`; no OOM kill, no timeout. Real cargo 1.98.0 only as `cargo metadata --no-deps --offline`.
+
+Spawned: survey reading untrusted `Cargo.toml` content for ownership and commands · `drive-adversary` · opus-5.5 (host) ·
+delegated, fresh context · manifest: `src/slipwai/ecosystems/cargo.py`, `src/slipwai/survey.py`, `src/slipwai/quick_wins.py`,
+`src/slipwai/bounded_read.py`, `tests/test_survey_cargo_workspace.py`, `tests/test_quick_wins.py`,
+`tests/fixtures/adopt/rust-workspace/`, `scripts/test-adoption.py`
+Omitted: driven adapter · not present. Authorisation · not present. Concurrency/time · already covered (row above).
+
+Findings:
+
+| # | Severity | Triage | State | Finding |
+|---|---|---|---|---|
+| W1 | HIGH | confirmed — reproduced by the host (HEAD `[('.', 'node')]`, `0e3bab3` `[('.', 'node'), ('packages/native/a', 'cargo')]`) | fixed (T015, `f01a9ec`) | A Cargo workspace whose directory's first detection is owned by an outer build of that ecosystem (a napi-rs package with its own `[workspace]` inside an npm workspace) vanishes, root and members: `member_of_workspace` counts the ancestor as owner though that directory is never proposed. A regression against `0e3bab3`, and D14's override cannot reach it. |
+| W2 | MEDIUM | confirmed — agent, `cargo metadata` reads it as a workspace | fixed (T016, `570143d`) | A UTF-8 BOM before `[workspace]` on line 1 hides the header: members proposed each, no `--workspace`, false `no-lockfile` findings. |
+| W3 | LOW | confirmed — agent, real cargo | open — named in the fragment (T017, `13a5f1c`) | The header text match disagrees with Cargo both ways: `[workspace]` inside a multi-line string makes a plain crate an owner and hides a crate below it; a quoted `["workspace"]` header or a top-level `workspace.members = […]` key is a workspace Cargo reads and the survey does not. The Assumptions' text match; named in the fragment by T017. |
+| W4 | LOW | confirmed — agent (16 MB root, 500 members: 34.6 s against 0.06 s) | fixed (T018, `0f20431`) | `member_of_workspace` re-reads every ancestor manifest for every member, up to `MAX_READ` each, and `missing_lockfiles` tests ancestors against a list; each read is bounded, the total is not. |

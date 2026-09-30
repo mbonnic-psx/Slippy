@@ -123,7 +123,8 @@ def quick_wins_table(findings: tuple[dict, ...]) -> str:
     is read from the tree on every `/survey`, so a finding fixed disappears here rather than being ticked off."""
     if not findings:
         return ("None the survey can see: no credential written in a file it reads, no IDE or build output tracked, no "
-                "dependency source over plain HTTP, no missing lockfile, no archive under version control.")
+                "dependency source over plain HTTP, no missing lockfile, no archive under version control, no "
+                "directory named to be read as code.")
     rows = "\n".join(f"| `{f['kind']}` | `{f['where']}` | {f['what']} | {f['fix']} |" for f in findings)
     return (
         f"Each is a proposal, not a change the factory made; `/drive` offers them before the map's rows while any "

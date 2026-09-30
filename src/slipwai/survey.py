@@ -32,6 +32,7 @@ from .delivery_facts import (
     role_of,
 )
 from .ecosystems import ECOSYSTEMS, Detected, aggregates, read
+from .naming import SAFE_NAME
 from .origin import FORGES, RELEASE_PATHS
 from .quick_wins import quick_wins
 
@@ -198,7 +199,7 @@ def directories(root: Path, depth: int, skipped: frozenset[str] = frozenset()) -
         except OSError:
             continue
         for child in children:
-            if child.name.startswith(".") and child.name != ".github":
+            if (child.name.startswith(".") and child.name != ".github") or not SAFE_NAME.fullmatch(child.name):
                 continue
             found.append(child.relative_to(root).as_posix())
             frontier.append((child, level + 1))

@@ -2,6 +2,7 @@
 its commands with. The rows themselves are `rows.py` and `cargo.py`; `__init__.py` is the table."""
 from __future__ import annotations
 
+import shlex
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -45,7 +46,7 @@ def first_line(path: Path) -> str:
 
 def in_dir(directory: str, command: str) -> str:
     """A command run inside `directory`, from the repository root — as is when the directory is the root."""
-    return command if directory == "." else f"cd {directory} && {command}"
+    return command if directory == "." else f"cd {shlex.quote(directory)} && {command}"
 
 
 def prefixed(directory: str, path: str) -> str:

@@ -262,7 +262,7 @@ here fixes them.
 
 ## Phase 4: Convergence pass 1 — what the slice still owes
 
-- [ ] T010 **HIGH** [US3] **A Cargo workspace root that shares its directory with a manifest tried earlier owns
+- [x] T010 **HIGH** [US3] **A Cargo workspace root that shares its directory with a manifest tried earlier owns
   nothing, so each member is proposed as a candidate of its own** (FR-006; SC-002; the edge case "reported once, by
   the ecosystem tried first"). Evidence: a probe tree with a root `package.json`, a root `Cargo.toml` holding
   `[workspace] members = ["crates/*"]` and `crates/a/Cargo.toml` (the napi-rs shape) surveys at HEAD as `.` (Node)
@@ -285,7 +285,7 @@ here fixes them.
   owner where its `Cargo.toml` declares a workspace; no member is proposed; one membership predicate for both rules;
   nothing new on the survey page. The sweep carries a member directory that also holds a `package.json` and stays Node.
 
-- [ ] T011 **MEDIUM** [US3] **Two conjuncts of the new rules have no test that fails without them** (Principle V's
+- [x] T011 **MEDIUM** [US3] **Two conjuncts of the new rules have no test that fails without them** (Principle V's
   evidence gate). Evidence, by the sanctioned route, each file restored with `git checkout -- <path>` before the next:
   (1) `quick_wins.py:181`, dropping `str(manifest) in paths and` — so an *untracked* ancestor `Cargo.toml` that
   declares a workspace hides a tracked member's missing lock — leaves `make test TESTS="test_survey_cargo_workspace
@@ -298,7 +298,7 @@ here fixes them.
   route; or run `/mutation` over the four and close each survivor. Files: `tests/test_survey_cargo_workspace.py`,
   `tests/test_quick_wins.py`.
 
-- [ ] T012 **MEDIUM** [US3] **The fragment says less than the code does, and once contradicts itself** (FR-009;
+- [x] T012 **MEDIUM** [US3] **The fragment says less than the code does, and once contradicts itself** (FR-009;
   `changelog.d/README.md`). Evidence, against `changelog.d/rust-cargo-adopt.md`: (a) *What stays out* no longer
   names that `members`, `exclude` and `default-members` are not read, nor an inline `workspace = { … }` table, so a
   crate below a root that the root excludes, and that declares no workspace, is owned and never proposed — a build
@@ -310,7 +310,7 @@ here fixes them.
   of the fragment's Cargo text read against the test that proves it, with any sentence no test proves reworded or
   removed; `python3 -m pytest tests/test_changelog.py` under the wrapper. Files: `changelog.d/rust-cargo-adopt.md`.
 
-- [ ] T013 **LOW** **The `docs/adopting.md` clause breaks its sentence.** Evidence: `docs/adopting.md:27` now
+- [x] T013 **LOW** **The `docs/adopting.md` clause breaks its sentence.** Evidence: `docs/adopting.md:27` now
   reads "every directory that builds — Node, …, Rust (Cargo, tried last), by the manifest that starts the build — a
   workspace root (…) owns its members …, except that a Cargo workspace nested below another is a candidate of its
   own — with its language, …": the second dash pair leaves "every directory that builds … with its language" with

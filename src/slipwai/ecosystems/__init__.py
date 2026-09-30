@@ -15,9 +15,9 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 
-from .cargo import cargo, declares_workspace
+from .cargo import cargo, declares_workspace, member_of_workspace
 from .common import EXTRA, TARGETS, Commands, Detected, prefixed, read
-from .rows import aggregates, ant, dotnet, go, gradle, maven, node, php, python, ruby, stands_alone
+from .rows import aggregates, ant, dotnet, go, gradle, maven, node, php, python, ruby
 
 # In the order tried, so a directory with a `package.json` beside a `pyproject.toml` is reported once, as Node,
 # and a `pom.xml` beside a leftover `build.xml` as Maven; the survey says which file decided it.
@@ -26,6 +26,6 @@ ECOSYSTEMS: tuple[Callable[[Path, str], Detected | None], ...] = (
 )
 
 __all__ = [
-    "ECOSYSTEMS", "EXTRA", "TARGETS", "Commands", "Detected", "aggregates", "declares_workspace", "prefixed", "read",
-    "stands_alone",
+    "ECOSYSTEMS", "EXTRA", "TARGETS", "Commands", "Detected", "aggregates", "declares_workspace", "member_of_workspace",
+    "prefixed", "read",
 ]

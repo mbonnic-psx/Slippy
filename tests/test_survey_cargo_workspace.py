@@ -11,6 +11,7 @@ from pathlib import Path
 from test_adopt import repository, slipwai
 from test_survey import write
 
+from slipwai.quick_wins import missing_lockfiles
 from slipwai.survey import buildable, survey
 
 VIRTUAL = {
@@ -226,3 +227,57 @@ class NpmWorkspaceRegressionTest(unittest.TestCase):
                 "packages/app/package.json": json.dumps({"name": "app", "workspaces": ["inner/*"]}),
             })
             self.assertEqual([r.path for r in buildable(root)], ["."], "the nested npm workspace is owned")
+
+
+ROOTS = {
+    "node": {"package.json": '{"name": "napi"}'}, "python": {"pyproject.toml": "[project]\nname = 'maturin'\n"},
+    "go": {"go.mod": "module m\n\ngo 1.22\n"}, "maven": {"pom.xml": "<project/>"},
+    "gradle": {"build.gradle": "plugins {}\n"}, "ant": {"build.xml": "<project/>"},
+    "dotnet": {"app.csproj": "<Project/>"}, "php": {"composer.json": "{}"}, "ruby": {"Gemfile": ""},
+}
+RUST = {
+    "Cargo.toml": '[workspace]\nmembers = ["crates/*"]\n',
+    "crates/a/Cargo.toml": '[package]\nname = "a"\n', "crates/b/Cargo.toml": '[package]\nname = "b"\n',
+}
+
+
+class WorkspaceRootBesideAnEarlierManifestTest(unittest.TestCase):
+    """A directory reported once, by the ecosystem tried first, still owns the crates below it where its
+    `Cargo.toml` declares a workspace (D14): no member is proposed."""
+
+    def candidates(self, files: dict[str, str]) -> list[tuple[str, str]]:
+        with tempfile.TemporaryDirectory() as directory:
+            return [(r.path, r.found.ecosystem) for r in buildable(write(Path(directory), files))]
+
+    def test_each_earlier_row_beside_a_workspace_root_is_one_candidate_and_no_member_is_proposed(self) -> None:
+        for ecosystem, manifest in ROOTS.items():
+            with self.subTest(ecosystem):
+                self.assertEqual(self.candidates({**manifest, **RUST}), [(".", ecosystem)])
+
+    def test_a_member_directory_that_also_holds_a_package_json_is_still_node(self) -> None:
+        files = {**ROOTS["python"], **RUST, "crates/a/package.json": '{"name": "a"}'}
+        self.assertEqual(self.candidates(files), [(".", "python"), ("crates/a", "node")])
+
+    def test_a_workspace_below_the_root_is_still_its_own_candidate_beside_an_earlier_manifest(self) -> None:
+        files = {**ROOTS["node"], **RUST, "fuzz/Cargo.toml": '[package]\nname = "f"\n[workspace]\n'}
+        self.assertEqual(self.candidates(files), [(".", "node"), ("fuzz", "cargo")])
+
+    def test_a_plain_crate_beside_an_earlier_manifest_does_not_own_the_crates_below_it(self) -> None:
+        files = {**ROOTS["node"], "Cargo.toml": '[package]\nname = "r"\n', "fuzz/Cargo.toml": '[package]\n'}
+        self.assertEqual(self.candidates(files), [(".", "node"), ("fuzz", "cargo")])
+
+    def test_the_survey_and_the_lockfile_rule_name_the_same_members(self) -> None:
+        trees = {
+            "napi": {**ROOTS["node"], **RUST},
+            "virtual": RUST,
+            "nested": {**RUST, "fuzz/Cargo.toml": '[workspace]\n', "fuzz/t/Cargo.toml": "[package]\n"},
+            "plain": {"Cargo.toml": "[package]\n", "tools/Cargo.toml": "[package]\n"},
+        }
+        for name, files in trees.items():
+            with self.subTest(name), tempfile.TemporaryDirectory() as directory:
+                root = write(Path(directory), files)
+                crates = {Path(f).parent.as_posix() for f in files if f.endswith("Cargo.toml")}
+                proposed = {r.path for r in buildable(root)} & crates
+                unlocked = {Path(f.where).parent.as_posix() for f in missing_lockfiles(root, sorted(files))
+                            if f.where.endswith("Cargo.toml")}
+                self.assertEqual(proposed, unlocked, "a crate is a build exactly when it is not a member")

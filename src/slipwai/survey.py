@@ -31,7 +31,7 @@ from .delivery_facts import (
     remote_host,
     role_of,
 )
-from .ecosystems import ECOSYSTEMS, Detected, aggregates, read, stands_alone
+from .ecosystems import ECOSYSTEMS, Detected, aggregates, member_of_workspace, read
 from .naming import SAFE_NAME
 from .origin import FORGES, RELEASE_PATHS
 from .quick_wins import quick_wins
@@ -223,8 +223,9 @@ def files(root: Path, depth: int = EVIDENCE_DEPTH, skipped: frozenset[str] = fro
 
 def buildable(root: Path, skipped: frozenset[str] = frozenset()) -> tuple[Root, ...]:
     """Every directory that builds, by path, each recognised once and none inside a build of its own ecosystem
-    that owns it — a Go module under an npm workspace is still a root; a workspace package is not. A Cargo workspace
-    root is the exception: Cargo never lets one be a member of another, so one below an owner is a root of its own."""
+    that owns it — a Go module under an npm workspace is still a root; a workspace package is not. A Cargo crate is
+    owned by any workspace root above it, whichever ecosystem reports that directory (`member_of_workspace`); a
+    workspace root is never a member, since Cargo lets none be one of another, so one below another is its own."""
     roots: list[Root] = []
     owners: list[tuple[str, str]] = []
     for directory in directories(root, DEPTH, skipped):
@@ -232,7 +233,7 @@ def buildable(root: Path, skipped: frozenset[str] = frozenset()) -> tuple[Root, 
             found = detect(root, directory)
             if found is None:
                 continue
-            owned = not stands_alone(root, found) and any(
+            owned = member_of_workspace(root, Path(found.evidence)) if found.ecosystem == "cargo" else any(
                 ecosystem == found.ecosystem and (owner == "." or directory.startswith(f"{owner}/"))
                 for owner, ecosystem in owners
             )

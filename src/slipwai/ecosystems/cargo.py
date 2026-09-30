@@ -4,6 +4,7 @@ a workspace — because that decides whether check, clippy and test are told to 
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from pathlib import Path
 
 from .common import Detected, complete, in_dir, prefixed, read
@@ -17,6 +18,20 @@ WORKSPACE = re.compile(r"(?m)^[ \t]*\[[ \t]*workspace[ \t]*[.\]]")
 def declares_workspace(manifest: Path) -> bool:
     """Whether the manifest holds a workspace table header; a manifest that cannot be read declares none."""
     return WORKSPACE.search(read(manifest)) is not None
+
+
+def member_of_workspace(root: Path, manifest: Path, present: Callable[[Path], bool] | None = None) -> bool:
+    """Whether a `Cargo.toml` (a path from `root`) declares no workspace itself and one above it does, whatever
+    ecosystem the directory of that root is reported as: Cargo writes one `Cargo.lock` at the workspace root and
+    builds every member from it. `present` says which manifests count as there — the files on disk, or the ones
+    Git tracks — and the survey's ownership and the lockfile rule both ask here, so they cannot disagree."""
+    if declares_workspace(root / manifest):
+        return False
+    there = present or (lambda candidate: (root / candidate).is_file())
+    return any(
+        there(above) and declares_workspace(root / above)
+        for above in (parent / "Cargo.toml" for parent in manifest.parent.parents)
+    )
 
 
 def cargo(root: Path, directory: str) -> Detected | None:

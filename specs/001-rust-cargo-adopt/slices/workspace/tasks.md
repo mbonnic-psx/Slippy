@@ -317,6 +317,19 @@ here fixes them.
   no verb in reach. **Sweep:** the survey paragraph read aloud end to end; the clause moved to a sentence of its
   own after the list. Files: `docs/adopting.md`.
 
+- [ ] T014 **LOW** [US3] **The survey and the lockfile rule still disagree on a workspace root Git does not track**
+  (T010's sweep: "no tree can have a crate that is a member for one and a build for the other"). Evidence: a
+  repository committing only `a/Cargo.toml` (`[package]`), with `Cargo.toml` (`[workspace] members = ["a"]`) on disk
+  and untracked, surveys at `f920ccb` as one candidate `.` (cargo) with `a` owned, while its quick wins report
+  `no-lockfile` at `a/Cargo.toml`. The two callers pass `member_of_workspace` different `present` sets — the survey
+  the files on disk (`survey.py:236`, the default at `cargo.py:30`), the lockfile rule the tracked paths
+  (`quick_wins.py:182-184`) — so `cargo.py:27`'s "so they cannot disagree" holds only where the two sets agree, and
+  `test_the_survey_and_the_lockfile_rule_name_the_same_members` (`test_survey_cargo_workspace.py:275`) passes every
+  file as tracked. Rare (a member committed without its root) and the finding is advice, not a build, so it ships
+  without. **Sweep:** either say in the docstring and the D13 text that ownership is read off the disk and the lock
+  rule off what Git tracks, or give the shared-predicate test a tree with an untracked root and pin whichever answer
+  is chosen. Files: `src/slipwai/ecosystems/cargo.py`, `tests/test_survey_cargo_workspace.py`.
+
 ## Convergence
 
 **Pass 1 of 2 (2026-09-30): not converged.** One HIGH owed (T010), which re-opens the loop and needs a product
@@ -377,5 +390,72 @@ Constitution, for each principle the diff touches:
   `MINOR` over the last released entry requires.
 - **XIV. Agent-generated change meets the same bar** — the full gate green at `cb1b4ca` except the one
   environmental `test_changelog` tag failure (T009).
+- IV, VI, VII, IX–XIII, XV — not touched: no port, no integration, no process, no money, time or identity value, no
+  pipeline change.
+
+**Pass 2 of 2 (2026-09-30): converged — the loop stopped at its bound with nothing CRITICAL or HIGH owed.** Reviewed
+`3c3d8bb..f920ccb` (T010–T013, D14). One LOW appended (T014); it does not re-open the loop. `make test
+TESTS="test_survey_cargo_workspace test_survey_cargo test_survey test_quick_wins test_adopt"`: 62 tests, OK.
+`scripts/test-adoption.py --only rust-workspace` (`CARGO_TARGET_DIR` under `$HOME/.cache/slippy-ws-tmp/`): adopted,
+re-survey a no-op, verify green on day one and after the migration. `make test TESTS=test_changelog`: 13 tests, the one
+environmental tag failure only. The full gate was not run (it runs after demo acceptance). Every run under
+`systemd-run … MemoryMax=4G`, probe trees under `$HOME/.cache/slippy-ws-tmp/p2/`.
+
+Each pass-1 task, against its sweep:
+
+- **T010 (HIGH) — closed, the whole class.** `buildable` asks `member_of_workspace` for every Cargo detection
+  (`survey.py:236`), which reads each ancestor `Cargo.toml` whatever ecosystem reported its directory
+  (`cargo.py:23-34`); `aggregates` no longer has a Cargo branch (`rows.py:271`), and `stands_alone` is gone (its one
+  caller was `survey.py`; text search, as the tree has no `.codegraph/`). The row sweep is
+  `test_survey_cargo_workspace.py:258` (all nine earlier rows as subtests), plus D14's member-with-`package.json` case
+  (`:263`), a nested workspace beside an earlier manifest (`:267`) and a plain crate that owns nothing (`:271`). One
+  predicate serves both rules (`quick_wins.py:182-184`), checked across four tree shapes at `:275` — except where
+  the two are given different presence sets (T014, LOW). The override the fragment names works end to end: adopting
+  the napi shape with `--language napi=rust --command 'napi:test=cargo test --workspace'` records one deployable at
+  `.`, language `rust`, that test command, provenance `overridden`. A snapshot-recorded member in that shape is
+  reported on `adopt --refresh` as `disagrees: a: nothing the survey recognises builds at crates/a any more; its
+  record stands as written`, with the record byte-for-byte unchanged — the fragment's snapshot sentence holds there too.
+- **T011 (MEDIUM) — closed.** Ten mutants, each applied alone to a committed file and restored with `git checkout --
+  <path>` before the next, all killed by the five suites: the regex's line anchor, inner and trailing whitespace,
+  the dotted form, and the `[.\]]` terminator (`:79`); the member's own-header check (`cargo.py:28`); the presence
+  conjunct (`cargo.py:32`) and the lockfile rule's tracked set, each by `test_quick_wins.py:279`; the Cargo branch
+  in `buildable`; and limiting the ancestors to the nearest one.
+- **T012 (MEDIUM) — closed.** Each Cargo sentence of `changelog.d/rust-cargo-adopt.md` read against code and tests:
+  the mixed-directory rule (`:12-18`) against `:258-271` and the override probe above; *What stays out* (`:21-23`)
+  against `:130` (members not read) and `WORKSPACE`, which matches no inline table; **Catch-up.** (`:33`) now opens
+  "No release needs one." and the snapshot sentence is the probe above and WG9. No line past the wrap width.
+- **T013 (LOW) — closed.** `docs/adopting.md:27-33` reads as whole sentences, with the mixed-directory rule after the
+  list.
+
+Nothing pass 1 found closed was re-opened. WG1–WG9 and D11–D13 are held by the same tests, all green. **SC-004,
+observed again:** every fixture under `tests/fixtures/adopt/` committed into a throwaway repository and surveyed
+with `0e3bab3:src`, with pass 1's source (`3c3d8bb:src`) and with HEAD — the whole `Survey` is identical across all
+three for the eight other fixtures (a single crate, `rust-crate`, included), and `rust-workspace` is identical
+between pass 1 and HEAD.
+
+Per level: **survey table** — `cargo.py:15` and `:23-34`, proved above; **use case** — `survey.py:236`,
+`quick_wins.py:182-184`; **delivery adapter** — no code changed, the override and refresh outcomes observed through
+`slipwai adopt`; **screen** — none, a CLI; **published contract** — the fragment and `docs/adopting.md`, above;
+`project.json`'s shape unchanged (one deployable per directory, D14 option (a)).
+
+Constitution, for each principle this diff touches:
+
+- **I. What a project was given keeps meaning what it meant** — the eight existing fixtures survey identically to
+  `0e3bab3`; the new ownership is keyed on `found.ecosystem == "cargo"` at `survey.py:236`, so no other row's
+  candidates change (`test_survey_cargo_workspace.py:263`, a `package.json` in a member stays Node); no release
+  carried the Cargo row. The fragment's first line is `MINOR` (`changelog.d/rust-cargo-adopt.md:1`), and it keeps
+  the experimental label (`:17`).
+- **II. Re-running is safe** — no new writing command; `adopt --refresh` is a no-op on the adopted fixture
+  (harness, above) and leaves a snapshot-recorded member exactly as written (probe above; WG9 at
+  `test_survey_cargo_workspace.py:169`).
+- **III. Simplicity** — the diff removes more than it adds in `src/`: `stands_alone`, the Cargo branch of
+  `aggregates` and `quick_wins`' private helper give way to one predicate (`cargo.py:23`) with two callers.
+- **V. Acceptance from Given-When-Then** — every new example enters at `buildable` or `missing_lockfiles` over a
+  tree on disk (`test_survey_cargo_workspace.py:250-289`, `test_quick_wins.py:279`); no mocking library; each
+  conjunct fails a test when removed (T011 above).
+- **VIII. Versioning** — `VERSION` reads `1.4.0.dev0`, which the fragment's `MINOR` over the last released entry
+  requires; `test_changelog` agrees apart from the one environmental tag failure.
+- **XIV. Agent-generated change meets the same bar** — the quick suites, the adoption harness and the changelog
+  suite above; the full `make verify` is the delegating session's next step.
 - IV, VI, VII, IX–XIII, XV — not touched: no port, no integration, no process, no money, time or identity value, no
   pipeline change.

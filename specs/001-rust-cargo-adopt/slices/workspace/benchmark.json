@@ -258,6 +258,34 @@
         "cycle": "rule",
         "split": 0
       }
+    },
+    {
+      "stage": "converge",
+      "started": "2026-09-30T19:14:35Z",
+      "planned": "converge: strong → host model — `strong` maps to the host model",
+      "tasks": {
+        "start": {
+          "open": 0,
+          "done": 9
+        }
+      },
+      "cursor": {
+        "source": "claude",
+        "session": "d307e2cf-e27d-4aa8-a103-676d726034e6",
+        "files": {
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/d307e2cf-e27d-4aa8-a103-676d726034e6.jsonl": 2607661
+        },
+        "subagents": {
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/d307e2cf-e27d-4aa8-a103-676d726034e6/subagents/agent-a0ca72a86cdc2d6fb.jsonl": 1511978,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/d307e2cf-e27d-4aa8-a103-676d726034e6/subagents/agent-a0e2c90871b920f0d.jsonl": 569723,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/d307e2cf-e27d-4aa8-a103-676d726034e6/subagents/agent-a12e6d4f0f6165ae8.jsonl": 266243,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/d307e2cf-e27d-4aa8-a103-676d726034e6/subagents/agent-a37e13a62c440a2de.jsonl": 532971,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/d307e2cf-e27d-4aa8-a103-676d726034e6/subagents/agent-a5b18f294c6c2ceeb.jsonl": 599991,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/d307e2cf-e27d-4aa8-a103-676d726034e6/subagents/agent-a8acb4e69f85556a4.jsonl": 320118,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/d307e2cf-e27d-4aa8-a103-676d726034e6/subagents/agent-aa29b32ba22d307be.jsonl": 880889,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/d307e2cf-e27d-4aa8-a103-676d726034e6/subagents/agent-aacb6b7d4c315004a.jsonl": 343095
+        }
+      }
     }
   ]
 }

@@ -17,10 +17,11 @@ import unittest
 from pathlib import Path
 
 from test_adopt import git, repository, slipwai
+from test_survey import write
 
 from slipwai.assets import ROOT
 from slipwai.ecosystems import read
-from slipwai.quick_wins import KINDS, quick_wins
+from slipwai.quick_wins import KINDS, missing_lockfiles, quick_wins
 from slipwai.survey import survey
 
 # What a hostile tree's reads may cost, held by the kernel: were a device read without end again, the run fails
@@ -225,3 +226,24 @@ class HostileFilesTest(unittest.TestCase):
             self.assertIn("deployable 'tools' is at `x\\n$(shell touch PWNED)\\n#`", refreshed.stderr)
             self.assertNotIn("PWNED", (repo / "delivery/Makefile").read_text())
             self.assertEqual(list(repo.glob("PWNED*")), [])
+
+
+class MissingLockfilesTest(unittest.TestCase):
+    """`missing_lockfiles` at its boundary, over a tree on disk and the paths Git would list."""
+
+    def reported(self, files: dict[str, str]) -> list[str]:
+        with tempfile.TemporaryDirectory() as directory:
+            root = write(Path(directory), files)
+            return [f.where for f in missing_lockfiles(root, sorted(files))]
+
+    def test_a_plain_crate_with_no_cargo_lock_beside_it_is_reported(self) -> None:
+        self.assertEqual(self.reported({"Cargo.toml": '[package]\nname = "a"\n'}), ["Cargo.toml"])
+
+    def test_a_package_json_with_no_lock_is_reported(self) -> None:
+        self.assertEqual(self.reported({"web/package.json": "{}\n"}), ["web/package.json"])
+
+    def test_a_member_below_a_workspace_root_with_a_lock_is_reported_for_want_of_one_beside_it(self) -> None:
+        self.assertEqual(self.reported({
+            "Cargo.toml": '[workspace]\nmembers = ["a"]\n', "Cargo.lock": "",
+            "a/Cargo.toml": '[package]\nname = "a"\n',
+        }), ["a/Cargo.toml"])

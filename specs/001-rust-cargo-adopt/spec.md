@@ -101,7 +101,12 @@ candidate at the root.
   tried first; the survey says which file decided it, as it does today.
 - A `Cargo.toml` that cannot be read as the survey expects (malformed) is still recognised as Cargo by its file
   name; nothing the survey proposes depends on parsing more than whether a `[workspace]` table is present.
-- A workspace member that is itself a nested workspace root is not proposed separately from the outer root.
+- A `Cargo.toml` below a workspace root that itself declares a workspace (a `[workspace]` or `[workspace.<x>]`
+  table) is a separate workspace, not a member — Cargo refuses a member that is also a workspace root — so it is
+  proposed as a candidate of its own, with its own lockfile, and owns the crates below it; a crate below a
+  workspace root that declares no workspace is a member and is not proposed (e.g. a cargo-fuzz `fuzz/` workspace
+  under a workspace root is its own candidate). *(Reworded by D12: the line first read "A workspace member that
+  is itself a nested workspace root is not proposed separately from the outer root.")*
 - No `Cargo.lock`: install stays `cargo fetch --locked`, which fails loudly rather than resolving silently; the
   maintainer may override it when confirming.
 
@@ -138,6 +143,49 @@ added, each owned by this slice:
   manifest pins (`platform.manifest_products`), dependencies and entry points in the structure view — say nothing
   Rust-specific. That is the axis answers of issue #11, which the Assumptions put out of scope.
 
+### Slice `workspace` — Gaps reviewed (2026-09-30, iteration 3)
+
+Checked against `src/slipwai/ecosystems/` (`cargo.py`, `rows.aggregates`), `survey.buildable`,
+`quick_wins.missing_lockfiles`, `resurvey.reconciled_app`, `scripts/test-adoption.py` and cargo 1.98.0 run over three
+probe trees (`slices/workspace/research.md`). The criteria and states this review added, each owned by this slice:
+
+- **WG1 — what makes a workspace root.** A `Cargo.toml` with a line that starts (after spaces) with `[workspace]` or
+  `[workspace.` — `[workspace.package]` or `[workspace.dependencies]` alone make one too, as Cargo reads them. A
+  `workspace = true` key inside a dependency, `package.workspace = "…"`, and a commented-out `# [workspace]` do not.
+  A malformed manifest is still Cargo, and is a workspace root exactly when such a header line is in it.
+- **WG2 — the commands at a workspace root** (US3 scenario 2; D11). Typecheck `cargo check --workspace --all-targets`,
+  lint `cargo clippy --workspace --all-targets --message-format=short -- -D warnings && cargo fmt --check`, test
+  `cargo test --workspace`; install stays `cargo fetch --locked` and the fmt half stays `cargo fmt --check`, both of
+  which already cover every member at the root (`research.md`). No `--all-features` (D11). The same for a virtual
+  workspace and one that is also a `[package]`; in a subdirectory, prefixed once as SG3 says.
+- **WG3 — a crate that is not a workspace keeps its commands.** A `Cargo.toml` with no workspace header is proposed
+  exactly what `single-crate` proposes, and SG5 still holds for it: a `fuzz/Cargo.toml` under a plain root crate is
+  its own candidate.
+- **WG4 — no member is proposed** (US3 scenarios 1 and 3; FR-006; SC-002). A virtual root with members under
+  `crates/` is one candidate, `.`; so is a root that is both `[workspace]` and `[package]`. A member is owned
+  wherever it sits below the root within the survey's depth, whatever `members` says — `members` is not read.
+- **WG5 — the Tauri shape.** A root `package.json` and a `src-tauri/Cargo.toml` that is both `[workspace]` and
+  `[package]`, with a member at `src-tauri/helper`, are two candidates: `.` (Node, `package.json`) and `src-tauri`
+  (Cargo, `src-tauri/Cargo.toml`, every command `cd src-tauri && …--workspace…`). Node does not own a Cargo crate,
+  nor Cargo a Node package, as today. Adopted with `--yes`, `project.json` records exactly those two deployables.
+- **WG6 — a nested workspace root is its own candidate** (D12; the reworded edge case). Below a workspace root, a
+  `Cargo.toml` that declares a workspace is proposed in its own directory with the workspace commands, and owns what
+  is below it. Only Cargo does this: a nested npm `"workspaces"` under an npm workspace root stays owned (SC-004).
+- **WG7 — a member's lockfile is its workspace's** (D13). No "no lockfile" quick win for a member — a `Cargo.toml`
+  that declares no workspace, below one that does: its lockfile is the nearest workspace root's, and a root without
+  one is reported once, at the root. Still one for a separate workspace (WG6) or a plain crate with none beside it.
+  Other ecosystems' lockfile findings are unchanged.
+- **WG8 — adopted end to end** (US3 independent test; SC-002). A committed virtual workspace with two members goes
+  through the same path as every other adoption fixture (`make test-adoption`): one deployable at `.` with the WG2
+  commands, `adopt --refresh` a no-op, `make -f delivery/Makefile verify` green where `cargo` is on the machine — so
+  both members' tests run and both are clippy- and fmt-clean — and a newer factory's `migrate` clean.
+- **WG9 — a repository adopted with a snapshot before this slice.** Its root's detected commands refresh to the WG2
+  ones on `adopt --refresh`; a member it recorded as a deployable of its own is reported (`nothing the survey
+  recognises builds at … any more; its record stands as written`), never removed. No release carried the old answer
+  (Principle I), and the fragment's Catch-up says what to do.
+- **Out of scope here:** reading `members`, `exclude` or `default-members` (the Assumptions' text match); an inline
+  top-level `workspace = { … }` table; a feature matrix (D11); what a member is for (SG4 holds per candidate).
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
@@ -152,8 +200,8 @@ added, each owned by this slice:
   ecosystems' commands are.
 - **FR-005**: The survey MUST record the toolchain as kind Rust with the version the repository pins in
   `rust-toolchain.toml` (its `channel`) or `rust-toolchain`, or an empty version where it pins none.
-- **FR-006**: A `Cargo.toml` declaring a `[workspace]` MUST aggregate the crates below it, so that no member is
-  proposed as a candidate of its own.
+- **FR-006**: A `Cargo.toml` declaring a `[workspace]` MUST aggregate the crates below it, so that no member (a crate below it that
+  declares no workspace of its own, D12) is proposed as a candidate of its own.
 - **FR-007**: The adopted gate's CI workflow MUST set up the Rust toolchain for a repository with a Rust
   candidate, reusing the setup step the factory already writes for generated Rust projects.
 - **FR-008**: The change MUST ship with a Rust fixture under `tests/fixtures/adopt/` and tests of the survey's

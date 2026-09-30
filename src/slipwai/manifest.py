@@ -14,6 +14,7 @@ from pathlib import Path
 from .assets import VERSION
 from .catalog import CATALOG
 from .errors import GenerationError
+from .naming import escaped, safe_path
 from .origin import ORIGINS, origin_of  # noqa: F401 — re-exported for the manifest's readers
 from .selection import Selection
 from .services import App, services_of, wrapped_of
@@ -123,6 +124,12 @@ def apps_from_manifest(document: dict, allow_empty: bool = False) -> list[App]:
         raise GenerationError("project.json names no deployables, so there is nothing to add a service to")
     apps: list[App] = []
     for name, record in deployables.items():
+        if isinstance(record, dict) and isinstance(record.get("path"), str) and not safe_path(record["path"]):
+            raise GenerationError(
+                f"project.json's deployable '{name}' is at `{escaped(record['path'])}`, a path the shell or make would "
+                "read part of as code, so nothing is written for it. Rename the directory and record the new path, "
+                "or remove the deployable from project.json — and ask who committed that name."
+            )
         try:
             generated = record.get("generated", True)
             if generated is not True and generated is not False:

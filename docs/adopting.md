@@ -369,8 +369,10 @@ since the survey leaves out what the factory wrote and would otherwise read no C
 The survey also reads for the handful of things that are both big and cheap to fix — a credential written in a
 file (a value shaped like a known key anywhere; a keyed literal in a configuration file, Spring's
 `<property name="password" value="…"/>` and `<value>` forms included; a keyed quoted literal in source), IDE and build output under version control, a dependency repository fetched over plain HTTP, a
-lockfile the package manager would write and nobody committed, a binary archive tracked — and says each with the
-file that shows it and the fix, never the value. They are proposals: `survey/survey.md` carries them under *Big
+lockfile the package manager would write and nobody committed, a binary archive tracked, a directory named so that
+the shell or make would read part of it as code (`unsafe-path`: nothing under it is surveyed, so no command is ever
+proposed for it, and the name is written escaped) — and says each with the file that shows it and the fix, never
+the value. They are proposals: `survey/survey.md` carries them under *Big
 issues that are quick wins*, the report says them first, and `/survey` reads the tree again so a finding fixed
 disappears rather than being ticked off.
 

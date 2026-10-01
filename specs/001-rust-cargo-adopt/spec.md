@@ -227,8 +227,10 @@ this slice:
   never above; the first directory holding `rust-toolchain` or `rust-toolchain.toml` decides, and the search stops
   there even when that file names nothing.
 - **TG2 — which file wins** (D21). In one directory, `rust-toolchain` over `rust-toolchain.toml`, as rustup does.
-- **TG3 — what is read** (D21). `rust-toolchain.toml`: `toolchain.channel`, by `tomllib`. `rust-toolchain`: TOML the
-  same way where it starts with `[`, otherwise its first non-blank line, stripped, with no leading `v` removed.
+- **TG3 — what is read** (D21, D22). `rust-toolchain.toml`: `toolchain.channel`, by `tomllib`. `rust-toolchain`: its
+  one line, stripped, with no leading `v` removed, where it is one line; TOML the same way where it is more than one,
+  as rustup reads it. *(Refined by D22 at plan: the line first read "TOML the same way where it starts with `[`,
+  otherwise its first non-blank line".)*
 - **TG4 — recorded as written** (D21). `1.85`, `1.85.0`, `stable`, `nightly`, `nightly-2025-01-01` and `1.85-beta`
   are each the version verbatim; a test per shape.
 - **TG5 — no pin is empty, never an error** (US2 scenario 3; D21). No file on the way up; a table with no `channel`

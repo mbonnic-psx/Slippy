@@ -230,3 +230,14 @@
 - **Confidence:** high · **Would reverse if:** rustup is shown not to accept TOML in a `rust-toolchain` file (assumed), or the owner wants the MSRV recorded where no pin exists
 - **Written to:** specs/001-rust-cargo-adopt/spec.md, specs/001-rust-cargo-adopt/decisions.md
 - **Status:** standing
+
+## D22 — Plan: a `rust-toolchain` of more than one line that does not start with `[` — first line, or TOML?
+- **Stage:** plan · **Slice:** toolchain-pin · **When:** 2026-10-01T20:05:00Z · **Iteration:** 2
+- **Question:** TG3 reads a legacy `rust-toolchain` as TOML "where it starts with `[`, otherwise its first non-blank line". rustup 1.29.0, probed (`slices/toolchain-pin/research.md` R6–R9), reads exactly one line as the channel and anything longer as TOML: `# comment\n[toolchain]\nchannel = "1.85"` is `1.85` to rustup and `# comment` to TG3's wording, and `1.85\n\n` is a refused file to rustup and `1.85` to TG3's wording. Which reading is recorded?
+- **Options:** TG3 as worded · rustup's rule — one line is the channel, stripped; more than one line is TOML, read as `rust-toolchain.toml` is (recommended)
+- **Decision:** rustup's rule. A `rust-toolchain` of one line records that line stripped, verbatim otherwise (no `v` removed); of more than one line, its `toolchain.channel` by `tomllib`, or an empty version where that is not a string. Every case TG3 and TG4 name reads the same either way.
+- **Why:** D21's reason governs: the recorded value is what rustup and the setup action consume, so it is rustup's reading or nothing. TG3's wording was a paraphrase of that rule that differs only where it would record a comment as a version, or a pin the build refuses.
+- **Decided by:** drive-slice (plan stage, on D21's stated reason; returned to the delegating session for review)
+- **Confidence:** high · **Would reverse if:** a rustup release is shown to read a multi-line legacy file's first line as its channel
+- **Written to:** specs/001-rust-cargo-adopt/spec.md (TG3), specs/001-rust-cargo-adopt/decisions.md, specs/001-rust-cargo-adopt/slices/toolchain-pin/plan.md
+- **Status:** standing

@@ -61,9 +61,14 @@ def projection_artifacts() -> str:
     return "".join(f"{directory.rstrip('/')}/\n" for directory in dict.fromkeys(directories))
 
 
-def build_artifacts(event: bool, apps: list[App], target: str = "none") -> str:
+def build_artifacts(
+    event: bool, apps: list[App], target: str = "none", candidate_ecosystems: tuple[str, ...] = ()
+) -> str:
     """Every backend's artifacts once each, then the frontend's, the event profile's, the selection's and the
-    production target's."""
+    production target's.
+
+    `candidate_ecosystems` is the toolchain ecosystem of each recorded candidate: a candidate becomes an application
+    at `adopt --confirm`, which writes no block, so the block written at adoption already carries what it will need."""
     per_backend = {
         "typescript": "node_modules/\ncoverage/\n.build/\n",
         # `.venv/` is what `uv sync` builds beside each service's manifest, from the committed `uv.lock`
@@ -87,10 +92,10 @@ def build_artifacts(event: bool, apps: list[App], target: str = "none") -> str:
         # and the `build-info` inside it rather than beside the pom, so there is no second file to ignore.
         "java-spring": "target/\n",
     }
-    language_artifacts = "".join(dict.fromkeys(per_backend[backend] for backend in backends_of(apps)))
-    language_artifacts += "".join(dict.fromkeys(
-        WRAPPED_ARTIFACTS.get((app.toolchain or {}).get("ecosystem", ""), "") for app in wrapped_of(apps)
-    ))
+    wrapped = [(app.toolchain or {}).get("ecosystem", "") for app in wrapped_of(apps)]
+    chunks = [per_backend[backend] for backend in backends_of(apps)]
+    chunks += [WRAPPED_ARTIFACTS.get(ecosystem, "") for ecosystem in (*wrapped, *candidate_ecosystems)]
+    language_artifacts = "".join(dict.fromkeys(chunks))
     frontend_artifacts = "".join(f"{web.path}/dist/\n" for web in web_apps(apps))
     # Of the family, not the backend: a TypeScript service behind any framework already ignores
     # node_modules for its own sake, and a second copy of the line is not the answer for either.

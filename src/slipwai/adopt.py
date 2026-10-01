@@ -262,7 +262,10 @@ def adopt(root: Path, answers: Answers, found: Survey | None = None) -> Adopted:
     appended = []
     if append_block(root / AGENTS, agents_block(layout, VERSION), "<!-- extension:delivery:begin -->"):
         appended.append(AGENTS)
-    ignored = layout.repoint(GITIGNORE, build_artifacts(answers.profile == "event-modelling", apps, answers.target))
+    ecosystems = tuple((row.get("toolchain") or {}).get("ecosystem", "") for row in answers.candidates)
+    ignored = layout.repoint(
+        GITIGNORE, build_artifacts(answers.profile == "event-modelling", apps, answers.target, ecosystems)
+    )
     if append_block(root / GITIGNORE, gitignore_block(ignored, layout), "# slipwai:delivery:begin"):
         appended.append(GITIGNORE)
     settings_written = not (root / SETTINGS).exists()

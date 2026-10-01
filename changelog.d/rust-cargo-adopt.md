@@ -28,9 +28,10 @@ and one holding `.cargo/mutants.toml` is offered `cargo mutants` as mutation; el
 takes `--workspace` at a workspace root (`cargo deny --workspace check advisories`, `cargo mutants --workspace`) and
 is prefixed once, as `cd crates/site && …`, for a candidate in a subdirectory. Neither is guarded, so a machine
 without the tool fails loudly (`error: no such command`) instead of passing silently. The adopted `.gitignore`
-block gains `mutants.out/` and `mutants.out.old/` for a Cargo application, whether or not it configures
-`cargo mutants`. What stays out: a `deny.toml` above the candidate (cargo-deny reads it; the survey does not look),
-an offline advisories run, and a diff scope for mutation (`--in-diff`).
+block gains `mutants.out/` and `mutants.out.old/` for a Cargo application or a Cargo candidate (so an
+attended adoption has them before `--confirm`), whether or not it configures `cargo mutants`. What stays out: a
+`deny.toml` above the candidate (cargo-deny reads it; the survey does not look), an offline advisories run, and a
+diff scope for mutation (`--in-diff`).
 
 What stays out, and comes later: a toolchain pin read from `rust-toolchain.toml` and Rust set up in the adopted CI.
 Nor are `members`, `exclude` and `default-members` read, or an inline `workspace = { … }` table: a workspace is

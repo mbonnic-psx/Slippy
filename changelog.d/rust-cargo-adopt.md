@@ -3,8 +3,9 @@ MINOR
 **`slipwai adopt` now recognises a Cargo repository.** A directory holding a `Cargo.toml` is proposed as Rust
 built by Cargo: install (`cargo fetch --locked`), typecheck (`cargo check --all-targets`), lint (`cargo clippy
 --all-targets --message-format=short -- -D warnings && cargo fmt --check`, one line per finding so the ratchet
-holds each warning as its own) and test (`cargo test`) are offered, and audit, mutation,
-integration and adversarial are written as no answer. A Cargo workspace root is one candidate, not one per
+holds each warning as its own) and test (`cargo test`) are offered, and integration and adversarial are written as
+no answer; audit and mutation are offered only where the crate configures them (below).
+A Cargo workspace root is one candidate, not one per
 member: its typecheck, lint and test carry `--workspace` (`cargo check --workspace --all-targets`, `cargo clippy
 --workspace --all-targets --message-format=short -- -D warnings && cargo fmt --check`, `cargo test --workspace`),
 with no `--all-features`, which needs system libraries some crates do not have on every machine; add it when
@@ -20,6 +21,16 @@ build of that other ecosystem owns the directory (a napi-rs package inside an np
 `<modules>` root or a Gradle settings root) and its `Cargo.toml` declares a workspace, the directory is proposed as
 Cargo with the workspace commands, since the outer build's commands do not build the Rust. The adoption path is
 experimental (see `AGENTS.md`), so what it offers may still change in a MINOR.
+
+**Audit and mutation, where the crate configures them.** A Cargo candidate whose own directory holds a cargo-deny
+configuration (`deny.toml`, `.deny.toml` or `.cargo/deny.toml`) is offered `cargo deny check advisories` as audit,
+and one holding `.cargo/mutants.toml` is offered `cargo mutants` as mutation; elsewhere both stay a written no. Each
+takes `--workspace` at a workspace root (`cargo deny --workspace check advisories`, `cargo mutants --workspace`) and
+is prefixed once, as `cd crates/site && …`, for a candidate in a subdirectory. Neither is guarded, so a machine
+without the tool fails loudly (`error: no such command`) instead of passing silently. The adopted `.gitignore`
+block gains `mutants.out/` and `mutants.out.old/` for a Cargo application, whether or not it configures
+`cargo mutants`. What stays out: a `deny.toml` above the candidate (cargo-deny reads it; the survey does not look),
+an offline advisories run, and a diff scope for mutation (`--in-diff`).
 
 What stays out, and comes later: a toolchain pin read from `rust-toolchain.toml` and Rust set up in the adopted CI.
 Nor are `members`, `exclude` and `default-members` read, or an inline `workspace = { … }` table: a workspace is
@@ -48,3 +59,6 @@ disagreement (`commands was confirmed as …; the record stands until you decide
 commands in `project.json` by hand. A member it recorded as a deployable of its own is reported as no longer
 recognised and left as written, so a snapshot adoption asks you to remove that record from `project.json` if you
 want it gone.
+A snapshot adoption is proposed the new audit and mutation commands by `slipwai adopt --refresh` as it is any
+detected command, but `migrate` and `adopt --refresh` never rewrite the `.gitignore` block, so add `mutants.out/`
+and `mutants.out.old/` to it by hand in a repository adopted earlier.

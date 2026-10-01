@@ -230,3 +230,14 @@
 - **Confidence:** high · **Would reverse if:** rustup is shown not to accept TOML in a `rust-toolchain` file (assumed), or the owner wants the MSRV recorded where no pin exists
 - **Written to:** specs/001-rust-cargo-adopt/spec.md, specs/001-rust-cargo-adopt/decisions.md
 - **Status:** standing
+
+## D25 — Phase 4: `make verify` is red in this clone for one changelog test; whose red is it?
+- **Stage:** after acceptance · **Slice:** optional-tools, toolchain-pin · **When:** 2026-10-01T22:05:00Z · **Iteration:** 2
+- **Question:** On both slice branches, and on the trunk checkout at `dc904ea`, `test_changelog.ChangelogTest.test_every_release_this_repository_has_ever_tagged_has_an_entry` fails: the clone holds tags `v1.4.0`, `v1.5.0` and `v1.5.1` fetched from the `upstream` remote (`git ls-remote --tags upstream` lists them; `origin` has none), and this fork's `CHANGELOG.md` has no entry for releases it never cut.
+- **Options:** park on the gate's own output · treat the tree as green where every other test passes and that one fails only for tags `origin` does not carry, and say so on each PR (recommended, D8's precedent) · delete the local tags (changes refs a person fetched; not taken)
+- **Decision:** The tree is green for this run: 920 and 930 tests, one failure each, that test, red on trunk the same way. Each PR says so; CI on the fork, which fetches no upstream tags, is the gate that decides. No test and no tag is changed.
+- **Why:** The failure is the clone's refs, not anything a maintainer running `slipwai` gets; it is red before either slice and identically after. Deleting tags a person fetched is not this run's to do.
+- **Decided by:** host (stage recommendation)
+- **Confidence:** high · **Would reverse if:** the fork's CI fails the same test, or a person wants the fork to carry upstream's release entries
+- **Written to:** specs/001-rust-cargo-adopt/decisions.md
+- **Status:** standing

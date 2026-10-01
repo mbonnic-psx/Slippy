@@ -1,9 +1,11 @@
 """The Cargo row: a directory holding a `Cargo.toml` is Rust built by Cargo, found by the file name alone, so a
 manifest the survey cannot parse is still recognised. The row reads one fact from the manifest — whether it declares
-a workspace — because that decides whether check, clippy and test are told to cover every member."""
+a workspace — because that decides whether check, clippy and test are told to cover every member, and it reads the
+toolchain the repository pins from `rust-toolchain.toml`, the way rustup does."""
 from __future__ import annotations
 
 import re
+import tomllib
 from collections.abc import Callable
 from pathlib import Path
 
@@ -48,6 +50,24 @@ def member_of_workspace(
     )
 
 
+TOOLCHAIN_FILES = ("rust-toolchain.toml",)
+
+
+def pinned_channel(text: str) -> str:
+    """The `toolchain.channel` of a TOML text, as written; empty where there is no usable one."""
+    try:
+        toolchain = tomllib.loads(text).get("toolchain")
+    except tomllib.TOMLDecodeError:
+        return ""
+    channel = toolchain.get("channel") if isinstance(toolchain, dict) else None
+    return channel if isinstance(channel, str) else ""
+
+
+def rust_toolchain(root: Path, directory: str, reader: Reader = read) -> str:
+    """The toolchain channel the candidate's directory pins, or empty where nothing usable is."""
+    return pinned_channel(reader(root / directory / TOOLCHAIN_FILES[0]))
+
+
 def cargo(root: Path, directory: str) -> Detected | None:
     if not (root / directory / "Cargo.toml").is_file():
         return None
@@ -63,5 +83,5 @@ def cargo(root: Path, directory: str) -> Detected | None:
             ),
             test=in_dir(directory, f"cargo test{flag}"),
         ),
-        {"kind": "rust", "version": ""},
+        {"kind": "rust", "version": rust_toolchain(root, directory)},
     )

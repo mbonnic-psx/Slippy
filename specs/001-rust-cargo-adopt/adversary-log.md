@@ -65,3 +65,29 @@ Findings:
 | W2 | MEDIUM | confirmed — agent, `cargo metadata` reads it as a workspace | fixed (T016, `570143d`) | A UTF-8 BOM before `[workspace]` on line 1 hides the header: members proposed each, no `--workspace`, false `no-lockfile` findings. |
 | W3 | LOW | confirmed — agent, real cargo | open — named in the fragment (T017, `13a5f1c`) | The header text match disagrees with Cargo both ways: `[workspace]` inside a multi-line string makes a plain crate an owner and hides a crate below it; a quoted `["workspace"]` header or a top-level `workspace.members = […]` key is a workspace Cargo reads and the survey does not. The Assumptions' text match; named in the fragment by T017. |
 | W4 | LOW | confirmed — agent (16 MB root, 500 members: 34.6 s against 0.06 s) | fixed (T018, `0f20431`) | `member_of_workspace` re-reads every ancestor manifest for every member, up to `MAX_READ` each, and `missing_lockfiles` tests ancestors against a list; each read is bounded, the total is not. |
+
+## optional-tools · e524890 · 2026-10-01
+
+| Trigger | Status | Evidence |
+|---|---|---|
+| driving adapter (HTTP route, CLI command, queue consumer) | widened | `src/slipwai/ecosystems/cargo.py` — `slipwai adopt` now reads four configuration names in an untrusted tree to decide whether `cargo deny … check advisories` and `cargo mutants` become recorded commands run by `delivery/Makefile`; `src/slipwai/project/gitignore.py`, `src/slipwai/adopt.py` — the adopted `.gitignore` block gains two lines |
+| driven adapter or the provider types behind one | not present | the ratchet is unchanged; audit and mutation are not ratcheted (`project/native_commands.py` `RATCHETED`) |
+| authorisation decision (who can reach one that already exists) | not present | no identity or permission in the diff |
+| concurrency, idempotency, ordering, retention, or time | already covered | `adopt --refresh` idempotence over the new records is in `tests/test_survey_cargo_tools_refresh.py` and was re-checked by the pass |
+
+Every probe ran under `systemd-run --user --scope -p MemoryMax=4G -p MemorySwapMax=0`, `TMPDIR` on disk; cargo-deny
+0.20.2 and cargo-mutants 27.1.0 installed.
+
+Spawned: cargo tool configuration → recorded commands and ignore block · `drive-adversary` · opus-5.5 (host) · delegated,
+fresh context · manifest: `src/slipwai/ecosystems/cargo.py`, `src/slipwai/project/gitignore.py`, `src/slipwai/adopt.py`,
+`src/slipwai/resurvey.py`, `src/slipwai/project/{makefile,native_commands}.py`, `src/slipwai/convergence.py`,
+`tests/test_survey_cargo_tools*.py`, the slice's `research.md` and `plan.md`
+Omitted: authorisation · not present. Driven adapter · not present (row above).
+
+Findings:
+
+| # | Severity | Triage | State | Finding |
+|---|---|---|---|---|
+| OT1 | LOW | confirmed — agent, cargo-deny 0.20.2 in probe trees | open | A directory named `deny.toml` beside a real `.deny.toml` proposes audit, since the survey counts regular files and cargo-deny takes the first name that *exists*; `make audit` then fails `Is a directory` until the tree is fixed. Loud, never a false green. |
+| OT2 | LOW | confirmed — agent, `od -c` | open — predates the slice | `adopt.append_block` reads and rewrites `.gitignore` in text mode, so a CRLF file comes back LF throughout and the adoption commit touches every user line. |
+| OT3 | LOW | confirmed — agent | open — predates the slice | A user's `!mutants.out.old/` before the factory's block is overridden by the block's `mutants.out.old/`, which comes later. |

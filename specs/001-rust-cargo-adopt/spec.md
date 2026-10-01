@@ -235,7 +235,7 @@ this slice:
   are each the version verbatim; a test per shape.
 - **TG5 — no pin is empty, never an error** (US2 scenario 3; D21). No file on the way up; a table with no `channel`
   or a non-string one; a `path` toolchain (never recorded: it is a path on someone's machine); invalid TOML; an empty,
-  oversize or non-regular file — each records `{"kind": "rust", "version": ""}`.
+  oversize or non-regular file — each records `{"kind": "rust", "version": ""}`; so does a channel that is not a toolchain name a runner can install — anything outside `^[A-Za-z0-9][A-Za-z0-9._-]*$`, such as a newline, a space or a quote (D23).
 - **TG6 — `rust-version` is not a pin** (D21). An MSRV in `Cargo.toml` with no toolchain file records an empty
   version.
 - **TG7 — what a maintainer sees.** The survey page shows `rust <version>` for a pin and nothing for an empty one; the

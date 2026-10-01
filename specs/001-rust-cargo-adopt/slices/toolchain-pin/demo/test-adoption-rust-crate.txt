@@ -1,0 +1,14 @@
+test-adoption: rust-crate
+  adopted: one commit by the factory; nothing of theirs written over; /drive grounds, pins, holds the map
+  re-survey: a no-op
+  verify on day one: green
+  migrated to 99.0.0: one clean merge; the repository's own files untouched
+  verify after the migration: green
+test-adoption: 1 fixture(s) adopted, re-surveyed, verified and migrated
+== case rust-crate-fixture
+-- setup: cp -r /home/mbonnic/Slippy-worktrees/toolchain-pin/tests/fixtures/adopt/rust-crate/. .
+adopt exit: 0
+deployable rust-crate-fixture: path=. language=rust toolchain={"kind": "rust", "version": "stable", "ecosystem": "cargo"}
+-- survey.md candidate lines:
+- `.` — cargo, rust, from `Cargo.toml`, rust stable; what it is for, nothing here says
+- `README`: yes

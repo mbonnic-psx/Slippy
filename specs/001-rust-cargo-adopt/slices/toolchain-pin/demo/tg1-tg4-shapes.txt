@@ -1,0 +1,63 @@
+== case legacy
+-- setup: mkdir -p src; printf "[package]\nname = \"ledger\"\nversion = \"0.1.0\"\nedition = \"2021\"\n" > Cargo.toml; echo "pub fn f() {}" > src/lib.rs; printf '1.84.1\n' > rust-toolchain
+adopt exit: 0
+deployable legacy: path=. language=rust toolchain={"kind": "rust", "version": "1.84.1", "ecosystem": "cargo"}
+-- survey.md candidate lines:
+- `.` — cargo, rust, from `Cargo.toml`, rust 1.84.1; what it is for, nothing here says
+- `README`: no
+== case legacy-v
+-- setup: mkdir -p src; printf "[package]\nname = \"ledger\"\nversion = \"0.1.0\"\nedition = \"2021\"\n" > Cargo.toml; echo "pub fn f() {}" > src/lib.rs; printf 'v1.84\n' > rust-toolchain
+adopt exit: 0
+deployable legacy-v: path=. language=rust toolchain={"kind": "rust", "version": "v1.84", "ecosystem": "cargo"}
+-- survey.md candidate lines:
+- `.` — cargo, rust, from `Cargo.toml`, rust v1.84; what it is for, nothing here says
+- `README`: no
+== case legacy-multiline-toml
+-- setup: mkdir -p src; printf "[package]\nname = \"ledger\"\nversion = \"0.1.0\"\nedition = \"2021\"\n" > Cargo.toml; echo "pub fn f() {}" > src/lib.rs; printf '# pinned\n[toolchain]\nchannel = "1.83"\n' > rust-toolchain
+adopt exit: 0
+deployable legacy-multiline-toml: path=. language=rust toolchain={"kind": "rust", "version": "1.83", "ecosystem": "cargo"}
+-- survey.md candidate lines:
+- `.` — cargo, rust, from `Cargo.toml`, rust 1.83; what it is for, nothing here says
+- `README`: no
+== case both
+-- setup: mkdir -p src; printf "[package]\nname = \"ledger\"\nversion = \"0.1.0\"\nedition = \"2021\"\n" > Cargo.toml; echo "pub fn f() {}" > src/lib.rs; printf '1.80\n' > rust-toolchain; printf '[toolchain]\nchannel = "1.85"\n' > rust-toolchain.toml
+adopt exit: 0
+deployable both: path=. language=rust toolchain={"kind": "rust", "version": "1.80", "ecosystem": "cargo"}
+-- survey.md candidate lines:
+- `.` — cargo, rust, from `Cargo.toml`, rust 1.80; what it is for, nothing here says
+- `README`: no
+== case stable
+-- setup: mkdir -p src; printf "[package]\nname = \"ledger\"\nversion = \"0.1.0\"\nedition = \"2021\"\n" > Cargo.toml; echo "pub fn f() {}" > src/lib.rs; printf '[toolchain]\nchannel = "stable"\n' > rust-toolchain.toml
+adopt exit: 0
+deployable stable: path=. language=rust toolchain={"kind": "rust", "version": "stable", "ecosystem": "cargo"}
+-- survey.md candidate lines:
+- `.` — cargo, rust, from `Cargo.toml`, rust stable; what it is for, nothing here says
+- `README`: no
+== case nightly-dated
+-- setup: mkdir -p src; printf "[package]\nname = \"ledger\"\nversion = \"0.1.0\"\nedition = \"2021\"\n" > Cargo.toml; echo "pub fn f() {}" > src/lib.rs; printf '[toolchain]\nchannel = "nightly-2025-01-01"\n' > rust-toolchain.toml
+adopt exit: 0
+deployable nightly-dated: path=. language=rust toolchain={"kind": "rust", "version": "nightly-2025-01-01", "ecosystem": "cargo"}
+-- survey.md candidate lines:
+- `.` — cargo, rust, from `Cargo.toml`, rust nightly-2025-01-01; what it is for, nothing here says
+- `README`: no
+== case beta
+-- setup: mkdir -p src; printf "[package]\nname = \"ledger\"\nversion = \"0.1.0\"\nedition = \"2021\"\n" > Cargo.toml; echo "pub fn f() {}" > src/lib.rs; printf '[toolchain]\nchannel = "1.85-beta"\n' > rust-toolchain.toml
+adopt exit: 0
+deployable beta: path=. language=rust toolchain={"kind": "rust", "version": "1.85-beta", "ecosystem": "cargo"}
+-- survey.md candidate lines:
+- `.` — cargo, rust, from `Cargo.toml`, rust 1.85-beta; what it is for, nothing here says
+- `README`: no
+== case full
+-- setup: mkdir -p src; printf "[package]\nname = \"ledger\"\nversion = \"0.1.0\"\nedition = \"2021\"\n" > Cargo.toml; echo "pub fn f() {}" > src/lib.rs; printf '[toolchain]\nchannel = "1.85.0"\ncomponents = ["clippy"]\n' > rust-toolchain.toml
+adopt exit: 0
+deployable full: path=. language=rust toolchain={"kind": "rust", "version": "1.85.0", "ecosystem": "cargo"}
+-- survey.md candidate lines:
+- `.` — cargo, rust, from `Cargo.toml`, rust 1.85.0; what it is for, nothing here says
+- `README`: no
+== case nightly
+-- setup: mkdir -p src; printf "[package]\nname = \"ledger\"\nversion = \"0.1.0\"\nedition = \"2021\"\n" > Cargo.toml; echo "pub fn f() {}" > src/lib.rs; printf 'nightly\n' > rust-toolchain
+adopt exit: 0
+deployable nightly: path=. language=rust toolchain={"kind": "rust", "version": "nightly", "ecosystem": "cargo"}
+-- survey.md candidate lines:
+- `.` — cargo, rust, from `Cargo.toml`, rust nightly; what it is for, nothing here says
+- `README`: no

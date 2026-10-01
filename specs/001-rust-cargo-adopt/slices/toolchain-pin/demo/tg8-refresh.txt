@@ -1,0 +1,43 @@
+== TG8 detected
+adopt exit 0
+before: {"kind": "rust", "version": "", "ecosystem": "cargo"} provenance.toolchain= (none: detected)
+-- adopt --refresh:
+  refreshed: tg8-detected: toolchain refreshed from `Cargo.toml`
+refresh exit 0
+after: {"kind": "rust", "version": "1.85", "ecosystem": "cargo"}
+- `.` — cargo, rust, from `Cargo.toml`, rust 1.85; what it is for, nothing here says
+ M delivery/commands/ground.md
+ M delivery/docs/adoption.md
+ M delivery/survey/survey.md
+ M project.json
+ec01d50 pin 1.85
+5f04e30 Adopt the delivery method for tg8-detected with slipwai 1.4.0.dev0
+== TG8 confirmed
+adopt exit 0
+before: {"kind": "rust", "version": "", "ecosystem": "cargo"} provenance.toolchain= confirmed
+-- adopt --refresh:
+  refreshed: nothing; every detected fact stands
+  disagrees: tg8-confirmed: toolchain.version was confirmed as "", and `Cargo.toml` now says "1.85"
+A disagreement is a decision: put both sides to the user, record the answer in project.json with honest provenance, and run this again so the files follow.
+refresh exit 0
+after: {"kind": "rust", "version": "", "ecosystem": "cargo"}
+- `.` — cargo, rust, from `Cargo.toml`, rust 1.85; what it is for, nothing here says
+ M delivery/docs/adoption.md
+ M delivery/survey/survey.md
+c8e98b5 pin 1.85
+54817ea maintainer confirmed the toolchain
+== TG8 overridden
+adopt exit 0
+before: {"kind": "rust", "version": "1.80", "ecosystem": "cargo"} provenance.toolchain= overridden
+-- adopt --refresh:
+  refreshed: nothing; every detected fact stands
+  disagrees: tg8-overridden: toolchain.version was overridden as "1.80", and `Cargo.toml` now says "1.85"
+A disagreement is a decision: put both sides to the user, record the answer in project.json with honest provenance, and run this again so the files follow.
+refresh exit 0
+after: {"kind": "rust", "version": "1.80", "ecosystem": "cargo"}
+- `.` — cargo, rust, from `Cargo.toml`, rust 1.85; what it is for, nothing here says
+ M delivery/commands/ground.md
+ M delivery/docs/adoption.md
+ M delivery/survey/survey.md
+3921662 pin 1.85
+b3a43f6 maintainer overridden the toolchain

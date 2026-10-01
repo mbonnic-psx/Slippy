@@ -249,7 +249,7 @@ No white box in this slice: no event model, no screen states to write back; `che
 
 ## Phase 3: Polish
 
-- [ ] T010 [US2] **Run the gate.** Depends on T001–T009. No files written.
+- [x] T010 [US2] **Run the gate.** Depends on T001–T009. No files written.
   Under the wrapper, in this order, and report each command's outcome:
   1. `make test TESTS="test_survey test_survey_cargo test_survey_cargo_toolchain test_survey_cargo_workspace
      test_adopt test_changelog"` — green but for the one environmental `test_changelog` tag failure.
@@ -264,6 +264,7 @@ No white box in this slice: no event model, no screen states to write back; `che
      regenerates the targets; that is not this slice's.)
   Do not commit red; do not touch any file not named above to make it pass — hand the failure back. Append the outcome
   as one line under this task.
+  - 2026-10-01, at 58c24d0: lint, typecheck, check-structure green; `make verify` 912 tests, 7 skipped, 1 failure — the environmental `test_changelog` tag one only; `test-adoption.py --only rust-crate` and `--only rust-workspace` each adopted, re-surveyed (no-op), verified green, migrated, verified green (cargo 1.98.0); D6 smoke `./slipwai --version && ./slipwai adopt --next` ran and printed the adoption sequence.
 
 ## Dependencies & execution order
 

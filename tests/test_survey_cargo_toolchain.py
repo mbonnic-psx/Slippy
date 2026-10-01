@@ -72,6 +72,7 @@ class ToolchainPinTest(unittest.TestCase):
                 "survey page": page,
                 "gitlab job": (repo / "delivery/ci/verify-delivery.gitlab-ci.yml").read_text(),
                 "adoption page": (repo / "delivery/docs/adoption.md").read_text(),
+                "ground command": (repo / "delivery/commands/ground.md").read_text(),
             }
         self.assertEqual(deployable["toolchain"], {"kind": "rust", "version": "", "ecosystem": "cargo"})
         for name, text in written.items():

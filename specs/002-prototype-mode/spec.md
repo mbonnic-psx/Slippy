@@ -46,13 +46,14 @@ Every other story improves or protects this one.
 
 **Independent Test**: In a generated project with prototype mode on and a `spec.md` of three user stories, run the
 prototype stage; open the published link and check that each user story is reachable as a clickable journey, that every
-screen shows the banner, and that the prototype's source is under `prototype/<feature>/` and nowhere else.
+screen shows the banner, and that the prototype's source is under `prototype/app/` and nowhere else.
 
 **Acceptance Scenarios**:
 
 1. **Given** prototype mode is on and a feature has a `spec.md` but no split, **When** the run reaches the prototype
-   stage, **Then** it builds a prototype under the project's prototype folder, publishes it as a private Claude
-   Artifact, and records the link and the spec revision it was built from.
+   stage, **Then** it builds or extends the repository's one prototype under `prototype/app/` — the whole app, across
+   every feature's specification, with this feature's screens added to it — publishes it as a private Claude Artifact,
+   and records the link and the revision of each specification it was built from.
 2. **Given** a published prototype, **When** the product person opens it, **Then** every user story of the spec is
    reachable as a journey, and every screen shows the "Prototype — nothing here is saved or sent" banner.
 3. **Given** the prototype, **When** any of its screens shows people, accounts, money or messages, **Then** what it shows
@@ -68,9 +69,12 @@ screen shows the banner, and that the prototype's source is under `prototype/<fe
    **When** the run reaches the point where the stage would sit, **Then** nothing is built and nothing about the ladder
    has changed.
 7. **Given** a published prototype, **When** the run republishes it after a change, **Then** the link stays the same.
-8. **Given** a prototype is built or rebuilt, **When** the stage ends, **Then** `specs/<feature>/prototype.md` — the
-   prototype's register — records its link, the spec revision it was built from, and every screen with its route name,
-   the user story it shows, and its state.
+8. **Given** a prototype is built or rebuilt, **When** the stage ends, **Then** `specs/prototype.md` — the
+   prototype's one register — records its link, the revision of each specification it was built from, and every screen
+   with its route name, the feature and user story it shows, and its state.
+9. **Given** a repository whose features each describe some of the app's windows, **When** the prototype is built,
+   **Then** there is one prototype for the whole app, not one per feature, and a reaction to a screen is answered in the
+   `decisions.md` of the feature that screen shows.
 
 ---
 
@@ -99,9 +103,12 @@ prototype folder: it fails and names the file. Remove that: it passes, although 
    those fail the gate.
 4. **Given** a generated project with prototype mode on, **When** its production build, image or deploy artifact is produced,
    **Then** it contains nothing from the prototype folder.
-5. **Given** an absolute URL in prototype source whose host is not `localhost` or `127.0.0.1`, **When** the fence check
-   runs, **Then** it fails, naming the file and the URL — unless the host is on the fence's one list of static code and
-   font hosts (the ones a Claude Artifact may load from), which is kept in one place.
+5. **Given** prototype code that loads, fetches, submits to or navigates to an absolute URL — a script, stylesheet,
+   image, font or media source, a request, a form's action, an automatic redirect — whose host is not `localhost` or
+   `127.0.0.1`, **When** the fence check runs, **Then** it fails, naming the file and the URL — unless the host is on the
+   fence's one list of static code and font hosts (the ones a Claude Artifact may load from), which is kept in one place.
+   **Given** an absolute URL that only appears as text a screen shows the reader (an example address in help text),
+   **Then** the fence does not refuse it. Planted fixtures prove both.
 6. **Given** a project with its own secret scan, **When** the fence checks for credentials, **Then** it runs that scan
    over the prototype folder; **Given** a project with none, **Then** it runs a built-in check for common key and token
    patterns. Both are proved by planted fixtures.
@@ -200,6 +207,10 @@ second, final slice retires the prototype.
 2. **Given** a published prototype, **When** the product person accepts a screen, **Then** they do it with the "Accept
    this screen" control that every screen carries, and the register records the screen as accepted with who accepted it
    and when; **Given** a local-only prototype, **Then** they accept a screen by writing that line in the register.
+   **Given** a viewer who can only view the Artifact, **When** they reach a screen, **Then** "Accept this screen" is shown
+   unavailable with a sentence saying they need to be able to use the page to accept, and whom to ask; and **Given** the
+   run hands back the link, **Then** it tells the maintainer that product people who will accept screens must be given
+   access that can use the page, not view-only.
 3. **Given** a prototype screen accepted by the product person, **When** the slice that replaces it reaches its demo,
    **Then** the demo stop shows the reference screen beside the real one.
 4. **Given** a slice accepted, **When** its screens are in production, **Then** the prototype marks each replaced screen
@@ -253,16 +264,17 @@ second, final slice retires the prototype.
 - **FR-004**: Every screen or step of a prototype MUST show a visible banner reading "Prototype — nothing here is saved
   or sent".
 - **FR-005**: A prototype MUST hold only sample data kept inside its own folder, MUST NOT read from or write to any real
-  system, and MUST NOT name an absolute URL other than `localhost`, `127.0.0.1`, or a host on the fence's one list of
-  static code and font hosts.
+  system, and MUST NOT load, fetch, submit to or navigate to an absolute URL other than `localhost`, `127.0.0.1`, or a
+  host on the fence's one list of static code and font hosts. An absolute URL shown to the reader as text is allowed.
 - **FR-006**: The prototype MUST be published by default as a private Claude Artifact; republishing MUST keep the same
   link; the run MUST record the link, the spec revision it was built from, and every screen's route, story and state in
-  the register `specs/<feature>/prototype.md`.
+  the one register `specs/prototype.md`, each screen naming the feature it shows.
 - **FR-007**: `make prototype` MUST serve the same prototype locally, printing its address, and the stage MUST fall back
   to it where an Artifact cannot be published or would exceed the Artifact size limit.
 - **FR-008**: The repository's gate MUST fail when production code imports from the prototype folder, when a
   credential-shaped value appears under it (by the project's own secret scan, or a built-in pattern check where it has
-  none), or when prototype code names an absolute URL outside the allowed hosts — naming the file in each case. The
+  none), or when prototype code loads, fetches, submits to or navigates to an absolute URL outside the allowed hosts —
+  naming the file in each case; a URL that is only displayed text MUST NOT fail it. The
   fence MUST hold wherever a prototype folder exists, whatever the setting says.
 - **FR-009**: The gate MUST NOT hold prototype code to the production standard (tests, coverage, mutation, lint,
   accessibility, internationalisation). In a generated project the production build, image and deploy MUST exclude the
@@ -279,14 +291,16 @@ second, final slice retires the prototype.
 - **FR-013**: A slice with a screen MUST name, in the split, the prototype screens it replaces; its demo stop MUST show
   the accepted reference screen; and on acceptance the prototype MUST mark each replaced screen as replaced. A product
   person MUST accept a screen through an "Accept this screen" control on it (or a line in the register for a local-only
-  prototype), recorded with who and when.
+  prototype), recorded with who and when. Accepting MUST need access that can use the page; a view-only viewer MUST
+  be told why the control is unavailable, and the run MUST tell the maintainer, when it hands back the link, which
+  access product people need.
 - **FR-014**: When every prototype screen is replaced, the prototype folder MUST be removed in one commit and the
   published link MUST say the prototype is retired; a published link MUST NOT be deleted unless a person asks.
 - **FR-015**: Prototype code MUST NOT be promoted into production code except through a slice of its own built to the
   production standard.
 - **FR-016**: Prototype mode MUST work the same way in a generated project and in an adopted repository; in an adopted
-  repository the prototype folder's location MUST be recorded in `project.json`; each feature's prototype MUST live
-  under its own `prototype/<feature>/`; and an existing folder that is not a
+  repository the prototype folder's location MUST be recorded in `project.json`; a repository MUST have one prototype,
+  for the whole app, under `prototype/app/`; and an existing folder that is not a
   prototype MUST NOT be written into.
 - **FR-017**: Turning prototype mode on twice, or re-running the prototype stage on an unchanged specification, MUST
   change nothing, with a test proving the second run is a no-op.
@@ -304,8 +318,8 @@ second, final slice retires the prototype.
   draft, accepted (by whom), or replaced (by which slice).
 - **Reaction**: a product person's comment or message about the prototype; it belongs to a screen where it names one,
   and is resolved by a decision entry and, where behaviour changes, a criterion.
-- **Register**: `specs/<feature>/prototype.md` — the prototype's link, spec revision, screens and their states, and
-  who accepted each.
+- **Register**: `specs/prototype.md` — the prototype's link, the revision of each specification it was built from,
+  its screens with the feature each shows and its state, and who accepted each.
 - **Fence**: the rules the gate holds at the prototype folder's boundary — no import across it, no credential inside
   it, no outbound call from it, no inclusion in a production artifact.
 
@@ -333,16 +347,15 @@ second, final slice retires the prototype.
 - **The Artifact is the default home, localhost the upgrade** (decided with the requester, 2026-10-01). Publishing an
   Artifact needs a harness that can; elsewhere the local prototype is the only home.
 - **Both workflows.** Generated projects and adopted repositories get the same feature (decided with the requester,
-  2026-10-01). Each feature's prototype is `prototype/<feature>/` at the repository root unless `project.json` records
-  another place.
+  2026-10-01). The prototype is `prototype/app/` at the repository root unless `project.json` records another place.
 - **The whole app, seeded** (requested 2026-10-01): a prototype is the whole app with its navigation, not loose
   screens, and it opens on seeded example data so every window has something to show.
 - **Not held to accessibility or internationalisation** — it is throwaway; the production slices that replace it are.
 - **The fence is the safety argument.** "No security concerns" holds because of what the gate enforces at the folder's
   boundary, not because of a convention; anything the fence cannot detect (personal data in sample data, for example)
   is stated on the prototype's page as the product people's rule.
-- **One prototype per feature.** A feature under `specs/<feature>/` has at most one live prototype; several features
-  may each have one.
+- **One prototype per repository.** The whole app is one prototype, whichever feature added a screen to it; building
+  Cairn's by hand showed its windows span three specifications, which per-feature prototypes would have split apart.
 - **The constitution's security MUSTs are about production code.** The prototype folder sits outside production code by
   construction, which is why the fence, and not the security principles, governs it; nothing in this feature loosens a
   MUST about production code.
@@ -360,8 +373,8 @@ Resolved (14):
   [Blocker → US2 AC6, FR-008]       What credential-shaped means: the project's secret scan, or a built-in pattern check
   [Blocker → US2 AC7, FR-008]       The fence holds wherever the folder exists, whatever the setting
   [Blocker → US5 AC2, FR-013]       How a screen is accepted: an "Accept this screen" control, or a register line locally
-  [Should  → US1 AC8, FR-006]       Where the record lives: specs/<feature>/prototype.md
-  [Should  → FR-016, Assumptions]   One folder per feature: prototype/<feature>/
+  [Should  → US1 AC8, FR-006]       Where the record lives: one register (superseded below by specs/prototype.md)
+  [Should  → FR-016, Assumptions]   Where the folder lives (superseded below by prototype/app/)
   [Should  → US3 AC1, FR-010]       Reactions are read at every /drive entry and /cruise iteration while live
   [Should  → US2 AC4/AC8, FR-009]   Adopted repositories own their build: import rule plus a written instruction
   [Should  → FR-004]                The banner's exact text
@@ -372,3 +385,18 @@ Resolved (14):
   [Added   → US1 AC5, FR-003a]      Seeded with a complete example of the central record, with a "start empty" switch
 
 Parked (0).
+
+## Gaps found by building Cairn's prototype by hand — 2026-10-01
+
+Building a whole-app prototype for Cairn to this spec, before the factory code exists, found three gaps; the requester
+took all three.
+
+Resolved (3):
+  [Blocker → US2 AC5, FR-005/008]   The URL rule caught display text: Cairn's help quotes an example address. It now
+                                    covers URLs the code loads, fetches, submits to or navigates to, not text it shows
+  [Blocker → US1 AC1/AC8/AC9, FR-006/016, Assumptions]
+                                    Per-feature prototypes split the whole app: Cairn's windows span three specs. One
+                                    prototype per repository under prototype/app/, one register at specs/prototype.md,
+                                    each screen naming its feature
+  [Should  → US5 AC2, FR-013]       Accepting needs write access: view-only viewers are told why, and the hand-back
+                                    names the access product people need

@@ -59,7 +59,9 @@ def pinned_channel(text: str) -> str:
         toolchain = tomllib.loads(text).get("toolchain")
     except tomllib.TOMLDecodeError:
         return ""
-    channel = toolchain.get("channel") if isinstance(toolchain, dict) else None
+    if not isinstance(toolchain, dict) or "path" in toolchain:  # a path is a place on somebody's machine
+        return ""
+    channel = toolchain.get("channel")
     return channel if isinstance(channel, str) else ""
 
 

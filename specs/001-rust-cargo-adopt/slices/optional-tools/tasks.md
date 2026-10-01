@@ -208,7 +208,7 @@ are the delegating session's; `story-split.md` row 2 still names `cargo deny che
 Graded: only `CRITICAL` and `HIGH` re-open the loop. Each task closes the class its finding sits on; the sweep is
 named in its GREEN.
 
-- [ ] T008 [US1] **HIGH — an attended adoption never gets the ignore lines** (OG5; ADR 0003; constitution I, the
+- [x] T008 [US1] **HIGH — an attended adoption never gets the ignore lines** (OG5; ADR 0003; constitution I, the
   fragment's promise). `slipwai adopt` in a terminal records every directory as a *candidate* and `apps` is empty when
   the block is written (`src/slipwai/cli_adopt.py:245-250`, `src/slipwai/adopt.py:265`), and
   `slipwai adopt --confirm` regenerates the Makefile but never the `.gitignore` block (`src/slipwai/confirm.py`
@@ -230,7 +230,7 @@ named in its GREEN.
   - Alternative, if the delegating session prefers it (OG5 allows it): name the attended path under the plan's
     *Not working yet* and correct the fragment sentence instead. Either way the fragment and the code must agree.
 
-- [ ] T009 [US1] **MEDIUM — the Catch-up overclaims what `adopt --refresh` proposes** (OG6; WG9;
+- [x] T009 [US1] **MEDIUM — the Catch-up overclaims what `adopt --refresh` proposes** (OG6; WG9;
   `changelog.d/rust-cargo-adopt.md:62-64`). "A snapshot adoption is proposed the new audit and mutation commands by
   `slipwai adopt --refresh` as it is any detected command" holds only for an `adopt --yes` record whose commands are
   `detected`. Observed: a record whose commands were `confirmed` (`adopt --confirm`), with `deny.toml` added later,
@@ -242,7 +242,7 @@ named in its GREEN.
   `docs/adopting.md`), and re-wrap the fragment's first paragraph at the file's width (lines 6-8 are ragged after
   T005's edit).
 
-- [ ] T010 [US1] **MEDIUM — OG6 and the re-run of a configured tree have no test** (OG6; constitution II, "refresh on
+- [x] T010 [US1] **MEDIUM — OG6 and the re-run of a configured tree have no test** (OG6; constitution II, "refresh on
   an unchanged tree changes nothing"). `make test-adoption` proves the no-op only for the unconfigured fixtures
   (OG7), and nothing in the suite enters `adopt --refresh` with a tool file present. Both behaviours were observed
   correct by probe; pin them. Files: `tests/test_survey_cargo_tools.py` (or a sibling suite if the 350-line budget
@@ -252,7 +252,7 @@ named in its GREEN.
   is reported as a disagreement and left as written; a second `adopt --refresh` on a configured, committed tree
   leaves `git status` empty.
 
-- [ ] T011 [US1] **LOW — a generated Rust service beside a wrapped Cargo application lists the lines twice**
+- [x] T011 [US1] **LOW — a generated Rust service beside a wrapped Cargo application lists the lines twice**
   (`src/slipwai/project/gitignore.py:91-93`). `build_artifacts` de-duplicates whole chunks, and `per_backend["rust"]`
   (`target/\nmutants.out/\nmutants.out.old/\nmutants.diff\n`) and `WRAPPED_ARTIFACTS["cargo"]` are different chunks:
   `build_artifacts(False, [generated rust, wrapped cargo])` counts `mutants.out/` twice (observed). Reachable only

@@ -137,6 +137,9 @@ same lines; it stays inside the 350-line budget (`scripts/check-structure.py`).
   product to date, which `toolchain-pin` puts out of scope; the `audited` rung needs `supported` first.
 - A repository adopted before this slice keeps its ignore block as written: `migrate` and `adopt --refresh` never
   rewrite it; the Catch-up names the two lines to add by hand.
+- `slipwai converge` respells the ignore block from the recorded applications alone (`converge.py:171`), so a Cargo
+  directory still only a *candidate* at that point loses the two lines. Converging presumes every candidate placed;
+  `converge.py` is outside this slice's manifest (found at T008).
 - No offline advisories run and no `--in-diff` mutation scope (spec *Out of scope*).
 - The toolchain version is always empty — `toolchain-pin`; the adopted CI sets up no Rust — `ci-toolchain`.
 - `story-split.md` row 2 still names `cargo deny check`; D18 superseded it, and the split is not this slice's to

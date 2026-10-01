@@ -4,6 +4,7 @@ a workspace — because that decides whether check, clippy and test are told to 
 toolchain the repository pins from `rust-toolchain.toml`, the way rustup does."""
 from __future__ import annotations
 
+import os
 import re
 import tomllib
 from collections.abc import Callable
@@ -50,7 +51,8 @@ def member_of_workspace(
     )
 
 
-TOOLCHAIN_FILES = ("rust-toolchain.toml",)
+# In the order rustup prefers them within one directory: the legacy file wins.
+TOOLCHAIN_FILES = ("rust-toolchain", "rust-toolchain.toml")
 
 
 def pinned_channel(text: str) -> str:
@@ -65,9 +67,25 @@ def pinned_channel(text: str) -> str:
     return channel if isinstance(channel, str) else ""
 
 
+def legacy_channel(text: str) -> str:
+    """A `rust-toolchain` as rustup reads it: exactly one line is the channel, stripped and nothing else removed;
+    more than one is TOML, so `pinned_channel` reads it; none is no pin."""
+    lines = text.split("\n")
+    if lines[-1] == "":
+        lines.pop()
+    if not lines:
+        return ""
+    return lines[0].strip() if len(lines) == 1 else pinned_channel(text)
+
+
 def rust_toolchain(root: Path, directory: str, reader: Reader = read) -> str:
     """The toolchain channel the candidate's directory pins, or empty where nothing usable is."""
-    return pinned_channel(reader(root / directory / TOOLCHAIN_FILES[0]))
+    here = root / directory
+    for name in TOOLCHAIN_FILES:
+        if os.path.lexists(here / name):
+            text = reader(here / name)
+            return legacy_channel(text) if name == "rust-toolchain" else pinned_channel(text)
+    return ""
 
 
 def cargo(root: Path, directory: str) -> Detected | None:

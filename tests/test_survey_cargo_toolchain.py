@@ -77,6 +77,39 @@ class ToolchainPinTest(unittest.TestCase):
     def test_no_toolchain_file_anywhere_is_an_empty_version(self) -> None:
         self.assertEqual(self.candidate({"Cargo.toml": CRATE, "src/lib.rs": ""}), {"kind": "rust", "version": ""})
 
+    def legacy(self, text: str, beside: str | None = None) -> str:
+        """The version recorded for a crate whose `rust-toolchain` holds `text`, and `rust-toolchain.toml` `beside`."""
+        files = {"Cargo.toml": CRATE, "rust-toolchain": text}
+        if beside is not None:
+            files["rust-toolchain.toml"] = beside
+        return self.candidate(files)["version"]
+
+    def test_a_one_line_rust_toolchain_is_that_line_stripped(self) -> None:
+        for name, text in (("plain", "1.85\n"), ("padded", "  1.85  \n"), ("no newline", "1.85"), ("crlf", "1.85\r\n")):
+            with self.subTest(name):
+                self.assertEqual(self.legacy(text), "1.85")
+
+    def test_a_leading_v_is_not_stripped(self) -> None:
+        self.assertEqual(self.legacy("v1.85\n"), "v1.85")
+
+    def test_a_legacy_file_of_several_lines_is_toml(self) -> None:
+        self.assertEqual(self.legacy('# pinned for the MSRV\n[toolchain]\nchannel = "1.85"\n'), "1.85")
+        self.assertEqual(self.legacy(toml("1.85")), "1.85")
+
+    def test_a_legacy_file_of_several_lines_that_is_not_toml_is_no_pin(self) -> None:
+        for name, text in (("blank line after", "1.85\n\n"), ("blank line before", "\n  1.85  \n")):
+            with self.subTest(name):
+                self.assertEqual(self.legacy(text), "")
+
+    def test_a_legacy_file_holding_toml_with_a_non_string_channel_is_no_pin(self) -> None:
+        self.assertEqual(self.legacy("[toolchain]\nchannel = 3\n"), "")
+
+    def test_the_legacy_file_wins_over_the_toml_beside_it(self) -> None:
+        self.assertEqual(self.legacy("1.84\n", beside=toml("1.85")), "1.84")
+
+    def test_an_empty_legacy_file_is_no_pin_and_the_toml_beside_it_is_not_consulted(self) -> None:
+        self.assertEqual(self.legacy("", beside=toml("1.85")), "")
+
 
 if __name__ == "__main__":
     unittest.main()

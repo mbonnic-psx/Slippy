@@ -202,3 +202,129 @@ stays `unknown` with an audit recorded until Rust has a `support.json` product; 
 gains the ignore lines only by hand; no offline advisories run and no `--in-diff` scope; the toolchain version is
 always empty (`toolchain-pin`) and the adopted CI sets up no Rust (`ci-toolchain`); `delivery/survey/pinned.md` rows
 are the delegating session's; `story-split.md` row 2 still names `cargo deny check`. No task here fixes them.
+
+## Phase 4: Convergence pass 1 (2026-10-01, at 05ef327)
+
+Graded: only `CRITICAL` and `HIGH` re-open the loop. Each task closes the class its finding sits on; the sweep is
+named in its GREEN.
+
+- [ ] T008 [US1] **HIGH — an attended adoption never gets the ignore lines** (OG5; ADR 0003; constitution I, the
+  fragment's promise). `slipwai adopt` in a terminal records every directory as a *candidate* and `apps` is empty when
+  the block is written (`src/slipwai/cli_adopt.py:245-250`, `src/slipwai/adopt.py:265`), and
+  `slipwai adopt --confirm` regenerates the Makefile but never the `.gitignore` block (`src/slipwai/confirm.py`
+  writes no block). Observed in a probe: a crate with `.cargo/mutants.toml`, adopted in a terminal and then
+  `--confirm ledger`ed, records `mutation: "cargo mutants"` and its block has no `mutants.out/`. OG5 says the block
+  carries it "where a Cargo candidate is recorded"; `changelog.d/rust-cargo-adopt.md:30-31` says the block gains it
+  "for a Cargo application"; neither holds on the path ADR 0003 makes the default. Files: `src/slipwai/adopt.py`,
+  `src/slipwai/project/gitignore.py`, `tests/test_survey_cargo_tools.py`.
+  - RED: at the adopt boundary, `test_candidates.adopted(...)` over a crate (no tool files) — the block contains
+    `mutants.out/\nmutants.out.old/\n` — fails today on the missing lines.
+  - GREEN, sweep: every writer of the block and every way a Cargo application enters the record. The writers are
+    `adopt.py:265` and `converge.py:171`; the entries are `adopt --yes` (deployables, already covered), `adopt` in a
+    terminal (candidates), `adopt --confirm` (candidate → deployable, block already written). Key the lines on the
+    recorded ecosystem of each wrapped application **and each recorded candidate** (both carry `toolchain.ecosystem`,
+    `adopt.py:152`), so the block written at adoption already covers what `--confirm` later makes an application,
+    and `converge.py`'s respell keeps them for a candidate still pending. Guards: a declined Cargo candidate leaves
+    the lines (an ignored path that does not exist costs nothing, as `.env`'s comment argues); a terminal adoption of
+    a Node-only tree has the block it always had.
+  - Alternative, if the delegating session prefers it (OG5 allows it): name the attended path under the plan's
+    *Not working yet* and correct the fragment sentence instead. Either way the fragment and the code must agree.
+
+- [ ] T009 [US1] **MEDIUM — the Catch-up overclaims what `adopt --refresh` proposes** (OG6; WG9;
+  `changelog.d/rust-cargo-adopt.md:62-64`). "A snapshot adoption is proposed the new audit and mutation commands by
+  `slipwai adopt --refresh` as it is any detected command" holds only for an `adopt --yes` record whose commands are
+  `detected`. Observed: a record whose commands were `confirmed` (`adopt --confirm`), with `deny.toml` added later,
+  is reported `disagrees: ledger: commands was confirmed as … the record stands until you decide` and `audit` stays
+  `null`. Files: `changelog.d/rust-cargo-adopt.md`. Reword, as the paragraph above it already does for the
+  workspace commands: refreshed where *detected*; a confirmed or overridden record is a disagreement, so add
+  `commands.audit` / `commands.mutation` to `project.json` by hand and run `adopt --refresh` so the Makefile
+  follows. Sweep: every Catch-up and docs sentence that says refresh proposes these commands (`changelog.d/`,
+  `docs/adopting.md`), and re-wrap the fragment's first paragraph at the file's width (lines 6-8 are ragged after
+  T005's edit).
+
+- [ ] T010 [US1] **MEDIUM — OG6 and the re-run of a configured tree have no test** (OG6; constitution II, "refresh on
+  an unchanged tree changes nothing"). `make test-adoption` proves the no-op only for the unconfigured fixtures
+  (OG7), and nothing in the suite enters `adopt --refresh` with a tool file present. Both behaviours were observed
+  correct by probe; pin them. Files: `tests/test_survey_cargo_tools.py` (or a sibling suite if the 350-line budget
+  is reached). Characterisation, green by design; prove teeth by the sanctioned route. Sweep over both tools and both
+  provenances: an `adopt --yes` crate given `deny.toml` and `.cargo/mutants.toml` afterwards is refreshed to both
+  commands and its `delivery/Makefile` `audit:`/`mutation:` recipes follow; a confirmed record given the same files
+  is reported as a disagreement and left as written; a second `adopt --refresh` on a configured, committed tree
+  leaves `git status` empty.
+
+- [ ] T011 [US1] **LOW — a generated Rust service beside a wrapped Cargo application lists the lines twice**
+  (`src/slipwai/project/gitignore.py:91-93`). `build_artifacts` de-duplicates whole chunks, and `per_backend["rust"]`
+  (`target/\nmutants.out/\nmutants.out.old/\nmutants.diff\n`) and `WRAPPED_ARTIFACTS["cargo"]` are different chunks:
+  `build_artifacts(False, [generated rust, wrapped cargo])` counts `mutants.out/` twice (observed). Reachable only
+  where an adopted repository gains a generated Rust service and its block is respelled (`converge.py:171`).
+  Harmless to Git. Sweep: de-duplicate `language_artifacts` by line, not by chunk, so every per-backend and
+  per-ecosystem table shares one rule.
+
+## Convergence
+
+**Verdict (pass 1 of 2): not converged** — one `HIGH` (T008) re-opens the loop; T009 and T010 (`MEDIUM`) and T011
+(`LOW`) ride along with it. Pass 1 ran within its budget and is complete for the levels below.
+
+**Levels.**
+
+- **Domain — the Cargo row's rules.** Proven: OG1–OG3 at the survey boundary over trees on disk — all three deny
+  names, directory-named impostors, member and above-the-candidate files, bare `mutants.toml`, the workspace and
+  subdirectory forms of both commands (`tests/test_survey_cargo_tools.py:73-141`), implemented at
+  `src/slipwai/ecosystems/cargo.py:53-67,84`. Two guards re-checked for teeth this pass by mutation and restore:
+  dropping `.cargo/deny.toml` from `DENY` fails `test_each_of_the_other_two_names_cargo_deny_reads_proposes_it_too`;
+  replacing `wrapped_of(apps)` with `apps` fails
+  `test_an_application_the_factory_generated_adds_nothing_from_the_wrapped_table`. Not proven: nothing open.
+- **Use case — survey → adopt record → refresh (OG6).** Proven: `adopt --yes` records both commands as surveyed
+  (`tests/test_survey_cargo_tools.py:162`); the Platform row's `audited`/`unknown` and "mutation claims no rung"
+  (`:201-218`). Observed by probe, not tested: refresh of a detected record proposes both, a confirmed record is a
+  disagreement, a second refresh is a no-op (T010). Not holding: the attended adopt → `--confirm` path (T008).
+- **Delivery adapter — adopted Makefile, ignore block, CI.** Observed in a probe adoption of a workspace in
+  `crates/site`: `delivery/Makefile` `mutation:` → `cd crates/site && cargo mutants --workspace`, `audit:` →
+  `cd crates/site && cargo deny --workspace check advisories`, unguarded (OG4); `verify` runs neither and the adopted
+  CI runs only `install` and `verify` (`ci:` locally runs `audit`, which fails loudly without the tool, as OG4
+  intends); neither is ratcheted (`src/slipwai/project/native_commands.py:42`). The block's lines are unanchored
+  and once each for `--yes` (`tests/test_survey_cargo_tools.py:156-188`); missing on the attended path (T008);
+  doubled beside a generated Rust service (T011).
+- **Screen — the survey page and adopt report.** The adopt report counts "6 of 8 targets have a command" and
+  `delivery/docs/adoption.md` lists the `audit` and `mutation` commands; the survey page names the candidate's
+  evidence as `Cargo.toml` and does not name the trigger file, as every sibling row's conditional command does not.
+  No finding.
+- **Published contract.** `project.json`: no new key — `commands.audit`/`commands.mutation` already existed
+  (constitution VIII). Fragment: first line `MINOR` (`changelog.d/rust-cargo-adopt.md:1`), experimental stated
+  (`:23`), `VERSION` `1.4.0.dev0`; its Catch-up overclaims refresh (T009) and its ignore-block sentence fails on the
+  attended path (T008). `docs/adopting.md:36-37` names the two trigger files (OG7).
+
+**Constitution, principle by principle.**
+
+- **I. What a project was given keeps meaning what it meant** — touched. Other ecosystems unchanged: the table is
+  keyed by `ecosystem` and only `cargo` has a row (`src/slipwai/project/gitignore.py:36,92`); a generated project's
+  `.gitignore` is unchanged because only `wrapped_of(apps)` contributes (`:92`, proven by
+  `tests/test_survey_cargo_tools.py:233`, teeth re-checked); a non-Cargo adoption's block is unchanged (`:190`). Fragment
+  in the same commits, `MINOR`, under the experimental exemption (`changelog.d/rust-cargo-adopt.md:1,23`). Not yet
+  met: the fragment's claims at `:30-31` and `:62-64` must match the code (T008, T009).
+- **II. Re-running is safe** — touched (refresh proposes new commands). No new writing command. The no-op is proven
+  for the unchanged fixtures by `make test-adoption` (green at 633b34d) and observed for a configured tree by probe;
+  T010 pins it.
+- **III. Simplicity** — holds: two constants and one function (`src/slipwai/ecosystems/cargo.py:53-67`), one table and
+  one expression (`src/slipwai/project/gitignore.py:36,91-93`); no abstraction added.
+- **V. Acceptance-driven** — holds: every new test enters at `survey` or `slipwai adopt` except
+  `IgnoreBlockTableTest`, which calls the public `build_artifacts` for the generated-app case adopt cannot reach; no
+  mocking library (`tests/test_survey_cargo_tools.py:11-16`).
+- **VIII. Versioning** — holds: no `project.json` field added or retyped; the commands are strings the record already
+  carries.
+- **IX. Security (dependency scanning)** — holds: the proposed audit is a vulnerability scan only,
+  `check advisories` (`src/slipwai/ecosystems/cargo.py:65`, D18), so a recorded audit lifts the Platform row by the
+  shared rule (`src/slipwai/convergence.py:182`; `tests/test_survey_cargo_tools.py:207`).
+- **X. One pull request per slice** — holds: the slice's commits are its own branch, `dc904ea..05ef327`.
+- IV, VI, VII, XI, XII — not touched: no domain/port code, no third-party adapter called at runtime, no long-running
+  process, no pipeline change.
+
+**Sweeps performed.** The three deny names × root/workspace/subdirectory (shared `here`, one test per name at the
+root and the forms with `deny.toml` — one code path, no gap); both tools × both provenances on refresh (probe;
+T010); every writer of the ignore block (`adopt.py:265`, `converge.py:171`) and every entry of a Cargo application
+into the record (`--yes`, terminal candidates, `--confirm`) — found the attended gap (T008); every per-backend and
+per-ecosystem ignore chunk for duplication — found T011.
+
+**Not this slice's.** Smoke: the slice touched no start-up. Convergence map: no rung moved (Platform stays `unknown`
+for a pure Rust repository; research). `delivery/survey/pinned.md` row is the delegating session's to append (plan
+*Pin*).

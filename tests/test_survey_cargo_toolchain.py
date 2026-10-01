@@ -2,6 +2,7 @@
 or an empty version where nothing usable is pinned. Every test enters at the survey over a tree on disk."""
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -109,6 +110,39 @@ class ToolchainPinTest(unittest.TestCase):
 
     def test_an_empty_legacy_file_is_no_pin_and_the_toml_beside_it_is_not_consulted(self) -> None:
         self.assertEqual(self.legacy("", beside=toml("1.85")), "")
+
+    def test_a_pin_above_the_crate_is_found_by_walking_up_to_the_root(self) -> None:
+        files = {"Cargo.toml": CRATE, "crates/a/Cargo.toml": CRATE, "rust-toolchain.toml": toml("1.85")}
+        with tempfile.TemporaryDirectory() as directory:
+            roots = {r.path: r.found.toolchain for r in survey(write(Path(directory), files)).roots}
+        self.assertEqual(roots["crates/a"], {"kind": "rust", "version": "1.85"})
+        self.assertEqual(roots["."], {"kind": "rust", "version": "1.85"}, "the zero-step walk still reads the root")
+
+    def test_a_nearer_file_that_names_no_channel_decides_and_the_search_stops(self) -> None:
+        files = {
+            "crates/a/Cargo.toml": CRATE, "rust-toolchain.toml": toml("1.85"),
+            "crates/a/rust-toolchain.toml": '[toolchain]\ncomponents = ["clippy"]\n',
+        }
+        self.assertEqual(self.candidate(files, "crates/a"), {"kind": "rust", "version": ""})
+
+    def test_a_dangling_link_in_the_candidates_directory_decides_as_an_empty_pin(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = write(Path(directory), {"crates/a/Cargo.toml": CRATE, "rust-toolchain.toml": toml("1.85")})
+            (root / "crates/a/rust-toolchain").symlink_to("nowhere")
+            self.assertEqual(survey(root).roots[0].found.toolchain, {"kind": "rust", "version": ""})
+
+    def test_a_pin_above_the_repository_root_is_never_read(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            outside = write(Path(directory), {"rust-toolchain.toml": toml("1.85"), "repo/Cargo.toml": CRATE})
+            self.assertEqual(survey(outside / "repo").roots[0].found.toolchain, {"kind": "rust", "version": ""})
+
+    def test_another_ecosystems_candidate_beside_a_pin_does_not_read_it(self) -> None:
+        files = {"package.json": json.dumps({"name": "web"}), "rust-toolchain.toml": toml("1.85")}
+        with tempfile.TemporaryDirectory() as directory:
+            found = survey(write(Path(directory), files)).roots[0].found
+        self.assertEqual(found.ecosystem, "node")
+        self.assertNotEqual(found.toolchain.get("version"), "1.85")
+        self.assertEqual(found.toolchain["kind"], "node")
 
 
 if __name__ == "__main__":

@@ -1,7 +1,8 @@
 """The Cargo row: a directory holding a `Cargo.toml` is Rust built by Cargo, found by the file name alone, so a
 manifest the survey cannot parse is still recognised. The row reads one fact from the manifest — whether it declares
 a workspace — because that decides whether check, clippy and test are told to cover every member, and it reads the
-toolchain the repository pins from `rust-toolchain.toml`, the way rustup does."""
+toolchain the repository pins from `rust-toolchain` or `rust-toolchain.toml` as rustup does (D19): the nearest
+directory holding either, from the candidate's up to the repository root, decides."""
 from __future__ import annotations
 
 import os
@@ -79,13 +80,18 @@ def legacy_channel(text: str) -> str:
 
 
 def rust_toolchain(root: Path, directory: str, reader: Reader = read) -> str:
-    """The toolchain channel the candidate's directory pins, or empty where nothing usable is."""
+    """The toolchain channel the candidate pins, as rustup would find it: from the candidate's directory up to and
+    including the repository root, never above, the nearest directory holding either file decides — even a file
+    that names no channel, or one that is not a file — and no file on the way up is no pin."""
     here = root / directory
-    for name in TOOLCHAIN_FILES:
-        if os.path.lexists(here / name):
-            text = reader(here / name)
-            return legacy_channel(text) if name == "rust-toolchain" else pinned_channel(text)
-    return ""
+    while True:
+        for name in TOOLCHAIN_FILES:
+            if os.path.lexists(here / name):
+                text = reader(here / name)
+                return legacy_channel(text) if name == "rust-toolchain" else pinned_channel(text)
+        if here == root or root not in here.parents:
+            return ""
+        here = here.parent
 
 
 def cargo(root: Path, directory: str) -> Detected | None:

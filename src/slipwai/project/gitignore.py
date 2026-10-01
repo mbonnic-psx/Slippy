@@ -6,7 +6,7 @@ import json
 from ..assets import NOTES, TOOLKIT_ROOT
 from ..catalog import CATALOG
 from ..extensions import known_extensions
-from ..services import App, backends_of, families_of, needs_environment, services_of, web_apps
+from ..services import App, backends_of, families_of, needs_environment, services_of, web_apps, wrapped_of
 from ..targets import managed
 from .cruise_record import (
     CHECKPOINT,
@@ -30,6 +30,10 @@ from .stage_models import DELEGATION_LOGS
 STORE_ARTIFACTS = {
     "sqlite": "*.sqlite3\n*.sqlite3-wal\n*.sqlite3-shm\n",
 }
+# What a wrapped application's own optional tool writes beside it when the delivery material runs it, keyed by the
+# toolchain's `ecosystem`. Keyed on the recorded application and not on a recorded command, so a maintainer who adds
+# the command later needs no second edit; unanchored, so a crate in a subdirectory is covered.
+WRAPPED_ARTIFACTS = {"cargo": "mutants.out/\nmutants.out.old/\n"}
 # The five slice-scoped artifacts the installed Spec Kit commands write at the feature root.
 CANONICAL_SLOTS = ("plan.md", "research.md", "data-model.md", "quickstart.md", "tasks.md")
 
@@ -84,6 +88,9 @@ def build_artifacts(event: bool, apps: list[App], target: str = "none") -> str:
         "java-spring": "target/\n",
     }
     language_artifacts = "".join(dict.fromkeys(per_backend[backend] for backend in backends_of(apps)))
+    language_artifacts += "".join(dict.fromkeys(
+        WRAPPED_ARTIFACTS.get((app.toolchain or {}).get("ecosystem", ""), "") for app in wrapped_of(apps)
+    ))
     frontend_artifacts = "".join(f"{web.path}/dist/\n" for web in web_apps(apps))
     # Of the family, not the backend: a TypeScript service behind any framework already ignores
     # node_modules for its own sake, and a second copy of the line is not the answer for either.

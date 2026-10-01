@@ -328,3 +328,66 @@ per-ecosystem ignore chunk for duplication — found T011.
 **Not this slice's.** Smoke: the slice touched no start-up. Convergence map: no rung moved (Platform stays `unknown`
 for a pure Rust repository; research). `delivery/survey/pinned.md` row is the delegating session's to append (plan
 *Pin*).
+
+**Verdict (pass 2 of 2): converged at the bound with one Phase 4 task** — T008–T011 each closed what they were
+written for; no `CRITICAL` or `HIGH` remains. T012 (`LOW`) is appended below and does not re-open the loop. Pass 2 ran
+at `9808f6b` within its budget and is complete. No codegraph index exists in this worktree (`delivery/scripts/codegraph
+callers build_artifacts` → "not initialized"), so the writer sweep was a text search of `src/`.
+
+**Each fix against its GREEN.**
+
+- **T008 (closed).** `adopt` keys the block on each recorded candidate's ecosystem as well as each wrapped application's
+  (`src/slipwai/adopt.py:265-267` → `src/slipwai/project/gitignore.py:65,95-104`). Proven at the adopt boundary in a
+  terminal: a crate recorded only as a candidate (`deployables == {}`) has both lines; `--confirm ledger` leaves each
+  once; a Node-only terminal adoption has no `mutants.out` (`tests/test_survey_cargo_tools_attended.py:25-46`). Teeth:
+  `ecosystems = ()` at `adopt.py:265` fails the first two. Writers swept: `build_artifacts` has three callers —
+  `scaffold.py:102` (generated, no candidates, so untouched), `adopt.py:267` (fixed), `converge.py:171` (applications
+  only; named under the plan's *Not working yet*, `plan.md:140`; T012).
+- **T011 (closed).** Wrapped and candidate lines are de-duplicated by line against what the generated backends already
+  list (`gitignore.py:96-104`); the backends' own chunk text is untouched. Byte-identity checked by loading
+  `git show dc904ea:src/slipwai/project/gitignore.py` as a scratch module (`$HOME/.cache/slippy-optional-tools-tmp/compare.py`)
+  and comparing with HEAD's `build_artifacts`: identical for a generated Rust service (alone and with a web app), for
+  `java`+`quarkus` beside `java`+`spring-boot` in both orders, and for wrapped Maven+npm, each across event ×
+  `none`/`aws` (20 cases). Against the pre-fix `05ef327`: identical for one wrapped Cargo app, two, and Cargo+Maven; the
+  only change is generated Rust beside wrapped Cargo, `mutants.out/` 2 → 1. Teeth: `if line not in listed` → `if True`
+  fails `test_a_generated_rust_service_beside_a_wrapped_cargo_application_lists_each_line_once` and
+  `test_two_wrapped_cargo_applications_carry_each_line_once`.
+- **T010 (closed).** `tests/test_survey_cargo_tools_refresh.py:43-81` enters `adopt --refresh` with both tool files
+  present across both provenances and the configured re-run. Teeth: `DENY = ()` (`ecosystems/cargo.py:53`) fails the
+  detected-record test; refreshing regardless of provenance (`resurvey.py:80` → `if True`) fails the confirmed-record
+  test. The second-refresh no-op is characterisation of the existing re-survey property (constitution II), not mutated.
+- **T009 (closed).** The Catch-up now splits detected from confirmed/overridden and gives the by-hand route
+  (`changelog.d/rust-cargo-adopt.md:61-66`), matching what the refresh test pins; first paragraph re-wrapped (`:3-21`).
+  First line `MINOR` (`:1`), experimental stated (`:21`), `VERSION` `1.4.0.dev0`. `docs/adopting.md` makes no refresh
+  claim about these commands (swept).
+
+**Constitution, as the fix diff touches it.**
+
+- **I. What a project was given keeps meaning what it meant** — holds. A generated project's `.gitignore` is
+  byte-identical to `dc904ea` (above), so `make test-migration`'s exactness is not disturbed; the change is adoption-only,
+  under the experimental exemption the fragment states (`changelog.d/rust-cargo-adopt.md:1,21`); the fragment's ignore
+  sentence (`:28-30`) and Catch-up (`:61-66`) now say what the code does.
+- **II. Re-running is safe** — holds: no new writing command; `adopt --refresh` on a configured, committed tree leaves
+  `git status` empty (`tests/test_survey_cargo_tools_refresh.py:72-81`).
+- **III. Simplicity** — holds: one optional parameter and one loop (`gitignore.py:65,100-104`), one expression in
+  `adopt.py:265`; no new table or abstraction.
+- **V. Acceptance-driven** — holds: the new tests enter at `slipwai adopt` / `--confirm` / `--refresh` through a terminal
+  or the CLI; the dedupe test calls the public `build_artifacts`; fakes only, no mocking library.
+- **X. One pull request per slice** — holds: fixes `fa23e9c..9808f6b` are on this slice's branch.
+- **XIV. Agent-generated change meets the same bar** — holds: the spec and constitution are unedited; the converge edge
+  is named in the plan rather than decided past the manifest.
+- IV, VI–IX, XI–XIII, XV — not touched by the fix diff.
+
+**Sweeps performed.** Every caller of `build_artifacts` (three); every way a Cargo directory enters the record
+(`--yes`, terminal candidate, `--confirm`, declined — a declined candidate keeps the lines, harmlessly); both tools ×
+both provenances on refresh; generated-project byte identity over Rust and the two Java frameworks × profile × target;
+every Catch-up and docs sentence about refresh proposing audit/mutation. Targeted suites green: `test_survey_cargo_tools`,
+`_attended`, `_refresh`, `test_adopt`, `test_mutation`, `test_candidates` — 76 tests OK.
+
+- [ ] T012 [US1] **LOW — `slipwai converge` drops the Cargo lines for a still-pending candidate** (OG5;
+  `src/slipwai/converge.py:171`; `plan.md:140`). `converge` respells the block from `apps_from_manifest(document)`
+  alone, so a Cargo directory still in `project.json`'s `candidates` loses `mutants.out/` / `mutants.out.old/` that
+  `adopt` wrote; the fragment (`changelog.d/rust-cargo-adopt.md:28-30`) does not say so. Harmless until `cargo mutants`
+  runs there. Fix: pass `tuple((row.get("toolchain") or {}).get("ecosystem", "") for row in document.get("candidates",
+  []))` as `candidate_ecosystems`, with a test at the `converge` boundary over a terminal-adopted crate. Needs
+  `converge.py` in a manifest — the next slice that touches `converge`, or a follow-up PR.

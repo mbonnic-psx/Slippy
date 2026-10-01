@@ -167,7 +167,7 @@ No white box in this slice: no event model, no screen states to write back; `che
 
 ## Phase 3: Polish
 
-- [ ] T007 [US1] **Run the gate** (OG7). Depends on T001–T006. No files written. Run `make verify` as the detached unit
+- [x] T007 [US1] **Run the gate** (OG7). Depends on T001–T006. No files written. Run `make verify` as the detached unit
   the safety rules give, poll it to completion, then `make test-adoption` under the wrapper (all with
   `env -u CRUISE_RUNNER -u CRUISE_ITERATION`); both green. Confirm `git status` shows no change under
   `tests/fixtures/adopt/` (the fixtures are unchanged, so the no-answer half stays end to end). The one failure

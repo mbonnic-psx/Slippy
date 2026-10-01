@@ -36,7 +36,7 @@ commands from the survey output and the recorded `project.json`.
    typecheck is `cargo check --all-targets`, lint is `cargo clippy --all-targets --message-format=short -- -D warnings` followed by
    `cargo fmt --check`, test is `cargo test`, and integration and adversarial are recorded as no answer.
 3. **Given** a crate with no `deny.toml`, **When** commands are proposed, **Then** audit is recorded as no answer;
-   **Given** a `deny.toml` beside the manifest, **Then** audit is `cargo deny check`.
+   **Given** a `deny.toml` beside the manifest, **Then** audit is `cargo deny check advisories` (D18).
 4. **Given** a crate with no mutation configuration, **When** commands are proposed, **Then** mutation is recorded
    as no answer; **Given** a `.cargo/mutants.toml` (cargo-mutants' own configuration file) in the crate,
    **Then** mutation is `cargo mutants`.
@@ -116,7 +116,7 @@ Checked against `src/slipwai/ecosystems.py`, `survey.py`, `delivery_facts.role_o
 `platform.py`, `programme.py`, `structure.py` and `scripts/test-adoption.py`. The criteria and states this review
 added, each owned by this slice:
 
-- **SG1 — the toolchain before slice 3.** A crate adopted under this slice records its toolchain as kind `rust`
+- **SG1 — the toolchain before slice 3.** *(Replaced by TG1–TG10 in `toolchain-pin`.)* A crate adopted under this slice records its toolchain as kind `rust`
   with an empty version, whatever toolchain file it carries; `toolchain-pin` is what reads the pin. The survey
   page therefore shows no version for it, the way it shows none for any absent pin.
 - **SG2 — no Rust setup in the adopted CI yet.** Until `ci-toolchain`, the gate's workflow writes no setup step for
@@ -186,6 +186,68 @@ probe trees (`slices/workspace/research.md`). The criteria and states this revie
 - **Out of scope here:** reading `members`, `exclude` or `default-members` (the Assumptions' text match); an inline
   top-level `workspace = { … }` table; a feature matrix (D11); what a member is for (SG4 holds per candidate).
 
+### Slice `optional-tools` — Gaps reviewed (2026-10-01, iteration 2)
+
+Checked against `src/slipwai/ecosystems/` (`cargo.py`, `rows.py`), `project/native_commands.py`, `project/makefile.py`,
+`convergence.py`, `project/gitignore.py`, `scripts/test-adoption.py` and cargo-deny 0.20.2 and cargo-mutants 27.1.0
+run over probe trees. The criteria and states this review added, each owned by this slice:
+
+- **OG1 — what makes audit appear** (D20). The candidate's directory holds `deny.toml`, `.deny.toml` or
+  `.cargo/deny.toml`. A file only in a member, or only above the candidate, proposes nothing: audit stays no answer.
+- **OG2 — the audit command** (D18, D20). `cargo deny check advisories`; at a workspace root (WG1)
+  `cargo deny --workspace check advisories`; in a subdirectory prefixed once (SG3). A vulnerability scan, as every
+  other ecosystem's audit is — licences, bans and sources are the maintainer's to add when confirming.
+- **OG3 — what makes mutation appear, and its command** (D20). `.cargo/mutants.toml` in the candidate's directory,
+  which for a workspace is its root; a member's copy and a bare `mutants.toml` propose nothing, as cargo-mutants
+  reads neither. `cargo mutants`, `cargo mutants --workspace` at a workspace root, prefixed once in a subdirectory;
+  no `--in-diff` and no Make variable.
+- **OG4 — a missing tool is a failure, never green.** Neither command is guarded; a machine without `cargo-deny` or
+  `cargo-mutants` fails `make -f delivery/Makefile audit` / `mutation` with cargo's `no such command` (exit 101).
+  Neither target is ratcheted, so nothing is baselined, and `verify` runs neither.
+- **OG5 — what a recorded audit claims.** A recorded audit lifts the Platform row to `audited`, as for any ecosystem;
+  a recorded mutation claims no rung. `cargo mutants` writes `mutants.out/`: the adopted ignore block carries it where
+  a Cargo candidate is recorded, or the plan names it under *Not working yet*.
+- **OG6 — adopted again.** A repository adopted with a snapshot before this slice is proposed the new commands on
+  `adopt --refresh`, reconciled as WG9 says; the fragment's Catch-up says so.
+- **OG7 — tested at the survey, fixtures unchanged.** Both adoption fixtures stay unconfigured, so the no-answer half
+  stays end to end; the configured halves, every file name above, the member and above-the-candidate cases and the
+  workspace forms are survey-level tests. `changelog.d/rust-cargo-adopt.md` is amended (no release carried it) and
+  `docs/adopting.md` names the two trigger files.
+- **Out of scope here:** a `deny.toml` above the candidate, which cargo-deny honours (D20's reversal); an offline
+  advisories run; scoping mutation to a diff.
+
+### Slice `toolchain-pin` — Gaps reviewed (2026-10-01, iteration 2)
+
+Checked against `src/slipwai/ecosystems/` (`cargo.py`, `rows.py`, `common.py`), `bounded_read.py`, `resurvey.py`,
+`adopt_report.py`, `platform.py`, `project/adopted_ci.py`, `project/ci_workflows.py`, rustup's overrides page and
+the README of `actions-rust-lang/setup-rust-toolchain`. **SG1 is replaced** by the criteria below, each owned by
+this slice:
+
+- **TG1 — where the pin is found** (D19). From the candidate's directory up to and including the repository root,
+  never above; the first directory holding `rust-toolchain` or `rust-toolchain.toml` decides, and the search stops
+  there even when that file names nothing.
+- **TG2 — which file wins** (D21). In one directory, `rust-toolchain` over `rust-toolchain.toml`, as rustup does.
+- **TG3 — what is read** (D21). `rust-toolchain.toml`: `toolchain.channel`, by `tomllib`. `rust-toolchain`: TOML the
+  same way where it starts with `[`, otherwise its first non-blank line, stripped, with no leading `v` removed.
+- **TG4 — recorded as written** (D21). `1.85`, `1.85.0`, `stable`, `nightly`, `nightly-2025-01-01` and `1.85-beta`
+  are each the version verbatim; a test per shape.
+- **TG5 — no pin is empty, never an error** (US2 scenario 3; D21). No file on the way up; a table with no `channel`
+  or a non-string one; a `path` toolchain (never recorded: it is a path on someone's machine); invalid TOML; an empty,
+  oversize or non-regular file — each records `{"kind": "rust", "version": ""}`.
+- **TG6 — `rust-version` is not a pin** (D21). An MSRV in `Cargo.toml` with no toolchain file records an empty
+  version.
+- **TG7 — what a maintainer sees.** The survey page shows `rust <version>` for a pin and nothing for an empty one; the
+  candidate's evidence stays `Cargo.toml`. The `rust-crate` fixture gains a pin, so the end-to-end adoption shows it,
+  and `tests/test_survey_cargo.py`'s empty-version assertions flip to it.
+- **TG8 — adopted again.** An app recorded with an empty detected toolchain refreshes to the pin on `adopt --refresh`;
+  a toolchain the maintainer confirmed or overrode is reported as a disagreement and not changed (`resurvey`).
+- **TG9 — what `ci-toolchain` is handed** (D19). The version string and nothing else; the record's shape is
+  unchanged. `adopted_ci` still writes no Rust setup step in this slice (SG2 stands).
+- **TG10 — the fragment.** `changelog.d/rust-cargo-adopt.md` is amended: the pin is no longer under *What stays out*,
+  which keeps only the CI half; the Catch-up names TG8.
+- **Out of scope here:** support status for a Rust version (`support.json` has no `rust` product); components and
+  targets a toolchain file lists.
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
@@ -194,8 +256,9 @@ probe trees (`slices/workspace/research.md`). The criteria and states this revie
   with `Cargo.toml` (prefixed by its directory) as the evidence.
 - **FR-002**: The survey MUST propose, for every one of the eight targets, either the Cargo command listed in
   User Story 1 or a written no-answer; it MUST NOT propose a command for integration or adversarial.
-- **FR-003**: Audit MUST be proposed only where a `deny.toml` sits beside the manifest, and mutation only where
-  cargo-mutants' configuration file is present; otherwise each is a written no-answer.
+- **FR-003**: Audit MUST be proposed only where a `deny.toml` sits beside the manifest (or `.deny.toml`,
+  `.cargo/deny.toml`, D20), and mutation only where cargo-mutants' configuration file is present; otherwise each is
+  a written no-answer.
 - **FR-004**: A candidate outside the root MUST have every command run in its own directory, as other
   ecosystems' commands are.
 - **FR-005**: The survey MUST record the toolchain as kind Rust with the version the repository pins in

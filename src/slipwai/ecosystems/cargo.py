@@ -133,15 +133,25 @@ def readable_text(path: Path, limit: int = MAX_READ) -> str | None:
         return None
 
 
+def stays_inside(root: Path, path: Path) -> bool:
+    """Whether `path`, links followed, resolves inside the repository root (D26): a toolchain file that links out of
+    the checked-out tree is passed over, as an unreadable one is, so nothing of the adopting machine is recorded."""
+    try:
+        return path.resolve().is_relative_to(root.resolve())
+    except (OSError, RuntimeError):
+        return False
+
+
 def rust_toolchain(root: Path, directory: str, reader: TextReader = readable_text) -> str:
     """The toolchain channel the candidate pins, as rustup would find it: from the candidate's directory up to and
     including the repository root, never above, the nearest directory holding a toolchain file it can read decides —
-    even one that names no channel — and a name that cannot be read as text (D24) is passed over, to the other name
-    in its directory and then upward. No file read on the way up is no pin."""
+    even one that names no channel — and a name that cannot be read as text (D24), or whose link resolves outside
+    the repository (D26), is passed over, to the other name in its directory and then upward. No file read on the
+    way up is no pin."""
     here = root / directory
     while True:
         for name in TOOLCHAIN_FILES:
-            text = reader(here / name)
+            text = reader(here / name) if stays_inside(root, here / name) else None
             if text is not None:
                 channel = legacy_channel(text) if name == "rust-toolchain" else pinned_channel(text)
                 return channel if TOOLCHAIN_NAME.fullmatch(channel) else ""

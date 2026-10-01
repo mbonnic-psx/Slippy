@@ -92,6 +92,60 @@ class UnreadableToolchainFileTest(unittest.TestCase):
                     self.assertEqual(found, NONE)
 
 
+class LinkOutsideTheRepositoryTest(unittest.TestCase):
+    """D26: a toolchain file whose link resolves outside the repository root is passed over as an unreadable one is."""
+
+    def crate(self, make, above: bool = True) -> dict:
+        """The toolchain for `crates/a` in a repository at `<scratch>/repo`; `make(here, outside)` lays files, where
+        `outside` is a directory beside the repository holding `elsewhere` ("9.9")."""
+        with tempfile.TemporaryDirectory() as scratch:
+            outside = Path(scratch) / "outside"
+            outside.mkdir()
+            (outside / "elsewhere").write_text("9.9\n")
+            files = {"crates/a/Cargo.toml": CRATE}
+            if above:
+                files["rust-toolchain.toml"] = toml("1.85")
+            repo = Path(scratch) / "repo"
+            repo.mkdir()
+            root = write(repo, files)
+            make(root / "crates/a", outside)
+            roots = [r for r in survey(root).roots if r.path == "crates/a"]
+            self.assertEqual(len(roots), 1)
+            return roots[0].found.toolchain
+
+    def test_a_link_outside_the_root_is_passed_over_to_the_pin_above(self) -> None:
+        self.assertEqual(
+            self.crate(lambda here, outside: (here / "rust-toolchain").symlink_to(outside / "elsewhere")), PINNED)
+
+    def test_a_link_outside_the_root_with_no_other_pin_is_no_pin(self) -> None:
+        self.assertEqual(
+            self.crate(lambda here, outside: (here / "rust-toolchain").symlink_to(outside / "elsewhere"), above=False),
+            NONE)
+
+    def test_a_link_outside_the_root_falls_to_the_toml_beside_it(self) -> None:
+        def make(here: Path, outside: Path) -> None:
+            (here / "rust-toolchain").symlink_to(outside / "elsewhere")
+            (here / "rust-toolchain.toml").write_text(toml("stable"))
+
+        self.assertEqual(self.crate(make), {"kind": "rust", "version": "stable"})
+
+    def test_a_link_inside_the_root_is_still_read(self) -> None:
+        def make(here: Path, outside: Path) -> None:
+            (here.parent.parent / "pins").mkdir()
+            (here.parent.parent / "pins" / "chosen").write_text("1.70\n")
+            (here / "rust-toolchain").symlink_to("../../pins/chosen")
+
+        self.assertEqual(self.crate(make), {"kind": "rust", "version": "1.70"})
+
+    def test_a_link_through_a_linked_directory_that_escapes_the_root_is_passed_over(self) -> None:
+        def make(here: Path, outside: Path) -> None:
+            (outside / "rust-toolchain").write_text("9.9\n")
+            (here / "rust-toolchain").symlink_to("via/rust-toolchain")
+            (here / "via").symlink_to(outside, target_is_directory=True)
+
+        self.assertEqual(self.crate(make), PINNED)
+
+
 class ByteOrderMarkTest(unittest.TestCase):
     def pinned(self, name: str, text: str) -> dict:
         with tempfile.TemporaryDirectory() as directory:

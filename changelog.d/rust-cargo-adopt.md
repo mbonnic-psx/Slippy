@@ -34,7 +34,7 @@ diff scope for mutation (`--in-diff`).
 The toolchain a Rust repository pins is recorded as the candidate's Rust version, read as rustup reads it:
 `rust-toolchain` or `rust-toolchain.toml`, looked for from the candidate's directory up to the repository root, the
 nearest directory holding either deciding (the legacy file first, and a `rust-toolchain` of more than one line read
-as TOML; a file rustup cannot read is passed over, and a byte order mark is read past), with the channel recorded
+as TOML; a file rustup cannot read is passed over, as is one that links outside the repository, which is not read, and a byte order mark is read past), with the channel recorded
 as written — `1.85`, `stable`, `nightly-2025-01-01`. Where nothing usable is
 pinned (no file, an empty or invalid one, a `path` toolchain, a channel that is not a toolchain name) the version
 is empty and nothing is reported as an error, and `rust-version` in `Cargo.toml` is not a pin.

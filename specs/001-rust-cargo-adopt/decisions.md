@@ -272,3 +272,14 @@
 - **Confidence:** high · **Would reverse if:** the fork's CI fails the same test, or a person wants the fork to carry upstream's release entries
 - **Written to:** specs/001-rust-cargo-adopt/decisions.md
 - **Status:** standing
+
+## D26 — Adversary AV1: a toolchain file whose link resolves outside the repository — read, decide empty, or pass over?
+- **Stage:** after acceptance (adversary) · **Slice:** toolchain-pin · **When:** 2026-10-01T22:30:00Z · **Iteration:** 2
+- **Question:** `readable_text` follows a `rust-toolchain` / `rust-toolchain.toml` link wherever it resolves, so a tree can write a file of the adopting machine into committed pages and make refresh rewrite them on every run (AV1, reproduced by the host: `rust-toolchain -> /etc/hostname` records the hostname). rustup follows the link too, so neither alternative matches rustup on this machine.
+- **Options:** keep following it · a file that resolves outside the repository root decides there with an empty version · it is passed over, to the other name and then upward, as an unreadable file is (D24) (recommended)
+- **Decision:** Passed over. A toolchain file whose resolved path is not inside the repository root's resolved path is treated as one rustup cannot read (D24): the other name in that directory, then the directories above, up to the root. A link that resolves inside the root is read as today.
+- **Why:** Nothing outside the checked-out tree may reach `project.json` or a page (Principle II: refresh a no-op on an unchanged tree), and a file of the adopting machine — a hostname, a one-token credential file — must never be committed by the factory. On a fresh clone, CI's included, such a link almost always dangles, and rustup passes a dangling link over (D24, research R15), so passing over is what the build there uses.
+- **Decided by:** host (stage recommendation)
+- **Confidence:** medium · **Would reverse if:** a real repository is found to pin through a link to a toolchain file outside itself that exists on every machine (a vendored rustup home), which this reading records as no pin
+- **Written to:** specs/001-rust-cargo-adopt/decisions.md, specs/001-rust-cargo-adopt/adversary-log.md
+- **Status:** standing

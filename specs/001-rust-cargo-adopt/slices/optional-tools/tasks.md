@@ -391,3 +391,33 @@ every Catch-up and docs sentence about refresh proposing audit/mutation. Targete
   runs there. Fix: pass `tuple((row.get("toolchain") or {}).get("ecosystem", "") for row in document.get("candidates",
   []))` as `candidate_ecosystems`, with a test at the `converge` boundary over a terminal-adopted crate. Needs
   `converge.py` in a manifest — the next slice that touches `converge`, or a follow-up PR.
+
+## Phase 4 — from the gaps pass after convergence (2026-10-01; drive-gaps, opus, fresh context; gaps=6)
+
+Traced OG1–OG7, FR-003, D18/D20, US1 scenarios 3–4, the fragment and the docs (14 items). Finding 3 is T012 again
+and is not repeated. None reopens the loop (bound reached; none CRITICAL or HIGH).
+
+- [ ] T013 [US1] **MEDIUM — a candidate overridden to Rust at `--confirm` gets no ignore lines** (OG5;
+  `src/slipwai/adopt.py:265`, `src/slipwai/confirm.py:80`; `changelog.d/rust-cargo-adopt.md:28-30`). A napi-rs root
+  (`package.json` + a `[workspace]`/`[package]` `Cargo.toml` + `.cargo/mutants.toml`) is a Node candidate at adopt,
+  so its block has no `mutants.out/`; `--confirm napi --language napi=rust` records `ecosystem: cargo` and writes no
+  block. Reproduction: the gaps probe `$HOME/.cache/slippy-optional-tools-tmp/gaps2/probe.py`. GREEN (recommended):
+  key the Cargo lines on a `Cargo.toml` in a candidate's directory as well as on its surveyed ecosystem, so every
+  path into a Cargo record (`--yes`, attended candidate, `--confirm`, `--language …=rust`) is covered — the sweep is
+  every way an application's ecosystem becomes `cargo`. Alternative: narrow the fragment and add a by-hand sentence.
+  Needs `adopt.py`'s candidate read (in this slice's manifest) and a test at the confirm boundary.
+- [ ] T014 [US1] **LOW — a Cargo crate added after adoption gets no ignore lines, and the Catch-up says so only for
+  earlier adoptions** (`changelog.d/rust-cargo-adopt.md:50-53,65-66`). GREEN: the by-hand sentence covers any Cargo
+  record added after `adopt` wrote the block, not only a repository adopted before this release.
+- [ ] T015 [US1] **LOW — OG4 at the Makefile level is asserted with `assertIn`** (`tests/test_survey_cargo_tools_refresh.py:55`).
+  GREEN: assert the adopted `delivery/Makefile` `audit:` and `mutation:` recipes are exactly the recorded command
+  (no `command -v` wrapper), and that neither target is in `native_commands.RATCHETED` nor run by `verify` — both
+  tools, both forms.
+- [ ] T016 [US1] **LOW — a symlinked `deny.toml` or `.cargo/` counts, though the comment says "regular file"**
+  (`src/slipwai/ecosystems/cargo.py:52`; probe `gaps2/probe2.py`: a link to `/etc/hostname` proposes audit). GREEN:
+  decide one reading for every trigger (all three deny names and `.cargo/mutants.toml`): follow links inside the
+  repository and say so, or refuse links; make the comment and a test say the same.
+- [ ] T017 [US1] **LOW — OG5's wording reads as if a recorded audit always lifts the Platform row** (`spec.md` OG5;
+  `tests/test_survey_cargo_tools.py:201,207`). A pure Rust repository stays `unknown` (no `support.json` product).
+  GREEN: the criterion and the fragment say "by the shared rule, once a product the table dates is in support", as
+  `plan.md` *Not working yet* already does.

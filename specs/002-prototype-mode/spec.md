@@ -46,7 +46,7 @@ Every other story improves or protects this one.
 
 **Independent Test**: In a generated project with prototype mode on and a `spec.md` of three user stories, run the
 prototype stage; open the published link and check that each user story is reachable as a clickable journey, that every
-screen shows the banner, and that the prototype's source is under the prototype folder and nowhere else.
+screen shows the banner, and that the prototype's source is under `prototype/<feature>/` and nowhere else.
 
 **Acceptance Scenarios**:
 
@@ -57,10 +57,20 @@ screen shows the banner, and that the prototype's source is under the prototype 
    reachable as a journey, and every screen shows the "Prototype — nothing here is saved or sent" banner.
 3. **Given** the prototype, **When** any of its screens shows people, accounts, money or messages, **Then** what it shows
    is sample data held inside the prototype folder, never data read from a real system.
-4. **Given** prototype mode is off — the default for every project generated or adopted before this feature —
+4. **Given** a published prototype, **When** the product person opens it, **Then** it is the whole app, not a set of
+   separate screens: one navigation reaches every window the spec describes, and each window can be reached from the
+   app's first screen by clicking alone.
+5. **Given** a published prototype, **When** it opens, **Then** it is already seeded with at least one complete example
+   of the product's central record (for an events product, an event with its attendees and their states), so every
+   window has something real-looking to show; and each window still has the empty state a first-time user would see,
+   reachable from a "start empty" switch the banner carries.
+6. **Given** prototype mode is off — the default for every project generated or adopted before this feature —
    **When** the run reaches the point where the stage would sit, **Then** nothing is built and nothing about the ladder
    has changed.
-5. **Given** a published prototype, **When** the run republishes it after a change, **Then** the link stays the same.
+7. **Given** a published prototype, **When** the run republishes it after a change, **Then** the link stays the same.
+8. **Given** a prototype is built or rebuilt, **When** the stage ends, **Then** `specs/<feature>/prototype.md` — the
+   prototype's register — records its link, the spec revision it was built from, and every screen with its route name,
+   the user story it shows, and its state.
 
 ---
 
@@ -87,10 +97,20 @@ prototype folder: it fails and names the file. Remove that: it passes, although 
    fails, naming the file.
 3. **Given** a prototype with no tests, untyped code and lint findings, **When** `make verify` runs, **Then** none of
    those fail the gate.
-4. **Given** a project with prototype mode on, **When** its production build, image or deploy artifact is produced,
+4. **Given** a generated project with prototype mode on, **When** its production build, image or deploy artifact is produced,
    **Then** it contains nothing from the prototype folder.
-5. **Given** a prototype that calls out to any network address other than its own host, **When** the fence check runs,
-   **Then** it fails, naming the call.
+5. **Given** an absolute URL in prototype source whose host is not `localhost` or `127.0.0.1`, **When** the fence check
+   runs, **Then** it fails, naming the file and the URL — unless the host is on the fence's one list of static code and
+   font hosts (the ones a Claude Artifact may load from), which is kept in one place.
+6. **Given** a project with its own secret scan, **When** the fence checks for credentials, **Then** it runs that scan
+   over the prototype folder; **Given** a project with none, **Then** it runs a built-in check for common key and token
+   patterns. Both are proved by planted fixtures.
+7. **Given** prototype mode turned off while a prototype folder still exists, **When** `make verify` runs, **Then** the
+   fence still holds: the fence applies wherever a prototype folder exists, whatever the setting says. Turning the mode
+   off stops new prototypes and leaves the folder alone.
+8. **Given** an adopted repository, **When** its own build produces a package or image, **Then** the factory does not
+   claim to exclude the prototype folder from it: the import rule keeps production code from reaching the prototype, and
+   the page written into the repository tells its maintainer to exclude the folder from their own packaging.
 
 ---
 
@@ -112,7 +132,8 @@ change, and the comment has a reply.
 
 **Acceptance Scenarios**:
 
-1. **Given** a comment on the published prototype, **When** the run next reaches the prototype stage, **Then** the
+1. **Given** a comment on the published prototype, **When** the run next starts — every `/drive` entry and every
+   `/cruise` iteration while the prototype is live, before the split and after it — **Then** the
    comment becomes a gap: a question answered in `decisions.md` and, where it changes what the product does, a
    criterion added or changed in `spec.md`.
 2. **Given** a specification that changed since the prototype was last published, **When** the run reaches the
@@ -124,6 +145,8 @@ change, and the comment has a reply.
 5. **Given** `/cruise`, **When** a reaction raises a question the stage cannot answer from the specification, the
    constitution or a standing decision, **Then** it goes to the skipper and its entry says `Decided by: drive-skipper`
    — so a person can see which answers to the product person were the machine's.
+6. **Given** a reply the run itself wrote on a comment thread, **When** the run next reads reactions, **Then** it does
+   not read its own reply as a new reaction.
 
 ---
 
@@ -149,6 +172,8 @@ open the printed address and check the banner and the journeys; check the gate's
    falls back to the local prototype and says so, rather than skipping the stage.
 4. **Given** a prototype upgraded to local, **When** its Artifact is next republished, **Then** the Artifact says where
    the current version is and stops being updated.
+5. **Given** a prototype that would exceed the Artifact size limit, **When** the run publishes it, **Then** it moves to
+   the local prototype automatically and says so.
 
 ---
 
@@ -172,15 +197,18 @@ second, final slice retires the prototype.
 
 1. **Given** a slice with a screen, **When** it is split, **Then** its row names the prototype screens it replaces, or
    says none.
-2. **Given** a prototype screen accepted by the product person, **When** the slice that replaces it reaches its demo,
+2. **Given** a published prototype, **When** the product person accepts a screen, **Then** they do it with the "Accept
+   this screen" control that every screen carries, and the register records the screen as accepted with who accepted it
+   and when; **Given** a local-only prototype, **Then** they accept a screen by writing that line in the register.
+3. **Given** a prototype screen accepted by the product person, **When** the slice that replaces it reaches its demo,
    **Then** the demo stop shows the reference screen beside the real one.
-3. **Given** a slice accepted, **When** its screens are in production, **Then** the prototype marks each replaced screen
+4. **Given** a slice accepted, **When** its screens are in production, **Then** the prototype marks each replaced screen
    as replaced, with a pointer to the real one.
-4. **Given** every prototype screen replaced, **When** the last slice is accepted, **Then** the prototype folder is
+5. **Given** every prototype screen replaced, **When** the last slice is accepted, **Then** the prototype folder is
    removed in one commit and the published link says the prototype is retired.
-5. **Given** `/cruise`, **When** a prototype screen would be accepted as a design reference, **Then** it is recorded as
+6. **Given** `/cruise`, **When** a prototype screen would be accepted as a design reference, **Then** it is recorded as
    `accepted-by: drive-skipper — pending human review` until a product person accepts it.
-6. **Given** prototype code a team wants to keep, **When** they choose to port it, **Then** the port is a slice of its
+7. **Given** prototype code a team wants to keep, **When** they choose to port it, **Then** the port is a slice of its
    own, built test-first to the production standard like any other — the fence is never lifted to let prototype code
    through.
 
@@ -217,37 +245,48 @@ second, final slice retires the prototype.
   adding the prototype stage and the fence.
 - **FR-002**: With prototype mode on, the ladder MUST offer a prototype stage after the product specification and before
   the split; the stage MUST be skippable per feature and MUST NOT block the split.
-- **FR-003**: The prototype stage MUST build a prototype from the feature's `spec.md` (and the PRD it names, if any), in
-  which every user story with an actor and an action is reachable as a journey.
-- **FR-004**: Every screen or step of a prototype MUST show a visible banner stating it is a prototype and that nothing
-  is saved or sent.
+- **FR-003**: The prototype stage MUST build a prototype of the whole app from the feature's `spec.md` (and the PRD it
+  names, if any): one navigation reaches every window the spec describes by clicking alone, and every user story with
+  an actor and an action is reachable as a journey through it.
+- **FR-003a**: A prototype MUST open seeded with at least one complete example of the product's central record, and
+  MUST also offer each window's empty state through a "start empty" switch on the banner.
+- **FR-004**: Every screen or step of a prototype MUST show a visible banner reading "Prototype — nothing here is saved
+  or sent".
 - **FR-005**: A prototype MUST hold only sample data kept inside its own folder, MUST NOT read from or write to any real
-  system, and MUST NOT call any network address other than the host serving it.
+  system, and MUST NOT name an absolute URL other than `localhost`, `127.0.0.1`, or a host on the fence's one list of
+  static code and font hosts.
 - **FR-006**: The prototype MUST be published by default as a private Claude Artifact; republishing MUST keep the same
-  link; the run MUST record the link and the spec revision it was built from.
+  link; the run MUST record the link, the spec revision it was built from, and every screen's route, story and state in
+  the register `specs/<feature>/prototype.md`.
 - **FR-007**: `make prototype` MUST serve the same prototype locally, printing its address, and the stage MUST fall back
-  to it where an Artifact cannot be published.
+  to it where an Artifact cannot be published or would exceed the Artifact size limit.
 - **FR-008**: The repository's gate MUST fail when production code imports from the prototype folder, when a
-  credential-shaped value appears under it, or when prototype code calls an external network address — naming the file
-  in each case.
-- **FR-009**: The gate MUST NOT hold prototype code to the production standard (tests, coverage, mutation, lint), and
-  the production build, image and deploy MUST exclude the prototype folder.
+  credential-shaped value appears under it (by the project's own secret scan, or a built-in pattern check where it has
+  none), or when prototype code names an absolute URL outside the allowed hosts — naming the file in each case. The
+  fence MUST hold wherever a prototype folder exists, whatever the setting says.
+- **FR-009**: The gate MUST NOT hold prototype code to the production standard (tests, coverage, mutation, lint,
+  accessibility, internationalisation). In a generated project the production build, image and deploy MUST exclude the
+  prototype folder; in an adopted repository, whose build is its own, the page written into it MUST say to exclude it.
 - **FR-010**: A reaction to the prototype (an Artifact comment, or a message passed on through `/cruise-tell`) MUST be
   handled as a gap in the specification: answered in `decisions.md`, written into `spec.md` where it changes behaviour,
-  and replied to on its thread where it came from one.
+  and replied to on its thread where it came from one. Reactions MUST be read at every `/drive` entry and every
+  `/cruise` iteration while the prototype is live, and the run MUST NOT read its own replies as reactions.
 - **FR-011**: The prototype MUST NOT show behaviour the specification does not describe: a change MUST be written in
   `spec.md` before the prototype reflects it.
 - **FR-012**: Under `/cruise`, the prototype stage MUST run with nobody at the wheel by the existing stop table and
   skipper protocol; a decision that answers a product person MUST say who decided it; and a design reference accepted
   by the machine MUST be marked pending human review.
 - **FR-013**: A slice with a screen MUST name, in the split, the prototype screens it replaces; its demo stop MUST show
-  the accepted reference screen; and on acceptance the prototype MUST mark each replaced screen as replaced.
+  the accepted reference screen; and on acceptance the prototype MUST mark each replaced screen as replaced. A product
+  person MUST accept a screen through an "Accept this screen" control on it (or a line in the register for a local-only
+  prototype), recorded with who and when.
 - **FR-014**: When every prototype screen is replaced, the prototype folder MUST be removed in one commit and the
   published link MUST say the prototype is retired; a published link MUST NOT be deleted unless a person asks.
 - **FR-015**: Prototype code MUST NOT be promoted into production code except through a slice of its own built to the
   production standard.
 - **FR-016**: Prototype mode MUST work the same way in a generated project and in an adopted repository; in an adopted
-  repository the prototype folder's location MUST be recorded in `project.json`, and an existing folder that is not a
+  repository the prototype folder's location MUST be recorded in `project.json`; each feature's prototype MUST live
+  under its own `prototype/<feature>/`; and an existing folder that is not a
   prototype MUST NOT be written into.
 - **FR-017**: Turning prototype mode on twice, or re-running the prototype stage on an unchanged specification, MUST
   change nothing, with a test proving the second run is a no-op.
@@ -265,6 +304,8 @@ second, final slice retires the prototype.
   draft, accepted (by whom), or replaced (by which slice).
 - **Reaction**: a product person's comment or message about the prototype; it belongs to a screen where it names one,
   and is resolved by a decision entry and, where behaviour changes, a criterion.
+- **Register**: `specs/<feature>/prototype.md` — the prototype's link, spec revision, screens and their states, and
+  who accepted each.
 - **Fence**: the rules the gate holds at the prototype folder's boundary — no import across it, no credential inside
   it, no outbound call from it, no inclusion in a production artifact.
 
@@ -292,7 +333,11 @@ second, final slice retires the prototype.
 - **The Artifact is the default home, localhost the upgrade** (decided with the requester, 2026-10-01). Publishing an
   Artifact needs a harness that can; elsewhere the local prototype is the only home.
 - **Both workflows.** Generated projects and adopted repositories get the same feature (decided with the requester,
-  2026-10-01). The prototype folder is `prototype/` at the repository root unless `project.json` records another place.
+  2026-10-01). Each feature's prototype is `prototype/<feature>/` at the repository root unless `project.json` records
+  another place.
+- **The whole app, seeded** (requested 2026-10-01): a prototype is the whole app with its navigation, not loose
+  screens, and it opens on seeded example data so every window has something to show.
+- **Not held to accessibility or internationalisation** — it is throwaway; the production slices that replace it are.
 - **The fence is the safety argument.** "No security concerns" holds because of what the gate enforces at the folder's
   boundary, not because of a convention; anything the fence cannot detect (personal data in sample data, for example)
   is stated on the prototype's page as the product people's rule.
@@ -305,3 +350,25 @@ second, final slice retires the prototype.
   MINOR while it settles.
 - **Out of scope:** hosting the prototype anywhere public, sign-in for product people, analytics on how the prototype is
   used, porting prototype code automatically, and prototypes of features whose specification does not yet exist.
+
+## Gaps closed — find-gaps session, 2026-10-01
+
+All twelve closed with the requester, who took every recommendation and added two requirements (the whole app, seeded).
+
+Resolved (14):
+  [Blocker → US2 AC5, FR-005/008]   What an outbound call is: an absolute URL outside localhost and the static-host list
+  [Blocker → US2 AC6, FR-008]       What credential-shaped means: the project's secret scan, or a built-in pattern check
+  [Blocker → US2 AC7, FR-008]       The fence holds wherever the folder exists, whatever the setting
+  [Blocker → US5 AC2, FR-013]       How a screen is accepted: an "Accept this screen" control, or a register line locally
+  [Should  → US1 AC8, FR-006]       Where the record lives: specs/<feature>/prototype.md
+  [Should  → FR-016, Assumptions]   One folder per feature: prototype/<feature>/
+  [Should  → US3 AC1, FR-010]       Reactions are read at every /drive entry and /cruise iteration while live
+  [Should  → US2 AC4/AC8, FR-009]   Adopted repositories own their build: import rule plus a written instruction
+  [Should  → FR-004]                The banner's exact text
+  [Should  → US3 AC6, FR-010]       The run ignores its own replies
+  [Nice    → FR-009, Assumptions]   Not held to accessibility or i18n
+  [Nice    → US4 AC5, FR-007]       Over the Artifact size limit, move to local automatically
+  [Added   → US1 AC4, FR-003]       The whole app, every window reachable from one navigation
+  [Added   → US1 AC5, FR-003a]      Seeded with a complete example of the central record, with a "start empty" switch
+
+Parked (0).

@@ -1,0 +1,41 @@
+# Demo log — slice `optional-tools`
+
+## 2026-10-01T21:56:39Z — accepted · iteration 2 · drive-hand (claude-opus-5-5)
+- **Started with:** the literal command from the brief, run in `$HOME/.cache/slippy-hand-ot/ledger`. It seeds a one-crate repository with an empty `deny.toml` and an empty `.cargo/mutants.toml`, commits it, runs `/home/mbonnic/Slippy-worktrees/optional-tools/slipwai adopt --yes`, then greps `project.json` and `.gitignore`. After that came `make -f delivery/Makefile audit`, `mutation` and `verify` there, run as `env -u CRUISE_RUNNER -u CRUISE_ITERATION` under `systemd-run --user --scope -p MemoryMax=4G -p MemorySwapMax=0` with TMPDIR on disk. Each was run with cargo-deny 0.20.2 and cargo-mutants 27.1.0 installed, and again with both hidden: PATH set to a directory linking every `~/.cargo/bin` entry except `cargo-deny` and `cargo-mutants`, and `CARGO_HOME` pointed at an empty directory. Eight more throwaway repositories (`v-*`) were adopted the same way, one per example below. Three refresh repositories (`r-*`) were adopted first and then put through `adopt --refresh`. Two of those were adopted with the pre-slice checkout `/home/mbonnic/Slippy/slipwai` at `dc904ea`, where single-crate and workspace are merged and this slice is not. · **Seeded:** only the two empty config files, placed where each example says, plus the committed fixture `tests/fixtures/adopt/rust-workspace` for the workspace cases. Everything under `$HOME/.cache/slippy-hand-ot/` was deleted afterwards.
+- **Driven through:** CLI. `.specify/cruise.json` names `hand: browser`, but this slice has no screen and no HTTP surface: `slipwai adopt` is a command-line verb and the targets are `make`. So the CLI is the demo, as it was for single-crate.
+- **Examples:**
+  - Board command: passed. `project.json` has audit `"cargo deny check advisories"` and mutation `"cargo mutants"`. `.gitignore`'s block carries `mutants.out/` and `mutants.out.old/`. `adopt` reports "6 of 8 targets have a command", and `adoption.md` lists both commands.
+  - US1-3: passed. With no `deny.toml`, audit is `null` (`v-none`). With a `deny.toml` beside the manifest, audit is `cargo deny check advisories`.
+  - US1-4: passed. With no mutation configuration, mutation is `null` (`v-none`). With `.cargo/mutants.toml` in the crate, mutation is `cargo mutants`.
+  - OG1: passed. `.deny.toml` alone proposes audit, and so does `.cargo/deny.toml` alone. Each leaves mutation `null`. Two cases propose nothing (audit and mutation both `null`):
+    - a `deny.toml` and `.cargo/mutants.toml` only in the member `crates/ledger` of a workspace;
+    - a `deny.toml`, `.cargo/deny.toml` and `.cargo/mutants.toml` only at the repo root above a crate in `crates/ledger`.
+  - OG2: passed. A workspace root with `deny.toml` gets `cargo deny --workspace check advisories`. A subdirectory crate gets `cd crates/ledger && cargo deny check advisories`, with the prefix written once. Both forms run green under `make audit` ("advisories ok").
+  - OG3: passed.
+    - A workspace root with `.cargo/mutants.toml` gets `cargo mutants --workspace`. `make mutation` found 8 mutants across both members, and all 8 were caught.
+    - A subdirectory crate gets `cd crates/ledger && cargo mutants`.
+    - A bare `mutants.toml` at the crate root proposes nothing: mutation is `null`.
+    - There is no `--in-diff` and no Make variable in the Makefile recipe.
+  - OG4: passed. Neither target ever shows a missing tool as green:
+    - With the tools hidden, `make -f delivery/Makefile audit` prints `error: no such command: \`deny\``, cargo exits 101 and make exits 2. `mutation` fails the same way with `no such command: \`mutants\``.
+    - With the tools installed, both exit 0.
+    - With neither tool on the machine, `make -f delivery/Makefile verify` exits 0 with "verify: all gates passed". Its recipe runs only lint, typecheck and test through `ratchet.py`, and no `delivery/baseline.json` is written, so nothing about audit or mutation is baselined.
+  - OG5: passed, with the rung half as planned. `mutants.out/` and `mutants.out.old/` are in the ignore block in every Cargo adoption, configured or not. After `make mutation`, `git status --ignored` shows `mutants.out/` as ignored, at the root and in `crates/ledger/` alike. The Platform row stays `unknown` ("no runtime pin, framework version or image the survey can date") even with an audit recorded. `plan.md` *Not working yet* names exactly this: the `audited` rung needs a dated product, which comes with toolchain-pin. That rung could not be shown on this branch.
+  - OG6: passed. Three refresh cases:
+    - A crate already holding both files, adopted with the pre-slice checkout, has audit and mutation `null`. `adopt --refresh` with this slice says "refreshed: r-old: commands refreshed from `Cargo.toml`". It rewrites `project.json`, `delivery/Makefile` and `adoption.md` with the two commands, and commits nothing.
+    - A crate adopted with this slice before the files existed refreshes the same way once they are committed.
+    - With `provenance.commands` set to `confirmed` (edited by hand in the throwaway repo, the way `/ground` records a person's yes), refresh changes nothing. It reports "disagrees: r-conf: commands was confirmed as {…}, and `Cargo.toml` now says {…}; the record stands until you decide", which is WG9's reconciliation.
+    - Refresh leaves the old adoption's `.gitignore` without `mutants.out/`. This is as `plan.md` *Not working yet* says, and the fragment's Catch-up tells the maintainer to add the two lines by hand.
+  - OG7: passed, read rather than driven. There is no diff under `tests/fixtures/` since the merge base. `docs/adopting.md` names `deny.toml`, `.deny.toml`, `.cargo/deny.toml` and `.cargo/mutants.toml`. The fragment `changelog.d/rust-cargo-adopt.md` is amended with both halves and the Catch-up.
+- **Evidence:** everything is under `specs/001-rust-cargo-adopt/slices/optional-tools/demo/`:
+  - `adopt-configured.txt` and `project-configured.json`: the board command.
+  - `variants.txt`: the eight per-example adoptions.
+  - `audit-installed.txt`, `mutation-installed.txt` and `recorded-forms-run.txt`: the targets run with the tools installed, the last for the workspace and subdirectory forms.
+  - `audit-missing-tool.txt` and `verify-without-tools.txt`: the runs with the tools hidden.
+  - `platform-row.txt`: the Platform row.
+  - `refresh.txt`, `refresh-old-diff.txt` and `refresh-confirmed.txt`: the refresh cases.
+- **Feedback:** nothing re-enters the ladder. Notes for the next slices:
+  - The refresh line "commands refreshed from `Cargo.toml`" does not say which targets changed. The maintainer learns that audit and mutation appeared only from `git diff`.
+  - The confirmed-record disagreement prints both full eight-key command objects on one line. The two keys that differ, `audit` and `mutation`, have to be found by eye. Every ecosystem prints it this way.
+  - Nothing `adopt --refresh` prints mentions the `.gitignore` lines it does not add. The only pointer is the changelog Catch-up, so a maintainer who refreshes without reading the changelog gets an untracked `mutants.out/` on their first `make mutation`.
+  - An empty `deny.toml` is enough for audit to be proposed, and it passes "advisories ok". This is cargo-deny's own default, but a maintainer who has written no config gets a green audit without having configured anything.

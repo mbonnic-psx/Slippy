@@ -35,7 +35,8 @@ manifest tried first decides the directory's language (a napi-rs or maturin crat
 no member is proposed as Cargo, and the Rust is gated when you override the language and commands — which replace
 that Node or Python gate rather than join it, so a maintainer who wants both writes a command that runs both. Where
 an outer build of that ecosystem owns the directory and its `Cargo.toml` declares a workspace, it is proposed as
-Cargo. A target
+Cargo. A Cargo candidate is proposed an audit where a cargo-deny configuration (`deny.toml`, `.deny.toml` or
+`.cargo/deny.toml`) is in its directory and a mutation where `.cargo/mutants.toml` is. A target
 the ecosystem has no answer for is `null`: a written no, never a guess. It also reads whether CI, containers
 and infrastructure code are here, whether a database schema is versioned here and with what, and which
 database drivers the dependency manifests name. Every fact carries the file that said so.

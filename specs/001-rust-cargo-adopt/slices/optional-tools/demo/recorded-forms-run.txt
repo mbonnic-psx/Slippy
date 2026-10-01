@@ -1,0 +1,29 @@
+### v-ws_root
+$ make -f delivery/Makefile audit
+cargo deny --workspace check advisories
+advisories ok
+exit=0
+$ make -f delivery/Makefile mutation
+cargo mutants --workspace
+Found 8 mutants to test
+ok       Unmutated baseline in 0s build + 0s test
+ INFO Auto-set test timeout to 20s
+8 mutants tested in 2s: 8 caught
+exit=0
+$ git status --short --ignored | grep -v target
+!! mutants.out/
+
+### v-sub
+$ make -f delivery/Makefile audit
+cd crates/ledger && cargo deny check advisories
+advisories ok
+exit=0
+$ make -f delivery/Makefile mutation
+cd crates/ledger && cargo mutants
+Found 0 mutants to test
+ WARN No mutants found under the active filters
+exit=0
+$ git status --short --ignored | grep -v target
+?? crates/ledger/Cargo.lock
+!! crates/ledger/mutants.out/
+

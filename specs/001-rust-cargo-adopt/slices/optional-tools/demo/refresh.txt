@@ -1,0 +1,35 @@
+### A: files present, adopted with the pre-slice checkout (dc904ea), refreshed with this slice
+$ <dc904ea>/slipwai adopt --yes
+exit=0
+  r-old: audit = null | mutation = null | generator = {'name': 'slipwai', 'generatedWith': '1.4.0.dev0', 'updatedWith': '1.4.0.dev0'}
+  .gitignore mutants.out lines: 0
+$ <optional-tools>/slipwai adopt --refresh
+re-surveyed (experimental): what the tree says, against what project.json records
+  refreshed: r-old: commands refreshed from `Cargo.toml`
+
+3 file(s) rewritten; nothing committed. `git diff` shows the record and what it drives.
+Then: make verify, and commit the result as one change.
+exit=0
+  r-old: audit = "cargo deny check advisories" | mutation = "cargo mutants" | generator = {'name': 'slipwai', 'generatedWith': '1.4.0.dev0', 'updatedWith': '1.4.0.dev0'}
+  .gitignore mutants.out lines: 0
+$ git status --short
+ M delivery/Makefile
+ M delivery/docs/adoption.md
+ M project.json
+
+### B: adopted with this slice before the files existed, files added and committed, then refreshed
+$ slipwai adopt --yes
+exit=0
+  r-new: audit = null | mutation = null | generator = {'name': 'slipwai', 'generatedWith': '1.4.0.dev0', 'updatedWith': '1.4.0.dev0'}
+$ (added deny.toml and .cargo/mutants.toml, committed) slipwai adopt --refresh
+re-surveyed (experimental): what the tree says, against what project.json records
+  refreshed: r-new: commands refreshed from `Cargo.toml`
+
+3 file(s) rewritten; nothing committed. `git diff` shows the record and what it drives.
+Then: make verify, and commit the result as one change.
+exit=0
+  r-new: audit = "cargo deny check advisories" | mutation = "cargo mutants" | generator = {'name': 'slipwai', 'generatedWith': '1.4.0.dev0', 'updatedWith': '1.4.0.dev0'}
+$ git status --short
+ M delivery/Makefile
+ M delivery/docs/adoption.md
+ M project.json

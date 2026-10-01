@@ -1,0 +1,2 @@
+24:| Platform | `unknown` | `audited` | no runtime pin, framework version or image the survey can date | *not yet* | `unrecorded` |
+65:### Platform

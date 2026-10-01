@@ -1,0 +1,37 @@
+### C: files present, adopted and confirmed with the pre-slice checkout, refreshed with this slice
+$ <dc904ea>/slipwai adopt --yes
+exit=0
+$ <dc904ea>/slipwai adopt --confirm r-conf
+                     [--infrastructure {here,elsewhere,unmanaged,none}]
+                     [--infrastructure-repository URL]
+                     [--forge {github,gitea,gitlab,other,none}]
+                     [--release {pipeline,scripted,manual,unknown}]
+slipwai adopt: error: this repository has no outstanding candidates — every buildable directory the survey found has been confirmed or declined. `slipwai adopt --refresh` reports one that has appeared since.
+exit=0
+nothing to commit, working tree clean
+  before: audit = None | provenance = {'language': 'detected', 'commands': 'detected', 'kind': 'unrecorded'}
+$ <optional-tools>/slipwai adopt --refresh
+re-surveyed (experimental): what the tree says, against what project.json records
+  refreshed: r-conf: commands refreshed from `Cargo.toml`
+
+3 file(s) rewritten; nothing committed. `git diff` shows the record and what it drives.
+Then: make verify, and commit the result as one change.
+exit=0
+  after: audit = cargo deny check advisories | mutation = cargo mutants
+ M delivery/Makefile
+ M delivery/docs/adoption.md
+ M project.json
+
+### C': the same record with provenance.commands set to "confirmed" by hand (as /ground records a person's yes), committed, then refreshed
+$ <optional-tools>/slipwai adopt --refresh
+re-surveyed (experimental): what the tree says, against what project.json records
+  refreshed: nothing; every detected fact stands
+  disagrees: r-conf: commands was confirmed as {"install": "cargo fetch --locked", "typecheck": "cargo check --all-targets", "lint": "cargo clippy --all-targets --message-format=short -- -D warnings && cargo fmt --check", "test": "cargo test", "integration": null, "adversarial": null, "audit": null, "mutation": null}, and `Cargo.toml` now says {"install": "cargo fetch --locked", "typecheck": "cargo check --all-targets", "lint": "cargo clippy --all-targets --message-format=short -- -D warnings && cargo fmt --check", "test": "cargo test", "integration": null, "adversarial": null, "audit": "cargo deny check advisories", "mutation": "cargo mutants"}; the record stands until you decide
+
+2 file(s) rewritten; nothing committed. `git diff` shows the record and what it drives.
+A disagreement is a decision: put both sides to the user, record the answer in project.json with honest provenance, and run this again so the files follow.
+Then: make verify, and commit the result as one change.
+exit=0
+  after: audit = None | mutation = None
+ M delivery/docs/adoption.md
+ M project.json

@@ -1,0 +1,19 @@
+$ PATH=<cargo, rustc and /usr/bin only> CARGO_HOME=<empty> make -f delivery/Makefile audit   # no cargo-deny
+cargo deny check advisories
+error: no such command: `deny`
+
+help: a command with a similar name exists: `bench`
+
+help: view all installed commands with `cargo --list`
+help: find a package to install `deny` with `cargo search cargo-deny`
+make: *** [delivery/Makefile:81: audit] Error 101
+exit=2
+
+$ same PATH, make -f delivery/Makefile mutation   # no cargo-mutants
+cargo mutants
+error: no such command: `mutants`
+
+help: view all installed commands with `cargo --list`
+help: find a package to install `mutants` with `cargo search cargo-mutants`
+make: *** [delivery/Makefile:79: mutation] Error 101
+exit=2

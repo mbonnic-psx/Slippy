@@ -78,7 +78,8 @@ EXPIRED = {"go-module": "Go 1.22 left support on 2025-02-11"}
 
 
 # What `adopt` records for the Rust crate, exactly as `specs/001-rust-cargo-adopt/plan.md`'s Design table has it:
-# four commands and four that are not recorded (the toolchain version is empty: the tree's pin is not read).
+# four commands and four that are not recorded. The toolchain version is the tree's pin: the crate pins `stable`, the
+# workspace pins nothing and records an empty one (`RUST_VERSIONS`).
 RUST_COMMANDS = {
     "install": "cargo fetch --locked",
     "typecheck": "cargo check --all-targets",
@@ -94,6 +95,7 @@ RUST_WORKSPACE_COMMANDS = {
     "test": "cargo test --workspace",
 }
 RUST_EXPECTED = {"rust-crate": RUST_COMMANDS, "rust-workspace": RUST_WORKSPACE_COMMANDS}
+RUST_VERSIONS = {"rust-crate": "stable", "rust-workspace": ""}
 
 
 def run(*command: str, cwd: Path, env: dict[str, str] | None = None) -> subprocess.CompletedProcess:
@@ -116,7 +118,7 @@ def own_files(fixture: Path) -> dict[str, bytes]:
 
 def recorded(repo: Path, name: str, expected: tuple[str, str]) -> None:
     """The adopted `project.json` names the fixture's one deployable with the toolchain kind and ecosystem its row
-    expects — and, for the Rust fixtures, no version and exactly the commands the survey table gives."""
+    expects — and, for the Rust fixtures, the version their tree pins and exactly the survey table's commands."""
     deployables = json.loads((repo / "project.json").read_text())["deployables"]
     if name in RUST_EXPECTED and list(deployables) != [name]:
         raise SystemExit(f"test-adoption: {name}: project.json records deployables {list(deployables)}, "
@@ -127,9 +129,11 @@ def recorded(repo: Path, name: str, expected: tuple[str, str]) -> None:
         raise SystemExit(
             f"test-adoption: {name}: project.json records toolchain {toolchain}, expected kind and ecosystem {expected}"
         )
-    if name in RUST_EXPECTED and (toolchain.get("version") != "" or deployable.get("commands") != RUST_EXPECTED[name]):
+    if name in RUST_EXPECTED and (
+        toolchain.get("version") != RUST_VERSIONS[name] or deployable.get("commands") != RUST_EXPECTED[name]
+    ):
         raise SystemExit(f"test-adoption: {name}: project.json records {toolchain} and {deployable.get('commands')}, "
-                         f"not an empty version and {RUST_EXPECTED[name]}")
+                         f"not version {RUST_VERSIONS[name]!r} and {RUST_EXPECTED[name]}")
 
 
 def newer_factory(into: Path) -> Path:

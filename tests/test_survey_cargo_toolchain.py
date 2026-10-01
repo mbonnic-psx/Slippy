@@ -7,6 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from test_adopt import repository, slipwai
 from test_survey import write
 
 from slipwai.bounded_read import MAX_READ
@@ -143,6 +144,27 @@ class ToolchainPinTest(unittest.TestCase):
         self.assertEqual(found.ecosystem, "node")
         self.assertNotEqual(found.toolchain.get("version"), "1.85")
         self.assertEqual(found.toolchain["kind"], "node")
+
+    def adopted(self, parent: Path, files: dict[str, str]) -> tuple[dict, str]:
+        """The deployable `adopt --yes` records for a repository of `files`, and its survey page."""
+        repo = repository(parent, "adopted", files)
+        result = slipwai(repo, "adopt", "--yes")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        deployable = json.loads((repo / "project.json").read_text())["deployables"][repo.name]
+        return deployable, (repo / "delivery/survey/survey.md").read_text()
+
+    def test_adopting_a_pinned_crate_records_the_pin_and_the_survey_page_shows_it(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            deployable, page = self.adopted(Path(directory), {"Cargo.toml": CRATE, "rust-toolchain.toml": toml("1.85")})
+        self.assertEqual(deployable["toolchain"], {"kind": "rust", "version": "1.85", "ecosystem": "cargo"})
+        self.assertIn("- `.` — cargo, rust, from `Cargo.toml`, rust 1.85;", page)
+
+    def test_adopting_an_unpinned_crate_shows_nothing_after_the_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            deployable, page = self.adopted(Path(directory), {"Cargo.toml": CRATE})
+        self.assertEqual(deployable["toolchain"], {"kind": "rust", "version": "", "ecosystem": "cargo"})
+        self.assertIn("- `.` — cargo, rust, from `Cargo.toml`;", page)
+        self.assertNotIn("rust 1", page)
 
 
 if __name__ == "__main__":

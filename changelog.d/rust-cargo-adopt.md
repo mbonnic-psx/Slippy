@@ -1,26 +1,24 @@
 MINOR
 
-**`slipwai adopt` now recognises a Cargo repository.** A directory holding a `Cargo.toml` is proposed as Rust
-built by Cargo: install (`cargo fetch --locked`), typecheck (`cargo check --all-targets`), lint (`cargo clippy
---all-targets --message-format=short -- -D warnings && cargo fmt --check`, one line per finding so the ratchet
-holds each warning as its own) and test (`cargo test`) are offered, and integration and adversarial are written as
-no answer; audit and mutation are offered only where the crate configures them (below).
-A Cargo workspace root is one candidate, not one per
-member: its typecheck, lint and test carry `--workspace` (`cargo check --workspace --all-targets`, `cargo clippy
---workspace --all-targets --message-format=short -- -D warnings && cargo fmt --check`, `cargo test --workspace`),
-with no `--all-features`, which needs system libraries some crates do not have on every machine; add it when
-confirming. No member is proposed as Cargo, a workspace below a workspace root (a cargo-fuzz `fuzz/`) is a
-candidate of its own, and no "no lockfile" finding is reported for a member, since Cargo writes one `Cargo.lock` at
-the root. A member directory that also holds a `package.json` is still Node. Where a workspace root shares its
-directory with a `package.json`, a `pyproject.toml` or any other manifest the survey tries first (a napi-rs or
-maturin crate), that directory stays one candidate, as the language of the manifest tried first, and its Cargo
-workspace still owns the members below it, so no Cargo candidate is proposed for them. That candidate's gate is
-the Node or Python one, replaced and not joined by any commands you give when confirming (`--language
-<name>=rust`, `--command <name>:<target>=<command>`); to gate both, write a command that runs both. Where an outer
-build of that other ecosystem owns the directory (a napi-rs package inside an npm workspace, below a Maven
-`<modules>` root or a Gradle settings root) and its `Cargo.toml` declares a workspace, the directory is proposed as
-Cargo with the workspace commands, since the outer build's commands do not build the Rust. The adoption path is
-experimental (see `AGENTS.md`), so what it offers may still change in a MINOR.
+**`slipwai adopt` now recognises a Cargo repository.** A directory holding a `Cargo.toml` is proposed as Rust built by
+Cargo: install (`cargo fetch --locked`), typecheck (`cargo check --all-targets`), lint (`cargo clippy --all-targets
+--message-format=short -- -D warnings && cargo fmt --check`, one line per finding so the ratchet holds each warning as
+its own) and test (`cargo test`) are offered, and integration and adversarial are written as no answer; audit and
+mutation are offered only where the crate configures them (below). A Cargo workspace root is one candidate, not one
+per member: its typecheck, lint and test carry `--workspace` (`cargo check --workspace --all-targets`, `cargo clippy
+--workspace --all-targets --message-format=short -- -D warnings && cargo fmt --check`, `cargo test --workspace`), with
+no `--all-features`, which needs system libraries some crates do not have on every machine; add it when confirming. No
+member is proposed as Cargo, a workspace below a workspace root (a cargo-fuzz `fuzz/`) is a candidate of its own, and
+no "no lockfile" finding is reported for a member, since Cargo writes one `Cargo.lock` at the root. A member directory
+that also holds a `package.json` is still Node. Where a workspace root shares its directory with a `package.json`, a
+`pyproject.toml` or any other manifest the survey tries first (a napi-rs or maturin crate), that directory stays one
+candidate, as the language of the manifest tried first, and its Cargo workspace still owns the members below it, so no
+Cargo candidate is proposed for them. That candidate's gate is the Node or Python one, replaced and not joined by any
+commands you give when confirming (`--language <name>=rust`, `--command <name>:<target>=<command>`); to gate both,
+write a command that runs both. Where an outer build of that other ecosystem owns the directory (a napi-rs package
+inside an npm workspace, below a Maven `<modules>` root or a Gradle settings root) and its `Cargo.toml` declares a
+workspace, the directory is proposed as Cargo with the workspace commands, since the outer build's commands do not
+build the Rust. The adoption path is experimental (see `AGENTS.md`), so what it offers may still change in a MINOR.
 
 **Audit and mutation, where the crate configures them.** A Cargo candidate whose own directory holds a cargo-deny
 configuration (`deny.toml`, `.deny.toml` or `.cargo/deny.toml`) is offered `cargo deny check advisories` as audit,
@@ -60,6 +58,9 @@ disagreement (`commands was confirmed as …; the record stands until you decide
 commands in `project.json` by hand. A member it recorded as a deployable of its own is reported as no longer
 recognised and left as written, so a snapshot adoption asks you to remove that record from `project.json` if you
 want it gone.
-A snapshot adoption is proposed the new audit and mutation commands by `slipwai adopt --refresh` as it is any
-detected command, but `migrate` and `adopt --refresh` never rewrite the `.gitignore` block, so add `mutants.out/`
-and `mutants.out.old/` to it by hand in a repository adopted earlier.
+A snapshot adoption whose commands were *detected* (an `adopt --yes` record) is proposed the new audit and mutation
+commands by `slipwai adopt --refresh`, as it is any detected command; one whose commands were confirmed (`adopt
+--confirm`) or overridden has them reported as a disagreement (`commands was confirmed as …; the record stands until
+you decide`) and left as written, so add `commands.audit` and `commands.mutation` to `project.json` by hand and run
+`slipwai adopt --refresh` so the Makefile follows. Neither `migrate` nor `adopt --refresh` rewrites the `.gitignore`
+block, so add `mutants.out/` and `mutants.out.old/` to it by hand in a repository adopted earlier.

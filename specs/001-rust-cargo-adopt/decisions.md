@@ -237,9 +237,9 @@
 - **Options:** TG3 as worded · rustup's rule — one line is the channel, stripped; more than one line is TOML, read as `rust-toolchain.toml` is (recommended)
 - **Decision:** rustup's rule. A `rust-toolchain` of one line records that line stripped, verbatim otherwise (no `v` removed); of more than one line, its `toolchain.channel` by `tomllib`, or an empty version where that is not a string. Every case TG3 and TG4 name reads the same either way.
 - **Why:** D21's reason governs: the recorded value is what rustup and the setup action consume, so it is rustup's reading or nothing. TG3's wording was a paraphrase of that rule that differs only where it would record a comment as a version, or a pin the build refuses.
-- **Decided by:** drive-slice (plan stage, on D21's stated reason; returned to the delegating session for review)
+- **Decided by:** host (standing decision D21)
 - **Confidence:** high · **Would reverse if:** a rustup release is shown to read a multi-line legacy file's first line as its channel
-- **Written to:** specs/001-rust-cargo-adopt/spec.md (TG3), specs/001-rust-cargo-adopt/decisions.md, specs/001-rust-cargo-adopt/slices/toolchain-pin/plan.md
+- **Written to:** specs/001-rust-cargo-adopt/spec.md, specs/001-rust-cargo-adopt/decisions.md, specs/001-rust-cargo-adopt/slices/toolchain-pin/plan.md
 - **Status:** standing
 
 ## D23 — Converge: a pinned channel holding a newline, a space or a quote — recorded, or not?
@@ -248,9 +248,9 @@
 - **Options:** as written, always (TG4's wording read literally) · only where it is a toolchain name a runner can install, `^[A-Za-z0-9][A-Za-z0-9._-]*$`, empty otherwise (recommended by the converge pass)
 - **Decision:** The recommended rule. The version is the channel as written where it matches `^[A-Za-z0-9][A-Za-z0-9._-]*$`, and empty otherwise — never an error, as TG5 says for every other unusable pin. The check is applied once, where the walk returns, so both readers pass through it. Every TG4 shape passes unchanged.
 - **Why:** D21's reason governs again: the recorded value is what rustup and the setup action consume, so it is rustup's reading or nothing, and rustup reads nothing from these names. Before this slice the Rust version was always empty, so this is the first route from a tree's toolchain file into generated files, and it is closed where it opens. The same class for other ecosystems' pins (`project/adopted_ci.py`'s `setup_steps`, code that was here) is not this slice's and is returned to the delegating session.
-- **Decided by:** drive-slice (converge stage, on D21's stated reason; returned to the delegating session for review)
+- **Decided by:** host (standing decision D21)
 - **Confidence:** high · **Would reverse if:** a rustup toolchain name a runner can install is shown to need a character outside the set
-- **Written to:** specs/001-rust-cargo-adopt/spec.md (TG5), specs/001-rust-cargo-adopt/decisions.md, specs/001-rust-cargo-adopt/slices/toolchain-pin/tasks.md (T011)
+- **Written to:** specs/001-rust-cargo-adopt/spec.md, specs/001-rust-cargo-adopt/decisions.md, specs/001-rust-cargo-adopt/slices/toolchain-pin/tasks.md
 - **Status:** standing
 
 ## D24 — Converge: a toolchain file rustup cannot read, and a byte order mark — decide there, or pass over as rustup does?
@@ -261,5 +261,5 @@
 - **Why:** Standing decision D21: the recorded value is what rustup and the setup action consume, so it is rustup's reading or nothing. Recording empty where rustup builds with a pin above is the failure US2 exists to prevent.
 - **Decided by:** host (standing decision D21)
 - **Confidence:** high · **Would reverse if:** a rustup run contradicts research.md's rows R15–R19
-- **Written to:** specs/001-rust-cargo-adopt/spec.md (TG1, TG5), specs/001-rust-cargo-adopt/decisions.md, specs/001-rust-cargo-adopt/slices/toolchain-pin/tasks.md (T012)
+- **Written to:** specs/001-rust-cargo-adopt/spec.md, specs/001-rust-cargo-adopt/decisions.md, specs/001-rust-cargo-adopt/slices/toolchain-pin/tasks.md
 - **Status:** standing

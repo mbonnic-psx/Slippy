@@ -141,11 +141,8 @@ survey-level test (TG4).
 - **D23** was decided at converge (T011, HIGH), on the same reason, and is returned for review: a channel that is not
   a toolchain name (`^[A-Za-z0-9][A-Za-z0-9._-]*$`) records an empty version, so a newline in a pin cannot break a
   generated file. Constitution XIV asks that the owner (or the skipper) accept the TG5 clause it added before merge.
-- **Proposed D24, open — the owner's to decide** (T012, MEDIUM, Phase 4): where rustup cannot read a toolchain file
-  (a dangling link, a directory of that name, an unreadable or non-UTF-8 file) it passes over it, to the other name
-  and then upward, and it reads a `rust-toolchain.toml` starting with a byte order mark; TG5 as worded records an
-  empty version and stops. Follow rustup (recommended, D21's reason), or keep TG5 as worded (T012 closes with that
-  decision and the two tests stay)?
+- **D24, decided by the host (standing decision D21):** a toolchain file rustup cannot read is passed over, to the
+  other name and then upward, and a byte order mark is read; T012 implements it. D22 and D23 were reviewed and stand.
 - **Not this slice's, returned:** the class T011 closed for Rust is open for every other ecosystem's pin that reaches
   `project/adopted_ci.py`'s `setup_steps` (a `.nvmrc` holding a quote, single-quoted at line 63) — code that was here
   before the method. Whether it is a slice of its own is the delegating session's decision.

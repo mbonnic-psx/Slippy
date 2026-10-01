@@ -233,6 +233,13 @@ class IgnoreBlockTableTest(unittest.TestCase):
     def test_an_application_the_factory_generated_adds_nothing_from_the_wrapped_table(self) -> None:
         self.assertNotIn("mutants.out", build_artifacts(False, [application("a", "cargo", True)]))
 
+    def test_a_generated_rust_service_beside_a_wrapped_cargo_application_lists_each_line_once(self) -> None:
+        service = App("svc", "svc", "service", "rust", None, 0, generated=True)
+        text = build_artifacts(False, [service, application("a", "cargo", False)])
+        lines = text.splitlines()
+        for line in ("target/", "mutants.out/", "mutants.out.old/", "mutants.diff"):
+            self.assertEqual(lines.count(line), 1, line)
+
 
 if __name__ == "__main__":
     unittest.main()

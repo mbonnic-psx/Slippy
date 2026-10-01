@@ -93,9 +93,15 @@ def build_artifacts(
         "java-spring": "target/\n",
     }
     wrapped = [(app.toolchain or {}).get("ecosystem", "") for app in wrapped_of(apps)]
-    chunks = [per_backend[backend] for backend in backends_of(apps)]
-    chunks += [WRAPPED_ARTIFACTS.get(ecosystem, "") for ecosystem in (*wrapped, *candidate_ecosystems)]
-    language_artifacts = "".join(dict.fromkeys(chunks))
+    language_artifacts = "".join(dict.fromkeys(per_backend[backend] for backend in backends_of(apps)))
+    # By line, against what is already listed: a generated Rust service and a wrapped Cargo application have different
+    # chunks, and `mutants.out/` is in both. The generated backends' own text is left as it always was.
+    listed = set(language_artifacts.splitlines())
+    for ecosystem in (*wrapped, *candidate_ecosystems):
+        for line in WRAPPED_ARTIFACTS.get(ecosystem, "").splitlines():
+            if line not in listed:
+                listed.add(line)
+                language_artifacts += f"{line}\n"
     frontend_artifacts = "".join(f"{web.path}/dist/\n" for web in web_apps(apps))
     # Of the family, not the backend: a TypeScript service behind any framework already ignores
     # node_modules for its own sake, and a second copy of the line is not the answer for either.

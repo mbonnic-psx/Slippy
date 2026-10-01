@@ -167,5 +167,53 @@ class ToolchainPinTest(unittest.TestCase):
         self.assertNotIn("rust 1", page)
 
 
+class RefreshTest(unittest.TestCase):
+    """`adopt --refresh` over a repository adopted before its pin was read: `resurvey.reconciled_app` is unchanged."""
+
+    def adopted_then_pinned(self, parent: Path, provenance: str) -> Path:
+        """An adopted crate whose record says an empty toolchain under `provenance`, with the pin now in the tree."""
+        repo = repository(parent, "adopted", {"Cargo.toml": CRATE})
+        self.assertEqual(slipwai(repo, "adopt", "--yes").returncode, 0)
+        path = repo / "project.json"
+        record = json.loads(path.read_text())
+        record["deployables"][repo.name]["provenance"]["toolchain"] = provenance
+        path.write_text(json.dumps(record, indent=2) + "\n")
+        (repo / "rust-toolchain.toml").write_text(toml("1.85"))
+        return repo
+
+    def recorded(self, repo: Path) -> dict:
+        return json.loads((repo / "project.json").read_text())["deployables"][repo.name]
+
+    def test_an_empty_detected_toolchain_is_refreshed_to_the_pin_and_stays_detected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = self.adopted_then_pinned(Path(directory), "detected")
+            result = slipwai(repo, "adopt", "--refresh")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            app = self.recorded(repo)
+            self.assertEqual(app["toolchain"], {"kind": "rust", "version": "1.85", "ecosystem": "cargo"})
+            self.assertEqual(app["provenance"]["toolchain"], "detected")
+
+    def test_a_confirmed_or_overridden_empty_toolchain_is_a_disagreement_and_is_not_changed(self) -> None:
+        for provenance in ("confirmed", "overridden"):
+            with self.subTest(provenance), tempfile.TemporaryDirectory() as directory:
+                repo = self.adopted_then_pinned(Path(directory), provenance)
+                before = (repo / "project.json").read_bytes()
+                result = slipwai(repo, "adopt", "--refresh")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                said = f'toolchain.version was {provenance} as "", and `Cargo.toml` now says "1.85"'
+                self.assertIn(said, result.stdout)
+                self.assertEqual((repo / "project.json").read_bytes(), before)
+
+    def test_a_second_refresh_of_a_recorded_pin_changes_nothing(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = self.adopted_then_pinned(Path(directory), "detected")
+            self.assertEqual(slipwai(repo, "adopt", "--refresh").returncode, 0)
+            settled = (repo / "project.json").read_bytes()
+            again = slipwai(repo, "adopt", "--refresh")
+            self.assertEqual(again.returncode, 0, again.stderr)
+            self.assertIn("refreshed: nothing", again.stdout)
+            self.assertEqual((repo / "project.json").read_bytes(), settled)
+
+
 if __name__ == "__main__":
     unittest.main()

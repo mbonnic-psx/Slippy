@@ -164,3 +164,25 @@
 - **Confidence:** medium · **Would reverse if:** the owner wants the fallback for every ecosystem pair, not only a Cargo workspace — a change to existing answers, a slice of its own
 - **Written to:** specs/001-rust-cargo-adopt/slices/workspace/tasks.md, specs/001-rust-cargo-adopt/adversary-log.md, specs/001-rust-cargo-adopt/decisions.md
 - **Status:** standing
+
+## D16 — Kick-off: what is this run for?
+- **Stage:** kick-off · **Slice:** none · **When:** 2026-10-01T19:37:07Z · **Iteration:** 2
+- **Question:** The run was started as `/cruise Rust issues`; which work does that scope?
+- **Options:** the fork's two open Rust issues, #10 first (the slices left in this feature: `optional-tools`, `toolchain-pin`, `ci-toolchain`), then #11 (Rust answers every axis) as a specification of its own (recommended) · #10 only · #11 only
+- **Decision:** Both open Rust issues, in order: finish #10 through this feature's split, then bring #11 in as feature `002` through the ladder's own stages, the issue as its brief. #15 and #22 are not Rust issues and are not taken; #22 is being fixed beside this run (`slice-scope-root-application`).
+- **Why:** "Rust issues" names the issues, plural; #10 is half-built and its remaining slices are ready, and #11's own text orders its work.
+- **Decided by:** human (kick-off "Rust issues"), read by the host
+- **Confidence:** medium · **Would reverse if:** the person meant only one of the two issues, or wants #15 taken with them
+- **Written to:** specs/001-rust-cargo-adopt/decisions.md
+- **Status:** standing
+
+## D17 — Slice branches: `slice/<id>` while #22 refuses every file of a root application?
+- **Stage:** ready set · **Slice:** optional-tools, toolchain-pin · **When:** 2026-10-01T19:37:07Z · **Iteration:** 2
+- **Question:** `slipwai` is recorded at path `.`, and `check-slice-scope` on a `slice/<id>` branch refuses every file under a root application (#22), so a slice that changes `src/slipwai/` cannot pass `make verify` there.
+- **Options:** claim with `slice/<id>` and do the work on a feature-named branch, as #18 and #20 did, holding the shared-surface rule by brief (recommended) · park until #22 lands · edit the gate (not available: the catastrophic list)
+- **Decision:** Claim with a `slice/<id>` ref; work and push on `001-rust-cargo-adopt-<id>`; each delegate's brief carries the shared-surface rule.
+- **Why:** The precedent of this feature's two merged slices; the gate is fixed in the factory, not here, and the fix is in flight.
+- **Decided by:** host (standing precedent, PRs #18 and #20)
+- **Confidence:** high · **Would reverse if:** #22's fix lands on `main` before these slices push — then they move to `slice/<id>`
+- **Written to:** specs/001-rust-cargo-adopt/decisions.md
+- **Status:** standing

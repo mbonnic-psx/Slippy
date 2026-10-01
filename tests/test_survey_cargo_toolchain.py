@@ -93,7 +93,6 @@ class ToolchainPinTest(unittest.TestCase):
             "a path, a place on somebody's machine": '[toolchain]\npath = "/opt/rust"\n',
             "a path beside a channel": '[toolchain]\nchannel = "1.85"\npath = "/opt/rust"\n',
             "an empty file": "",
-            "a byte order mark": "\ufeff" + toml("1.85"),
             "over the bounded read's limit": toml("1.85") + "#" * MAX_READ,
         }
         for name, text in pins.items():
@@ -160,11 +159,11 @@ class ToolchainPinTest(unittest.TestCase):
         }
         self.assertEqual(self.candidate(files, "crates/a"), {"kind": "rust", "version": ""})
 
-    def test_a_dangling_link_in_the_candidates_directory_decides_as_an_empty_pin(self) -> None:
+    def test_a_dangling_link_in_the_candidates_directory_is_passed_over_as_rustup_does(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = write(Path(directory), {"crates/a/Cargo.toml": CRATE, "rust-toolchain.toml": toml("1.85")})
             (root / "crates/a/rust-toolchain").symlink_to("nowhere")
-            self.assertEqual(survey(root).roots[0].found.toolchain, {"kind": "rust", "version": ""})
+            self.assertEqual(survey(root).roots[0].found.toolchain, {"kind": "rust", "version": "1.85"})
 
     def test_a_pin_above_the_repository_root_is_never_read(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

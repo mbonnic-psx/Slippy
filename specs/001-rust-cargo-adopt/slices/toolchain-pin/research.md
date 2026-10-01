@@ -2,7 +2,7 @@
 
 Every row below was observed on 2026-10-01 with rustup 1.29.0 (28d1352db 2026-03-05), toolchains `stable`
 (rustc 1.98.0) and `1.98.1` installed, `RUSTUP_AUTO_INSTALL=0`, by `rustup show active-toolchain` run in a probe
-directory under `$HOME/.cache/slippy-toolchain-pin-tmp/` (the two probe scripts, `probe.sh` and `probe2.sh`, are
+directory under `$HOME/.cache/slippy-toolchain-pin-tmp/` (the probe scripts, `probe.sh`, `probe2.sh` and `probe3.sh`, are
 there). The page rustup itself publishes on the subject is https://rust-lang.github.io/rustup/overrides.html, which
 the gaps review read (spec, *Slice `toolchain-pin` — Gaps reviewed*); nothing here rests on it alone.
 
@@ -22,6 +22,14 @@ the gaps review read (spec, *Slice `toolchain-pin` — Gaps reviewed*); nothing 
 | R12 | `rust-toolchain.toml` holding `path = "/nonexistent"` under `[toolchain]` | `error: invalid toolchain: the path '/nonexistent' has no bin/ directory` | TG5: a `path` is a place on someone's machine; never recorded. |
 | R13 | `rust-toolchain.toml` holding `[toolchain\nchannel = ` | `error: … TOML parse error … unclosed table` | TG5: invalid TOML is no pin. |
 | R14 | `rust-toolchain.toml` with `channel = "stable"` | `stable (overridden by …)` | TG4: a named channel is a pin, recorded as written. |
+| R15 | `rust-toolchain` (`1.98.1`) at the root; a dangling `rust-toolchain` symlink in `sub`; run from `sub` | `1.98.1 (overridden by …/root/rust-toolchain)` | D24: a dangling link is passed over, and the walk goes on upward. |
+| R16 | root `rust-toolchain` (`1.98.1`); a *directory* named `rust-toolchain.toml` in `sub` | `1.98.1`, the root's | D24: a directory is passed over, upward. |
+| R17 | `sub/rust-toolchain` a directory, `sub/rust-toolchain.toml` holding `stable`; root pin `1.98.1` | `stable (overridden by …/sub/rust-toolchain.toml)` | D24: the unreadable name is passed over to the other name in the same directory first. |
+| R18 | root pin `1.98.1`; `sub/rust-toolchain` mode `000` (run as a non-root user), and separately holding `1.85\xff` | `1.98.1`, the root's, for each | D24: an unreadable file and one that is not UTF-8 are passed over, upward. |
+| R19 | root pin `1.98.1`; `sub/rust-toolchain.toml` starting with U+FEFF, then `[toolchain]\nchannel = "stable"` | `stable (overridden by …/sub/rust-toolchain.toml)` | D24: a leading U+FEFF is removed before TOML is parsed. |
+| R19b | `sub/rust-toolchain` holding U+FEFF then `stable` (one line) | `error: custom toolchain '\ufeffstable' … is not installed` | rustup does not remove the mark from a one-line legacy file: the channel keeps it, is not a toolchain name (D23), and is recorded as no pin. |
+| R19c | `sub/rust-toolchain` holding U+FEFF then a two-line TOML `[toolchain]` / `channel = "stable"` | `stable (overridden by …/sub/rust-toolchain)` | The mark is removed where the file is read as TOML, legacy name or not. |
+| R20 | `sub/rust-toolchain` a FIFO | rustup blocks in the open (killed by `timeout`) | Not a reading to follow: the survey never opens a non-regular file (issue #13), so it passes over the FIFO as D24 says. |
 
 ## R8/R9 against TG3's wording
 

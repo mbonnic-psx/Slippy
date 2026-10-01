@@ -2,18 +2,22 @@
 manifest the survey cannot parse is still recognised. The row reads one fact from the manifest — whether it declares
 a workspace — because that decides whether check, clippy and test are told to cover every member, and it reads the
 toolchain the repository pins from `rust-toolchain` or `rust-toolchain.toml` as rustup does (D19): the nearest
-directory holding either, from the candidate's up to the repository root, decides."""
+directory holding either that it can read, from the candidate's up to the repository root, decides (D24)."""
 from __future__ import annotations
 
 import os
 import re
+import stat
 import tomllib
 from collections.abc import Callable
 from pathlib import Path
 
+from ..bounded_read import MAX_READ
 from .common import Detected, complete, in_dir, prefixed, read
 
 Reader = Callable[[Path], str]
+# A reader that can say "could not be read as text" (`None`) apart from "read, and empty" (`""`).
+TextReader = Callable[[Path], str | None]
 
 # A `[workspace]` or `[workspace.<x>]` table header at the start of a line: a workspace root. Not `workspace = true`
 # in a dependency, `package.workspace = "…"` or a comment, which are a member pointing at a root, and not a
@@ -57,9 +61,10 @@ TOOLCHAIN_FILES = ("rust-toolchain", "rust-toolchain.toml")
 
 
 def pinned_channel(text: str) -> str:
-    """The `toolchain.channel` of a TOML text, as written; empty where there is no usable one."""
+    """The `toolchain.channel` of a TOML text, as written; empty where there is no usable one. A leading byte order
+    mark is removed first: rustup reads past it (R19), and `tomllib` does not."""
     try:
-        toolchain = tomllib.loads(text).get("toolchain")
+        toolchain = tomllib.loads(text.removeprefix("\ufeff")).get("toolchain")
     except tomllib.TOMLDecodeError:
         return ""
     if not isinstance(toolchain, dict) or "path" in toolchain:  # a path is a place on somebody's machine
@@ -84,15 +89,41 @@ def legacy_channel(text: str) -> str:
 TOOLCHAIN_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
 
 
-def rust_toolchain(root: Path, directory: str, reader: Reader = read) -> str:
+def readable_text(path: Path, limit: int = MAX_READ) -> str | None:
+    """The file's text; `None` where it cannot be read as UTF-8 text — missing, a dangling link, not a regular file
+    (never blocked on: issue #13), unreadable, not valid UTF-8; empty where it is larger than `limit`, as
+    `bounded_read.read` has it, which is a file that was read and names nothing."""
+    try:
+        descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0))
+    except OSError:
+        return None
+    try:
+        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+            return None
+        with os.fdopen(descriptor, "rb", closefd=False) as handle:
+            data = handle.read(limit + 1)
+    except OSError:
+        return None
+    finally:
+        os.close(descriptor)
+    if len(data) > limit:
+        return ""
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+
+
+def rust_toolchain(root: Path, directory: str, reader: TextReader = readable_text) -> str:
     """The toolchain channel the candidate pins, as rustup would find it: from the candidate's directory up to and
-    including the repository root, never above, the nearest directory holding either file decides — even a file
-    that names no channel, or one that is not a file — and no file on the way up is no pin."""
+    including the repository root, never above, the nearest directory holding a toolchain file it can read decides —
+    even one that names no channel — and a name that cannot be read as text (D24) is passed over, to the other name
+    in its directory and then upward. No file read on the way up is no pin."""
     here = root / directory
     while True:
         for name in TOOLCHAIN_FILES:
-            if os.path.lexists(here / name):
-                text = reader(here / name)
+            text = reader(here / name)
+            if text is not None:
                 channel = legacy_channel(text) if name == "rust-toolchain" else pinned_channel(text)
                 return channel if TOOLCHAIN_NAME.fullmatch(channel) else ""
         if here == root or root not in here.parents:

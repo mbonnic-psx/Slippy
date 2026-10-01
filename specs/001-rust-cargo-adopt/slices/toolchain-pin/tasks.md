@@ -83,7 +83,7 @@ Each is written on disk by a named test (helper `write` from `tests/test_survey.
 
 ## Phase 1: Setup — the Pin
 
-- [ ] T001 **Pin — observe today's answers green before any production change** (plan *Pin*; SC-004). Not a RED-GREEN
+- [x] T001 **Pin — observe today's answers green before any production change** (plan *Pin*; SC-004). Not a RED-GREEN
   increment: a characterisation is green by design. Files: none written.
   - Run `make test TESTS="test_survey test_survey_cargo test_survey_cargo_workspace test_adopt"` under the wrapper and
     confirm green, so a later red is the slice's and not the tree's. Also `python3 scripts/test-adoption.py --only
@@ -100,7 +100,7 @@ on the survey page, and an empty version where nothing usable is pinned.
 
 **Independent test**: survey the four example trees; adopt the committed `rust-crate` fixture end to end.
 
-- [ ] T002 [US2] **Rule TP1 — `rust-toolchain.toml`'s channel, in the candidate's own directory, is the recorded
+- [x] T002 [US2] **Rule TP1 — `rust-toolchain.toml`'s channel, in the candidate's own directory, is the recorded
   version, as written** (US2 scenario 1; FR-005; TG3 toml half; TG4). Depends on T001.
   Files: `tests/test_survey_cargo_toolchain.py` (new), `tests/test_survey_cargo.py`,
   `src/slipwai/ecosystems/cargo.py`.
@@ -122,7 +122,7 @@ on the survey page, and an empty version where nothing usable is pinned.
   - REFACTOR: the module docstring of `cargo.py` says the row reads the toolchain pin as well as the workspace fact; no
     behaviour change, suite green.
 
-- [ ] T003 [US2] **Rule TP2 — nothing usable is pinned: the version is empty, never an error, and `rust-version` is not a
+- [x] T003 [US2] **Rule TP2 — nothing usable is pinned: the version is empty, never an error, and `rust-version` is not a
   pin** (US2 scenario 3; TG5; TG6; D21). Depends on T002.
   Files: `tests/test_survey_cargo_toolchain.py`, `src/slipwai/ecosystems/cargo.py`.
   - RED: one test over the **unusable pins** trees, each a subtest recording `{"kind": "rust", "version": ""}`: invalid
@@ -139,7 +139,7 @@ on the survey page, and an empty version where nothing usable is pinned.
     reading `Cargo.toml` for a pin); no file anywhere records an empty version (US2 scenario 3).
   - REFACTOR: none expected beyond naming; suite green.
 
-- [ ] T004 [US2] **Rule TP3 — the legacy `rust-toolchain` is its one line, or TOML where it is more than one, and it wins
+- [x] T004 [US2] **Rule TP3 — the legacy `rust-toolchain` is its one line, or TOML where it is more than one, and it wins
   over `rust-toolchain.toml` in one directory** (US2 scenario 2; TG3 legacy half; TG2; D21; D22; R1, R2, R5–R9). Depends
   on T003.
   Files: `tests/test_survey_cargo_toolchain.py`, `src/slipwai/ecosystems/cargo.py`.
@@ -158,7 +158,7 @@ on the survey page, and an empty version where nothing usable is pinned.
     present but empty records `""` and the `.toml` beside it is not consulted (rustup refuses the first, R10).
   - REFACTOR: `legacy_channel` and `pinned_channel` read as the two halves of one rule; suite green.
 
-- [ ] T005 [US2] **Rule TP4 — the pin is looked for from the candidate's directory up to the repository root, never above,
+- [x] T005 [US2] **Rule TP4 — the pin is looked for from the candidate's directory up to the repository root, never above,
   and the nearest directory holding a toolchain file decides** (D19; TG1; US2 scenario 3; R3, R4). Depends on T004.
   Files: `tests/test_survey_cargo_toolchain.py`, `src/slipwai/ecosystems/cargo.py`.
   - RED: one test over the **nested crate** tree — a root `rust-toolchain.toml` with `channel = "1.85"` and candidate
@@ -178,7 +178,7 @@ on the survey page, and an empty version where nothing usable is pinned.
     green; `python3 scripts/check-structure.py` holds the new suite under the 350-line budget (split by example tree if
     not).
 
-- [ ] T006 [US2] **Rule TP5 — an adopted Rust repository's `project.json` and survey page carry the pin, and the
+- [x] T006 [US2] **Rule TP5 — an adopted Rust repository's `project.json` and survey page carry the pin, and the
   `rust-crate` fixture pins `stable`** (US2 independent test; TG7; TG9; SC-003). Depends on T005.
   Files: `tests/test_survey_cargo_toolchain.py`, `tests/fixtures/adopt/rust-crate/rust-toolchain.toml`,
   `scripts/test-adoption.py`.
@@ -203,7 +203,7 @@ on the survey page, and an empty version where nothing usable is pinned.
     with `--only rust-workspace`.
   - If the harness needs anything in `src/slipwai/` beyond T002–T005, stop and report: it is a plan contradiction.
 
-- [ ] T007 [US2] **Characterisation TP6 — an app recorded with an empty detected toolchain refreshes to the pin on `adopt
+- [x] T007 [US2] **Characterisation TP6 — an app recorded with an empty detected toolchain refreshes to the pin on `adopt
   --refresh`; one the maintainer confirmed or overrode is a disagreement and is not changed** (TG8). Depends on T006
   (the row must read the pin first). Not a RED-GREEN increment: it characterises `resurvey.reconciled_app`, code that was
   here before the method, which this slice does not change; the tests are green on the day they are written, and are
@@ -220,7 +220,7 @@ on the survey page, and an empty version where nothing usable is pinned.
   - If any of (a)–(c) is red, stop and report: the plan names no change to `resurvey`, so it is a plan contradiction and
     not an addition to this task.
 
-- [ ] T008 [P] [US2] **Changelog fragment amended** (TG10; FR-009; `changelog.d/README.md`; plan *Constitution Check* I).
+- [x] T008 [P] [US2] **Changelog fragment amended** (TG10; FR-009; `changelog.d/README.md`; plan *Constitution Check* I).
   Files: `changelog.d/rust-cargo-adopt.md`. Not a RED-GREEN increment: a fragment is a document and
   `tests/test_changelog.py` is its check. Keep the first line `MINOR`, keep it saying experimental, and `VERSION` at
   `1.4.0.dev0`. Remove the toolchain pin from *What stays out* (line 24 reads "a toolchain pin read from
@@ -233,7 +233,7 @@ on the survey page, and an empty version where nothing usable is pinned.
   them to edit in `project.json`. Each sentence is one a test in TP1–TP6 proves. Run `python3 -m pytest
   tests/test_changelog.py` under the safety wrapper; only the one environmental failure remains.
 
-- [ ] T009 [P] [US2] **One docs clause** (plan *Source Code*; not user-visible under `AGENTS.md`, so no fragment).
+- [x] T009 [P] [US2] **One docs clause** (plan *Source Code*; not user-visible under `AGENTS.md`, so no fragment).
   Files: `docs/adopting.md`. Not a RED-GREEN increment. In the survey paragraph that says a candidate carries "the
   toolchain pin the tree carries" (line 28), say in one clause where the Rust pin is read from: `rust-toolchain` or
   `rust-toolchain.toml`, from the candidate's directory up to the repository root. Touch nothing else in the file and

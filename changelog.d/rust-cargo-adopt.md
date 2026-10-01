@@ -18,13 +18,15 @@ the Node or Python one, replaced and not joined by any commands you give when co
 <name>=rust`, `--command <name>:<target>=<command>`); to gate both, write a command that runs both. Where an outer
 build of that other ecosystem owns the directory (a napi-rs package inside an npm workspace, below a Maven
 `<modules>` root or a Gradle settings root) and its `Cargo.toml` declares a workspace, the directory is proposed as
-Cargo with the workspace commands, since the outer build's commands do not build the Rust. The toolchain a repository pins is recorded as the
-candidate's Rust version: `rust-toolchain` or `rust-toolchain.toml`, looked for from the candidate's directory up
-to the repository root, the nearest directory holding either deciding (the legacy file first, and a `rust-toolchain`
-of several lines read as TOML, as rustup reads it), with the channel recorded as written. Where nothing usable is
-pinned (no file, an empty or invalid one, a `path` toolchain) the version is empty and nothing is reported as an
-error, and `rust-version` in `Cargo.toml` is not a pin. The adoption path is
+Cargo with the workspace commands, since the outer build's commands do not build the Rust. The adoption path is
 experimental (see `AGENTS.md`), so what it offers may still change in a MINOR.
+
+The toolchain a Rust repository pins is recorded as the candidate's Rust version, read as rustup reads it:
+`rust-toolchain` or `rust-toolchain.toml`, looked for from the candidate's directory up to the repository root, the
+nearest directory holding either deciding (the legacy file first, and a `rust-toolchain` of more than one line read
+as TOML), with the channel recorded as written — `1.85`, `stable`, `nightly-2025-01-01`. Where nothing usable is
+pinned (no file, an empty or invalid one, a `path` toolchain) the version is empty and nothing is reported as an
+error, and `rust-version` in `Cargo.toml` is not a pin.
 
 What stays out, and comes later: Rust set up in the adopted CI.
 Nor are `members`, `exclude` and `default-members` read, or an inline `workspace = { … }` table: a workspace is
@@ -52,7 +54,7 @@ this change has its root's commands refreshed to the workspace ones by `slipwai 
 disagreement (`commands was confirmed as …; the record stands until you decide`) and left as written, so edit its
 commands in `project.json` by hand. A member it recorded as a deployable of its own is reported as no longer
 recognised and left as written, so a snapshot adoption asks you to remove that record from `project.json` if you
-want it gone. A repository adopted with a snapshot before this change has its detected, empty Rust toolchain
+want it gone.
+A repository adopted with a snapshot before the toolchain pin was read has its detected, empty Rust version
 refreshed to the pin by `slipwai adopt --refresh`; one the maintainer confirmed or overrode is reported as a
-disagreement (`toolchain.version was confirmed as …`) and left as written, so
-edit it in `project.json` by hand.
+disagreement (`toolchain.version was confirmed as …`) and left as written, so edit it in `project.json` by hand.

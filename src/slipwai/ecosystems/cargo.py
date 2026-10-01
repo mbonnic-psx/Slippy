@@ -79,6 +79,11 @@ def legacy_channel(text: str) -> str:
     return lines[0].strip() if len(lines) == 1 else pinned_channel(text)
 
 
+# What rustup will install by name, and so what a workflow's `toolchain:` input can safely carry (D23): a channel
+# holding a newline, a space, a quote or a replacement character is nothing rustup reads, and is not recorded.
+TOOLCHAIN_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+
+
 def rust_toolchain(root: Path, directory: str, reader: Reader = read) -> str:
     """The toolchain channel the candidate pins, as rustup would find it: from the candidate's directory up to and
     including the repository root, never above, the nearest directory holding either file decides — even a file
@@ -88,7 +93,8 @@ def rust_toolchain(root: Path, directory: str, reader: Reader = read) -> str:
         for name in TOOLCHAIN_FILES:
             if os.path.lexists(here / name):
                 text = reader(here / name)
-                return legacy_channel(text) if name == "rust-toolchain" else pinned_channel(text)
+                channel = legacy_channel(text) if name == "rust-toolchain" else pinned_channel(text)
+                return channel if TOOLCHAIN_NAME.fullmatch(channel) else ""
         if here == root or root not in here.parents:
             return ""
         here = here.parent

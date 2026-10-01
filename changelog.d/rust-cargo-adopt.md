@@ -25,8 +25,8 @@ The toolchain a Rust repository pins is recorded as the candidate's Rust version
 `rust-toolchain` or `rust-toolchain.toml`, looked for from the candidate's directory up to the repository root, the
 nearest directory holding either deciding (the legacy file first, and a `rust-toolchain` of more than one line read
 as TOML), with the channel recorded as written — `1.85`, `stable`, `nightly-2025-01-01`. Where nothing usable is
-pinned (no file, an empty or invalid one, a `path` toolchain) the version is empty and nothing is reported as an
-error, and `rust-version` in `Cargo.toml` is not a pin.
+pinned (no file, an empty or invalid one, a `path` toolchain, a channel that is not a toolchain name) the version
+is empty and nothing is reported as an error, and `rust-version` in `Cargo.toml` is not a pin.
 
 What stays out, and comes later: Rust set up in the adopted CI.
 Nor are `members`, `exclude` and `default-members` read, or an inline `workspace = { … }` table: a workspace is

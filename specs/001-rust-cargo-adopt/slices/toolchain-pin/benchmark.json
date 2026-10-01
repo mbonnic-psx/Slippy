@@ -483,6 +483,37 @@
       ],
       "delegated": true,
       "signals": {}
+    },
+    {
+      "stage": "implement",
+      "started": "2026-10-01T20:43:29Z",
+      "planned": "implement: fast → sonnet — Claude Code: the Agent tool's `model` parameter, set per call",
+      "tasks": {
+        "start": {
+          "open": 4,
+          "done": 10
+        }
+      },
+      "cursor": {
+        "source": "claude",
+        "session": "b757fce2-5d7c-4774-b873-1de41a591614",
+        "files": {
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/b757fce2-5d7c-4774-b873-1de41a591614.jsonl": 1095988
+        },
+        "subagents": {
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/b757fce2-5d7c-4774-b873-1de41a591614/subagents/agent-a0cf90d45c44fbee8.jsonl": 549019,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/b757fce2-5d7c-4774-b873-1de41a591614/subagents/agent-a1b54768b6ced5b31.jsonl": 203259,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/b757fce2-5d7c-4774-b873-1de41a591614/subagents/agent-a4018d20352f04eba.jsonl": 305494,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/b757fce2-5d7c-4774-b873-1de41a591614/subagents/agent-a4373cddc7766f0a2.jsonl": 522579,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/b757fce2-5d7c-4774-b873-1de41a591614/subagents/agent-a44f210eff54d45a0.jsonl": 825932,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/b757fce2-5d7c-4774-b873-1de41a591614/subagents/agent-a45bafe4299b5da5c.jsonl": 289020,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/b757fce2-5d7c-4774-b873-1de41a591614/subagents/agent-a568dfa4778522508.jsonl": 858380,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/b757fce2-5d7c-4774-b873-1de41a591614/subagents/agent-a73e7363d22aabd78.jsonl": 379068,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/b757fce2-5d7c-4774-b873-1de41a591614/subagents/agent-a8c2dde7a40cb8eea.jsonl": 287447,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/b757fce2-5d7c-4774-b873-1de41a591614/subagents/agent-a8e09198214982c48.jsonl": 338968,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/b757fce2-5d7c-4774-b873-1de41a591614/subagents/agent-aaabcf92ea889bf34.jsonl": 549098
+        }
+      }
     }
   ]
 }

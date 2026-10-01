@@ -305,7 +305,7 @@ rustup observations below were made by the converge pass with rustup 1.29.0, `RU
 active-toolchain`, in probe trees under `$HOME/.cache/slippy-toolchain-pin-tmp/converge/`, with a root
 `rust-toolchain` holding `1.98.1` above the probed directory where a walk was in question.
 
-- [ ] T011 [US2] **HIGH — the recorded Rust version is a toolchain name or nothing: a channel holding a newline, a
+- [x] T011 [US2] **HIGH — the recorded Rust version is a toolchain name or nothing: a channel holding a newline, a
   space, a quote or a replacement character is not recorded** (D21's reason: "the recorded value is what rustup and the
   setup action will consume"; TG5; TG9). Depends on a decision the delegating session records (proposed D23 below).
   Files: `src/slipwai/ecosystems/cargo.py`, `tests/test_survey_cargo_toolchain.py`, `changelog.d/rust-cargo-adopt.md`.
@@ -368,7 +368,7 @@ active-toolchain`, in probe trees under `$HOME/.cache/slippy-toolchain-pin-tmp/c
     survey's boundary over R15–R19's trees, each with a root pin above; flip the two enshrining tests. Add R15–R19 to
     `research.md` as observed rows. The fragment's "the nearest directory holding either deciding" names the exception.
 
-- [ ] T013 [US2] **MEDIUM — TG9's hand-over and the pin's other readers are claimed, not proved** (TG9; plan *Not working
+- [x] T013 [US2] **MEDIUM — TG9's hand-over and the pin's other readers are claimed, not proved** (TG9; plan *Not working
   yet*). Depends on T011. Files: `tests/test_survey_cargo_toolchain.py`.
   - TG9 says the adopted CI writes no Rust setup step in this slice; no test adopts a pinned crate and reads the gate's
     CI. Since this slice the pin also reaches the GitLab job's comment (`adopted_ci.py:161`, now `rust 1.85` where it
@@ -381,7 +381,7 @@ active-toolchain`, in probe trees under `$HOME/.cache/slippy-toolchain-pin-tmp/c
     `ground.md` carry `rust 1.85`. Each observed to bite by recording `""` in the row and restoring with
     `git checkout -- src/slipwai/ecosystems/cargo.py`.
 
-- [ ] T014 [US2] **LOW — the `docs/adopting.md` clause is one unwrapped line** (`docs/adopting.md:28`, 242
+- [x] T014 [US2] **LOW — the `docs/adopting.md` clause is one unwrapped line** (`docs/adopting.md:28`, 242
   characters where the page wraps at 120). Files: `docs/adopting.md`. Rewrap the sentence; change no word.
 
 ## Convergence

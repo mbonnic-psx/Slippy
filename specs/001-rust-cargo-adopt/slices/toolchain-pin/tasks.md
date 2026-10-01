@@ -384,52 +384,94 @@ active-toolchain`, in probe trees under `$HOME/.cache/slippy-toolchain-pin-tmp/c
 - [x] T014 [US2] **LOW — the `docs/adopting.md` clause is one unwrapped line** (`docs/adopting.md:28`, 242
   characters where the page wraps at 120). Files: `docs/adopting.md`. Rewrap the sentence; change no word.
 
+Appended by converge pass 2 (2026-10-01, at cbd3f1c).
+
+- [ ] T015 [US2] **LOW — the hostile-channel sweep reads three of the four pages the pin reaches, not `/ground`'s**
+  (T011's own *What is wrong* names `delivery/commands/ground.md`, `project/ground_command.py:118-121`). Files:
+  `tests/test_survey_cargo_toolchain.py`. `test_a_channel_that_is_not_a_toolchain_name_reaches_no_generated_file`
+  (line 63) asserts `curl evil` absent from the survey page, the GitLab job and `adoption.md`; `ground.md` is safe today
+  only because the check sits at the producer (`cargo.py:97`). **The sweep:** the test reads every file that prints
+  `toolchain.version` — today `adopt_report.py:52`, `project/adopted_ci.py:161`, `project/adopted.py:112`,
+  `project/ground_command.py:120` (`grep -rn "toolchain" src/slipwai | grep version` lists them) — by adding
+  `delivery/commands/ground.md` to `written`. Observed to bite by dropping the check at `cargo.py:97` and restoring
+  with `git checkout -- src/slipwai/ecosystems/cargo.py`.
+
 ## Convergence
 
-**Verdict (pass 1 of 2): not converged.** One HIGH (T011) re-opens the loop; T012 and T013 are MEDIUM, T014 LOW. T011 and
-T012 each need a decision the delegating session records first (proposed D23, D24); converge did not choose them.
+**Verdict (pass 2 of 2, at cbd3f1c): converged.** No CRITICAL or HIGH remains. Pass 1's HIGH (T011) and MEDIUM (T013)
+are closed and proved to bite; T014 is a local rewrap. T012 remains open, a MEDIUM in Phase 4, pending the owner's
+decision on proposed D24 (which would change TG5's explicit "non-regular file … records empty"); per
+`delivery/commands/drive.md`'s bound it does not re-open the loop. One new LOW (T015). The slice may ship without
+T012 and T015; each is a decision about what to do next, not a defect in what ships.
+
+What pass 2 checked, and how (every run under the HARD SAFETY RULES wrapper; each mutation restored with
+`git checkout -- <exact path>` before the next):
+
+- **T011 holds.** The check is applied once, where the walk returns (`src/slipwai/ecosystems/cargo.py:96-97`), after
+  both producers, so `pinned_channel` and `legacy_channel` cannot bypass it; `TOOLCHAIN_NAME` (`:84`) is ASCII-only
+  and `fullmatch`ed. Mutations: dropping the check fails 17 (every hostile subtest in both files and the
+  generated-file test); `match` for `fullmatch` fails 15 (the newline case among them); exempting the legacy branch
+  fails its 6 subtests; admitting a space fails 2; admitting a quote and backtick fails 4. Every page that prints the
+  version reads it from the record the row wrote (`adopt_report.py:52`, `project/adopted_ci.py:161`,
+  `project/adopted.py:112`, `project/ground_command.py:120`; `platform.py:295` dates nothing for `rust`, D21), so the
+  one check covers them all; the hostile test asserts three of the four (T015).
+- **T013's tests bite where they claim.** Recording `""` in the row fails the GitLab comment, `adoption.md` and
+  `ground.md` tests (`tests/test_adopt_cargo_toolchain.py:36-49`). The GitHub test (`:31-34`) is a guard on
+  `adopted_ci.py`, not on the row, and passes under that mutation by design; adding a `rust` entry to `SETUP` fails it.
+- **T014 is local.** `docs/adopting.md` against 4158414 has the same words in the same order; three lines changed
+  (28-30), each at most 114 characters; line 30 is a short `run for each`, the price of not reflowing the paragraph.
+- **Nothing broke.** `test_survey_cargo_toolchain`, `test_adopt_cargo_toolchain`, `test_survey_cargo`,
+  `test_survey_cargo_workspace`, `test_survey`, `test_adopt`: green. `test_changelog`: the one environmental tag
+  failure only. `scripts/verify --lint-only`, `--typecheck-only`, `scripts/check-structure.py`: green. The full
+  `make -f delivery/Makefile verify` was not run (it runs after demo acceptance).
+- **T012 is still accurate in substance, stale in four citations.** The dangling-link test is now at
+  `tests/test_survey_cargo_toolchain.py:163` (was 129), the BOM subtest at `:96` (was 61), the `lexists` decision at
+  `cargo.py:94` (was 88); and R18's invalid-UTF-8 `rust-toolchain` now records `""`, not `1.85�` (T011's check) —
+  still not rustup's answer, which is the root's pin. Whoever closes T012 reads those numbers here.
 
 Each level, what the diff proves and what it does not:
 
-- **Domain — the pin reading** (`src/slipwai/ecosystems/cargo.py:55-94`). Proves TG1-TG6 as worded for regular UTF-8
-  files: the walk to the root and never above (test file lines 115, 122, 135), the legacy file first (109, 112), one line
-  versus TOML (89-106, D22), every TG4 shape verbatim (38), the unusable pins (52), `rust-version` ignored (75). Does not
-  prove that the recorded value is one rustup could install (T011), nor rustup's reading where a file cannot be read or
-  carries a BOM (T012).
-- **Use case — survey / adopt / adopt --refresh.** Proves the survey answer (every test enters at `survey`), the adopted
-  record (156), TG8's refresh of a detected empty version (187), the disagreement for confirmed and overridden (196) and
-  the second refresh's no-op (207); `scripts/test-adoption.py:98,133` holds the fixture end to end (T010's run). Does
-  not prove the hostile-channel path (T011).
-- **Delivery adapter — CLI output, survey page, project.json.** Proves the survey page's `rust 1.85` and its absence
-  (156, 162) and the record `{"kind", "version", "ecosystem"}` (160). `adopt`'s stdout does not name the version, and
-  TG7 does not ask it to. Does not prove the other pages the pin now reaches, nor that a channel cannot break them
-  (T011, T013).
+- **Domain — the pin reading** (`cargo.py:55-100`). Proves TG1-TG6 as worded and D23's clause in TG5: the walk to the
+  root and never above (test lines 149, 156, 169), the legacy file first (143, 146), one line versus TOML (123-140,
+  D22), every TG4 shape verbatim (38), the unusable pins (86, 103), `rust-version` ignored (109), a channel that is
+  not a toolchain name recorded empty (47). Does not prove rustup's reading where a file cannot be read or carries a
+  BOM (T012, pending D24).
+- **Use case — survey / adopt / adopt --refresh.** Proves the survey answer, the adopted record (190), TG8's refresh
+  (221), the disagreement for confirmed and overridden (230), the second refresh's no-op (241), and that a hostile
+  channel is recorded as `""` through `adopt --yes` (63). Nothing further owed.
+- **Delivery adapter — the pages and `project.json`.** Proves the survey page (190, 196), the GitLab comment, the
+  adoption page and `/ground`'s Platform line carry `rust 1.85`, and the GitHub workflow names no Rust
+  (`tests/test_adopt_cargo_toolchain.py:31-49`); that a hostile channel reaches none of the survey page, the GitLab
+  job or `adoption.md` (test line 63). Does not assert `ground.md` under a hostile channel (T015, LOW).
 - **Screen — none.** The slice is a CLI's survey.
-- **Published contract.** `project.json`'s toolchain shape is unchanged (test lines 38-45 assert exactly `kind` and
-  `version`; 160 with `ecosystem`). The fragment amends the pin out of *What stays out* and names TG8 in its Catch-up
-  (`changelog.d/rust-cargo-adopt.md:24-31, 58-60`). `docs/adopting.md:28` names where the pin is read (T014 is its
-  wrapping). The hand-over to `ci-toolchain` per TG9 is the version string only, as designed, but its "no Rust step"
-  half is unproved (T013), and the string it hands over is not yet safe to put in a workflow (T011).
+- **Published contract.** `project.json`'s toolchain shape is unchanged (test lines 38-45, 190). The fragment names
+  the non-name exclusion (`changelog.d/rust-cargo-adopt.md:27-29`) and keeps the pin out of *What stays out* (`:31`).
+  TG9's hand-over is the version string only, and its "no Rust step" half is now proved
+  (`tests/test_adopt_cargo_toolchain.py:31-34`).
 
 Constitution principles the diff touches:
 
-- **I — what a project was given keeps meaning what it meant.** Satisfied: the Cargo row was never released (it is in
-  `changelog.d/`, not `CHANGELOG.md`); the fragment stays `MINOR` (`changelog.d/rust-cargo-adopt.md:1`) and says
-  experimental (`:22`); `VERSION` stays `1.4.0.dev0`; the Catch-up note is written (`:58-60`); other ecosystems keep
-  their answers — the walk is called by the Cargo row alone (`cargo.py:112`; test line 140).
-- **II — re-running is safe.** Satisfied: `adopt --refresh` over an unchanged pinned tree changes nothing
-  (`tests/test_survey_cargo_toolchain.py:207-215`; `scripts/test-adoption.py`'s re-survey no-op in T010's run); the walk
-  stops at the root, so nothing outside the checkout can change the answer (test line 135).
-- **III — simplicity.** Satisfied: three functions beside the row that calls them (`cargo.py:55-94`), no new field, no
-  new module; the `reader` seam on `rust_toolchain` is unused by its caller (`cargo.py:82,112`), left as the sibling
-  functions have it.
-- **V (as it holds today) — tests at the boundary, fakes in the test tree, no mocking framework.** Satisfied: every new
-  test enters at `survey` or `slipwai adopt` over a tree on disk (`tests/test_survey_cargo_toolchain.py:24-30, 149-154`);
-  no mock imported. The principle's in-force text is a target, not yet in force.
-- **VIII — what a repository records is a contract.** Satisfied: no key added to `project.json`; `toolchain.version` is
-  a string it already carried (test lines 38-45, 160).
-- **VII, IX — touched and not breached by a MUST, but T011's class is where they would be:** no refusal is added (an
-  unusable pin is empty, never an error, per D21) and no credential is involved; the generated CI file the pin can break
-  is T011.
-- IV, VI, X, XI — not touched (no port, no third-party adapter, no branch policy, no pipeline route; X and XI are
-  targets not yet in force).
+- **I — what a project was given keeps meaning what it meant.** Satisfied: the Cargo row is unreleased (in
+  `changelog.d/`, not `CHANGELOG.md`); `changelog.d/rust-cargo-adopt.md:1` stays `MINOR` and `:22` says experimental;
+  `VERSION` is `1.4.0.dev0`; the Catch-up note is written (`:47`); other ecosystems keep their answers — the walk and
+  the D23 check are called by the Cargo row alone (`cargo.py:118`; test line 174).
+- **II — re-running is safe.** Satisfied: a second `adopt --refresh` over an unchanged pin changes nothing
+  (`tests/test_survey_cargo_toolchain.py:241`); the walk stops at the root (test line 169).
+- **III — simplicity.** Satisfied: the D23 fix is one constant and one conditional (`cargo.py:84, 97`), no new module
+  or field.
+- **V (as it holds today) — tests at the boundary, fakes in the test tree, no mocking framework.** Satisfied: the new
+  tests enter at `survey` and `slipwai adopt --yes` (`tests/test_survey_cargo_toolchain.py:24, 63`;
+  `tests/test_adopt_cargo_toolchain.py:22-28`); no mock imported.
+- **VIII — what a repository records is a contract.** Satisfied: no key added; `toolchain.version` stays a string,
+  now narrower in what it can hold (test lines 38-45, 47).
+- **IX — security.** Satisfied for this slice's route: a tree's toolchain file can no longer write a line into a
+  generated CI file or page (`cargo.py:97`; test line 63). The same class for other ecosystems' pins
+  (`project/adopted_ci.py:63`, code that was here) remains handed back to the delegating session (T011).
+- **XIV — agent-generated change meets the same bar.** Satisfied for the code: each fix is its own commit with its
+  tests (1ca5cef carries `cargo.py`, the tests and the fragment together). The amendment of TG5 (`spec.md:238`) is an
+  acceptance criterion an agent wrote; D23 records it as decided by `drive-slice` and "returned to the delegating
+  session for review", so it stands on that review: the delegating session confirms the owner (or the product
+  owner's delegate) accepted D23 before the PR is merged. T012's D24 is held to the same, and is why T012 is open.
+- **VII** — no refusal added; an unusable pin is empty, never an error (D21). **XIII, XV** — targets not in force; the
+  new suites run in seconds. **IV, VI, X, XI, XII** — not touched (no port, no third-party adapter, no branch policy,
+  no pipeline route, no build or deploy artifact).

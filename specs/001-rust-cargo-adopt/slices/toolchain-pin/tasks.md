@@ -338,7 +338,7 @@ active-toolchain`, in probe trees under `$HOME/.cache/slippy-toolchain-pin-tmp/c
     (`project/adopted_ci.py:63`, `'{version}'` single-quoted) — a `.nvmrc` holding a quote — in code that was here
     before the method. The delegating session decides whether that is a slice of its own.
 
-- [ ] T012 [US2] **MEDIUM — where rustup cannot read a toolchain file it skips it and keeps looking; the survey decides
+- [x] T012 [US2] **MEDIUM — where rustup cannot read a toolchain file it skips it and keeps looking; the survey decides
   there with an empty pin, and reads a byte-order-marked `.toml` as no pin where rustup reads its channel** (D21's
   reason; D22's precedent; TG1, TG5). Depends on a decision the delegating session records (proposed D24 below).
   Files: `src/slipwai/ecosystems/cargo.py`, `tests/test_survey_cargo_toolchain.py`,
@@ -386,7 +386,7 @@ active-toolchain`, in probe trees under `$HOME/.cache/slippy-toolchain-pin-tmp/c
 
 Appended by converge pass 2 (2026-10-01, at cbd3f1c).
 
-- [ ] T015 [US2] **LOW — the hostile-channel sweep reads three of the four pages the pin reaches, not `/ground`'s**
+- [x] T015 [US2] **LOW — the hostile-channel sweep reads three of the four pages the pin reaches, not `/ground`'s**
   (T011's own *What is wrong* names `delivery/commands/ground.md`, `project/ground_command.py:118-121`). Files:
   `tests/test_survey_cargo_toolchain.py`. `test_a_channel_that_is_not_a_toolchain_name_reaches_no_generated_file`
   (line 63) asserts `curl evil` absent from the survey page, the GitLab job and `adoption.md`; `ground.md` is safe today

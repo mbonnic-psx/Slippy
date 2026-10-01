@@ -56,7 +56,7 @@ Written on disk by named tests (helper `write` from `tests/test_survey.py`); the
 
 ## Phase 1: Setup — the Pin
 
-- [ ] T001 [US1] **Pin — observe today's answers green before any production change** (plan *Pin*; SC-004). Files:
+- [x] T001 [US1] **Pin — observe today's answers green before any production change** (plan *Pin*; SC-004). Files:
   `tests/test_survey_cargo_tools.py` (new; holds this slice's tests). No production file is touched. Not a
   RED-GREEN increment: a characterisation is green by design.
   - First run `make test TESTS="test_survey test_survey_cargo test_adopt test_mutation"` and confirm green, so a later
@@ -78,7 +78,7 @@ adopted ignore block carries what `cargo mutants` writes.
 **Independent test**: survey and adopt the example trees; `make test-adoption` still proves the unconfigured half
 through the unchanged fixtures.
 
-- [ ] T002 [US1] **Rule OG1 + OG2 — a cargo-deny configuration in the candidate's directory proposes
+- [x] T002 [US1] **Rule OG1 + OG2 — a cargo-deny configuration in the candidate's directory proposes
   `cargo deny check advisories` as audit, and nothing else does** (scenario 3; FR-003; D18; D20; OG1, OG2). Depends
   on T001. Files: `tests/test_survey_cargo_tools.py`, `src/slipwai/ecosystems/cargo.py`.
   - RED: one test over the **configured crate** tree with a root `deny.toml` — `survey` returns candidate `.` whose
@@ -98,7 +98,7 @@ through the unchanged fixtures.
   - REFACTOR: the module docstring of `cargo.py` names the two configuration facts the row reads beside the manifest;
     no behaviour change, suite green.
 
-- [ ] T003 [US1] **Rule OG3 — `.cargo/mutants.toml` in the candidate's directory proposes `cargo mutants` as
+- [x] T003 [US1] **Rule OG3 — `.cargo/mutants.toml` in the candidate's directory proposes `cargo mutants` as
   mutation, and nothing else does** (scenario 4; FR-003; D20; OG3). Depends on T002 (same two files; its RED needs
   `optional_tools` to exist). Files: `tests/test_survey_cargo_tools.py`, `src/slipwai/ecosystems/cargo.py`.
   - RED: one test over the **configured crate** tree with `.cargo/mutants.toml` — `survey` returns candidate `.`
@@ -115,7 +115,7 @@ through the unchanged fixtures.
   - REFACTOR: none expected beyond the docstring; suite green, and `python3 scripts/check-structure.py` holds the new
     suite under the 350-line budget (split by example tree if not).
 
-- [ ] T004 [US1] **Rule OG4 + OG5 — an adopted Cargo repository records both commands unguarded, carries
+- [x] T004 [US1] **Rule OG4 + OG5 — an adopted Cargo repository records both commands unguarded, carries
   `mutants.out/` in its ignore block, and a recorded mutation claims no rung** (OG4; OG5; D20; constitution I).
   Depends on T003. Files: `tests/test_survey_cargo_tools.py`, `src/slipwai/project/gitignore.py`.
   - RED: invert T001's ignore assertion — `slipwai adopt --yes` in a throwaway repository holding a Cargo crate with
@@ -139,7 +139,7 @@ through the unchanged fixtures.
     it is a plan contradiction and not an addition to this task.
   - REFACTOR: none expected; suite green.
 
-- [ ] T005 [P] [US1] **Changelog fragment amended** (OG6; FR-009; `changelog.d/README.md`; plan *Constitution Check*
+- [x] T005 [P] [US1] **Changelog fragment amended** (OG6; FR-009; `changelog.d/README.md`; plan *Constitution Check*
   I). Files: `changelog.d/rust-cargo-adopt.md`. Not a RED-GREEN increment: a fragment is a document and
   `tests/test_changelog.py` is its check. Keep the first line `MINOR`, keep it saying experimental and `VERSION` at
   `1.4.0.dev0`. Move audit and mutation out of *What stays out* into what the release does: with a cargo-deny
@@ -152,7 +152,7 @@ through the unchanged fixtures.
   added by hand to a repository adopted earlier because `migrate` and `adopt --refresh` never rewrite the block. Wrap
   at the file's width. Run `python3 -m pytest tests/test_changelog.py` under the safety wrapper.
 
-- [ ] T006 [P] [US1] **One docs sentence** (OG7; plan *Source Code*; not user-visible under `AGENTS.md`, so no
+- [x] T006 [P] [US1] **One docs sentence** (OG7; plan *Source Code*; not user-visible under `AGENTS.md`, so no
   fragment). Files: `docs/adopting.md`. Not a RED-GREEN increment. In the survey paragraph's treatment of the Cargo
   row, add one sentence naming the two trigger files for a Cargo candidate: a cargo-deny configuration in its
   directory for audit, `.cargo/mutants.toml` for mutation. Touch nothing else in the file.

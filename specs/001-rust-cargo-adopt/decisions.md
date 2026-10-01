@@ -252,3 +252,14 @@
 - **Confidence:** high · **Would reverse if:** a rustup toolchain name a runner can install is shown to need a character outside the set
 - **Written to:** specs/001-rust-cargo-adopt/spec.md (TG5), specs/001-rust-cargo-adopt/decisions.md, specs/001-rust-cargo-adopt/slices/toolchain-pin/tasks.md (T011)
 - **Status:** standing
+
+## D24 — Converge: a toolchain file rustup cannot read, and a byte order mark — decide there, or pass over as rustup does?
+- **Stage:** converge · **Slice:** toolchain-pin · **When:** 2026-10-01T22:30:00Z · **Iteration:** 2
+- **Question:** Converge pass 1 (T012, MEDIUM) observed rustup 1.29.0 pass over a toolchain file it cannot read — a dangling link, a directory of that name, a file mode `000`, a file that is not UTF-8 — to the other name in the same directory and then upward, and read the channel of a `rust-toolchain.toml` that starts with U+FEFF (R15–R19). TG1 and TG5 as worded stop at the first name present and record an empty version. Which reading is recorded?
+- **Options:** TG1 and TG5 as worded · follow rustup, as D22 did (recommended by converge pass 1)
+- **Decision:** Follow rustup. A toolchain file that cannot be read as UTF-8 text — missing, a dangling link, a directory, a FIFO or other non-regular file (never opened), unreadable, not valid UTF-8 — is passed over: within its directory to the other name, then upward to the repository root. A leading U+FEFF is removed before TOML is parsed. A regular file that is read and names nothing usable (empty, invalid TOML, no channel, a `path`) still decides with an empty version, as rustup refuses it there; an oversize file stays no pin and decides.
+- **Why:** Standing decision D21: the recorded value is what rustup and the setup action consume, so it is rustup's reading or nothing. Recording empty where rustup builds with a pin above is the failure US2 exists to prevent.
+- **Decided by:** host (standing decision D21)
+- **Confidence:** high · **Would reverse if:** a rustup run contradicts research.md's rows R15–R19
+- **Written to:** specs/001-rust-cargo-adopt/spec.md (TG1, TG5), specs/001-rust-cargo-adopt/decisions.md, specs/001-rust-cargo-adopt/slices/toolchain-pin/tasks.md (T012)
+- **Status:** standing

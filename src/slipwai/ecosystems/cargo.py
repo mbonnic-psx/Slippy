@@ -2,7 +2,7 @@
 manifest the survey cannot parse is still recognised. The row reads one fact from the manifest — whether it declares
 a workspace — because that decides whether check, clippy and test are told to cover every member. Beside the
 manifest it reads one configuration fact for the audit: a cargo-deny configuration file (`deny.toml`, `.deny.toml`
-or `.cargo/deny.toml`) in the candidate's own directory."""
+or `.cargo/deny.toml`) in the candidate's own directory, and for the mutation `.cargo/mutants.toml` there."""
 from __future__ import annotations
 
 import re
@@ -51,6 +51,9 @@ def member_of_workspace(
 
 # What cargo-deny reads in the directory it is run in: any of these three names, as a regular file.
 DENY = ("deny.toml", ".deny.toml", ".cargo/deny.toml")
+# What cargo-mutants reads at the directory it is run in (the workspace root, for a workspace). A bare `mutants.toml`
+# is not read by it.
+MUTANTS = ".cargo/mutants.toml"
 
 
 def optional_tools(root: Path, directory: str, flag: str) -> dict[str, str | None]:
@@ -58,7 +61,10 @@ def optional_tools(root: Path, directory: str, flag: str) -> dict[str, str | Non
     regular file in the candidate's directory; elsewhere the key is a written no. `flag` is the row's `--workspace`."""
     here = root / directory
     deny = any((here / name).is_file() for name in DENY)
-    return {"audit": in_dir(directory, f"cargo deny{flag} check advisories") if deny else None}
+    return {
+        "audit": in_dir(directory, f"cargo deny{flag} check advisories") if deny else None,
+        "mutation": in_dir(directory, f"cargo mutants{flag}") if (here / MUTANTS).is_file() else None,
+    }
 
 
 def cargo(root: Path, directory: str) -> Detected | None:

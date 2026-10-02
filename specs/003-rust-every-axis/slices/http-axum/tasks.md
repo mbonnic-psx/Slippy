@@ -405,7 +405,7 @@ Judged at `115e5a7` against `7e4291e..HEAD` (pass 1 of 2). Evidence is from a sc
 `$HOME/.cache/slippy-cruise-tmp/converge1/` (outside the repository) unless a repository path is named; no
 production file in the worktree was changed. Only `CRITICAL` and `HIGH` re-open the loop.
 
-- [ ] T016 [US1] **HIGH — the 400 body quotes the caller's value when the value contains `, expected `** (R3:
+- [x] T016 [US1] **HIGH — the 400 body quotes the caller's value when the value contains `, expected `** (R3:
   "names the field and the rule and never the value"; scenario 3). `schema_failure_for` in
   `assets/backing-services/rust/http_app.rs:216` rebuilds the rule by splitting serde's *message* on its first
   `, expected `, and serde's message for `invalid type` quotes the value first. Observed through `Router::oneshot` in a
@@ -420,7 +420,7 @@ production file in the worktree was changed. Only `CRITICAL` and `HIGH` re-open 
   tail after `rsplit_once`, held by the cases). Sweep: **every branch of `schema_failure_for`** is exercised by a case
   whose value contains each delimiter the branch parses on (`` ` ``, `, expected `, ` at line `).
 
-- [ ] T017 [US1] **HIGH — the entry point's own log lines are filtered out at every level but `warn`**
+- [x] T017 [US1] **HIGH — the entry point's own log lines are filtered out at every level but `warn`**
   (R8: "bound on `config.address()`, the reported URL logged"; scenario 4). `subscriber` in
   `assets/backing-services/rust/observability.rs:154-161` lets through only the *library* crate's target
   (`module_path!()`'s first segment, e.g. `ax_std`) at `LOG_LEVEL`; `src/bin/serve.rs` is a separate crate whose target
@@ -435,7 +435,7 @@ production file in the worktree was changed. Only `CRITICAL` and `HIGH` re-open 
   level, dependencies still at `warn`. Sweep: **every `tracing::` call in every generated `src/bin/*.rs`** is at a
   target the filter admits.
 
-- [ ] T018 [US1] **HIGH — no trace-to-event correlation, which every other backend's transport gives** (spec: "the
+- [x] T018 [US1] **HIGH — no trace-to-event correlation, which every other backend's transport gives** (spec: "the
   bar is the other backends"; US1 "everything a transport brings with it elsewhere"). Go's `tracing.go:135`
   `TraceIDs`, TypeScript's `tracing.ts:145` `traceIds`, and Python's `tracing.py` `trace_ids` turn the request span
   into the event's correlation and causation ids, each with tests (`TestAnEventIsCorrelatedByTheTraceTheCallerSentIn`,
@@ -464,7 +464,7 @@ production file in the worktree was changed. Only `CRITICAL` and `HIGH` re-open 
   `decisions.md` (an agent does not edit the spec to pass, Principle XIV). Then correct the fragment's sentence to
   match. Sweep: **every file under both `--http none` trees**, not only those T001 listed.
 
-- [ ] T020 [US1] **HIGH — a slice route mounted with `Router::route` still tells the caller which verbs exist**
+- [x] T020 [US1] **HIGH — a slice route mounted with `Router::route` still tells the caller which verbs exist**
   (R3: "the same for a known path under the wrong method"; scenario 3). `build_app` strips `Allow` only for routes
   mounted through the adapter's `route` helper (`http_app.rs:97-99`); axum adds `Allow` after every layer for a plain
   `Router::route`, and the adapter's own examples teach that form (`http_app.rs:408`, `:426`). Observed: a registrar
@@ -486,14 +486,14 @@ production file in the worktree was changed. Only `CRITICAL` and `HIGH` re-open 
   the decision (keep, or derive the path another way) in `decisions.md`, and `research.md` gains its row with the
   citation. Sweep: **every crate in both `axum` regions** of the manifest is in `research.md`'s table.
 
-- [ ] T022 [US1] **MEDIUM — four committed locks are stale, so `make check-locks` is not clean** (R9 guard; T015).
+- [x] T022 [US1] **MEDIUM — four committed locks are stale, so `make check-locks` is not clean** (R9 guard; T015).
   Re-resolved here with `scripts/regenerate-locks.py`'s own `rust_locks()`: the five `*-axum` locks match; `memory`,
   `memory-sqlite`, `memory-postgres` and `memory-sqlite-postgres` differ by transitive patch releases (e.g. `js-sys`
   0.3.105→0.3.106, `wasm-bindgen` 0.2.128→0.2.129, `1.16.1`→`1.16.2`, `1.4.7`→`1.5.1`). GREEN: `make locks` for the
   Rust variants, committed with the slice (user-visible, covered by the MINOR fragment). Sweep: **every lock variant**
   `make check-locks` resolves, all ecosystems, clean.
 
-- [ ] T023 [US1] **LOW — the D5 sentence is written for two Rust services whether or not they serve.**
+- [x] T023 [US1] **LOW — the D5 sentence is written for two Rust services whether or not they serve.**
   `src/slipwai/project/run_skill.py:201` counts `service.language == "rust"`, where R8 says "two Rust services with a
   transport". GREEN: count Rust services whose selection has the transport; a case with one Rust `axum` and one Rust
   `none` service gets no sentence. Sweep: **every condition in `run_skill.py`** that names a language also asks

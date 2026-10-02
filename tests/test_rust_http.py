@@ -8,6 +8,7 @@ takes all of them.
 from __future__ import annotations
 
 import json
+import subprocess
 import tempfile
 from pathlib import Path
 
@@ -15,7 +16,8 @@ from support import FactoryTestCase, commit_all
 from test_migrate import migrate
 from test_replay import NEWER, git, newer_factory
 
-from slipwai.catalog import axis_options
+from slipwai.assets import ROOT
+from slipwai.catalog import axis_default, axis_options
 
 # What a Rust service is generated with when no transport is part of the tree: today, whatever it is not asked;
 # once the axis is offered, the answer that says so. Both are the same tree, which is the point of pinning it.
@@ -131,3 +133,46 @@ class RustWithoutATransportTest(FactoryTestCase):
             selection = json.loads(record.read_text())["deployables"]["service"]["selection"]
             self.assertNotIn("http", selection)
             self.assertEqual(json.loads(record.read_text())["generator"]["updatedWith"], NEWER)
+
+
+class RustIsAskedTheHttpQuestionTest(FactoryTestCase):
+    """R1: Rust answers `none` or `axum` like every backend answers its own transport, and is offered `axum` by default."""
+
+    def test_rust_is_offered_none_and_axum_and_defaults_to_axum(self) -> None:
+        self.assertEqual(axis_options("http", "rust", "none"), ["none", "axum"])
+        self.assertEqual(axis_default("http", "rust", "none"), "axum")
+
+    def test_each_answer_generates_and_is_recorded_on_both_profiles(self) -> None:
+        for profile in PROFILES:
+            for answer in ("axum", "none"):
+                with self.subTest(profile=profile, answer=answer), tempfile.TemporaryDirectory() as directory:
+                    repo = self.generate(directory, "answered", profile, "rust", http=answer)
+
+                    selection = json.loads((repo / "project.json").read_text())["deployables"]["service"]["selection"]
+                    self.assertEqual(selection["http"], answer)
+
+    def test_an_answer_left_out_is_the_default_the_catalog_gives_rust(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = self.generate(directory, "defaulted", "standard", "rust")
+
+            selection = json.loads((repo / "project.json").read_text())["deployables"]["service"]["selection"]
+            self.assertEqual(selection["http"], "axum")
+
+    def test_the_prompt_offers_none_and_axum_with_axum_as_the_default(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            result = subprocess.run(
+                [str(ROOT / "slipwai"), "generate"],
+                input=f"rust-interactive\nno\n\nrust\ncore\n\n\nnone\n\n{directory}\n",
+                text=True, capture_output=True, check=True,
+            )
+
+            self.assertIn("Choose (none/axum) [axum]:", result.stdout)
+            metadata = json.loads((Path(directory) / "rust-interactive" / "project.json").read_text())
+            self.assertEqual(metadata["deployables"]["core"]["selection"]["http"], "axum")
+
+    def test_another_backend_s_transport_is_refused_for_rust_as_it_is_for_every_backend(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            said = self.refuse(directory, "wrong", language="rust", http="net-http")
+
+            self.assertIn("net-http", said)
+            self.assertIn("axum", said)

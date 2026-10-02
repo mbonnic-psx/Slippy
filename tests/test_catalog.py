@@ -34,7 +34,7 @@ TRANSPORTS = {
 # Backends that answer only some axes yet, and which: stated rather than skipped. Rust's adapters are arriving
 # an axis at a time, so the axes it does not answer yet fall back to their no-infrastructure answer for it, and
 # `docs/axes.md` carries a dash for each. A backend leaves this map when it answers every axis.
-PARTIAL = {"rust": {"event-store"}}
+PARTIAL = {"rust": {"event-store", "http"}}
 ANSWERING = [backend for backend in CATALOG["backends"] if backend not in PARTIAL]
 
 
@@ -70,7 +70,9 @@ class CatalogTest(FactoryTestCase):
                 "frontend": "react-vite",
                 "event-store": "postgres",
                 # One answer per backend, because the options themselves are per backend.
-                "http": TRANSPORTS,
+                # Rust is not in the map yet: it answers only the axes `PARTIAL` names, and its default
+                # transport is spelled here until the generated-project checks that read the map follow.
+                "http": {**TRANSPORTS, "rust": "axum"},
                 "auth": "none",
                 "users": "none",
             },

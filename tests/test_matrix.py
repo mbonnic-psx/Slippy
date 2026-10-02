@@ -13,7 +13,7 @@ import json
 import subprocess
 import tempfile
 
-from support import FactoryTestCase, backends_under_test, offering, targeting
+from support import FactoryTestCase, backends_under_test, offered, offering, targeting
 
 from slipwai.catalog import CATALOG, axis_default
 
@@ -82,8 +82,8 @@ class MatrixTest(FactoryTestCase):
                         "none",
                         event_store=store,
                         http=transport,
-                        auth="keycloak",
-                        users="keycloak",
+                        auth=offered("auth", language, "keycloak"),
+                        users=offered("users", language, "keycloak"),
                     )
                     subprocess.run(["make", "verify"], cwd=repo, check=True)
 

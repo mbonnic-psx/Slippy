@@ -13,6 +13,7 @@
       "typescript": "fastify",
       "python": "fastapi",
       "go": "net-http",
+      "rust": "axum",
       "java-quarkus": "quarkus-rest",
       "java-spring": "spring-web"
     },
@@ -288,6 +289,7 @@
             "typescript",
             "python",
             "go",
+            "rust",
             "java-quarkus",
             "java-spring"
           ],
@@ -395,6 +397,27 @@
           ],
           "backends": [
             "java-spring"
+          ],
+          "targets": [
+            "none",
+            "existing",
+            "aws",
+            "azure"
+          ]
+        },
+        "axum": {
+          "capabilities": [
+            "http-axum"
+          ],
+          "containers": [],
+          "migrations": false,
+          "integration-suite": false,
+          "label": "axum — JSON API on tokio, with the browser hardening and a request span, held to a hand-written openapi.yaml; the in-process router tests prove the routes, not a socket or a collector",
+          "features": [
+            "axum"
+          ],
+          "backends": [
+            "rust"
           ],
           "targets": [
             "none",

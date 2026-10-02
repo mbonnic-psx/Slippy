@@ -8,7 +8,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from support import FactoryTestCase
+from support import FactoryTestCase, offered
 
 from slipwai.assets import (
     BACKING_SERVICE_ROOT,
@@ -56,8 +56,8 @@ class PruningTest(FactoryTestCase):
                     "react-vite",
                     event_store=stores[-1],
                     http=transports[0],
-                    auth="keycloak",
-                    users="keycloak",
+                    auth=offered("auth", backend, "keycloak"),
+                    users=offered("users", backend, "keycloak"),
                 )
                 # Resolved rather than listed by name: a Python service's entry point is inside a package
                 # directory named after the project, so its row in the table can only be a pattern.

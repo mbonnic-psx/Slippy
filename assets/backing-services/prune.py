@@ -44,6 +44,7 @@ from pathlib import Path
 # Every marker feature this script knows how to prune. A feature owns files and marked regions; an axis
 # option is answered *with* a set of features. The factory asserts this tuple against its catalog.
 FEATURES = (
+    "axum",
     "fastapi",
     "fastify",
     "keycloak",
@@ -171,6 +172,17 @@ AXES: dict[str, dict] = {
                     "Dropping this drops Actuator with it, so the project loses its readiness probe as "
                     "well as its routes — there is no hand-written /health to fall back to, on purpose."
                 ),
+            },
+            "axum": {
+                "capabilities": ("http-axum",),
+                "features": ("axum",),
+                "targets": ("none", "existing", "aws", "azure"),
+                "label": (
+                    "axum — JSON API on tokio, with the browser hardening and a request span, held to a "
+                    "hand-written openapi.yaml; the in-process router tests prove the routes, not a socket "
+                    "or a collector"
+                ),
+                "note": "",
             },
             "none": {
                 "capabilities": (),
@@ -556,6 +568,11 @@ OWNED_FILES: dict[str, dict[str, tuple[str, ...]]] = {
         # at a file that is not there fails every target `build-packages` is a prerequisite of.
         "any": ("packages/api-client",),
         "java": (),
+    },
+    # Rust's files are named when the pruner is taught to take the transport away; until then the feature
+    # owns only what every transport owns, the typed client generated from its document.
+    "axum": {
+        "any": ("packages/api-client",),
     },
     "net-http": {
         "typescript": (),

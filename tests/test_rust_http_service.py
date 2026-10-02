@@ -67,6 +67,9 @@ class GeneratedServiceTest(FactoryTestCase):
     def test_the_checked_environment_is_held_by_its_own_tests(self) -> None:
         self.cargo_test("config::tests", at_least=11)
 
+    def test_one_span_per_request_is_held_by_its_own_tests(self) -> None:
+        self.cargo_test("observability::tests", at_least=12)
+
 
 class GeneratedEnvironmentTest(FactoryTestCase):
     """R5: `.env.example` carries the transport's keys, and each store's in its own region — all of them read."""

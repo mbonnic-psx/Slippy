@@ -37,6 +37,8 @@ RUST_WRITE_SIDE: dict[str, dict[str, str]] = {
         # The environment's one struct, read and checked before anything binds. A module of its own because
         # `src/bin/serve.rs` is the one file with no test, and checking the environment is a rule.
         "src/config.rs": "config.rs",
+        # The SDK's wiring, under the transport: a span per request is what only a transport produces.
+        "src/observability.rs": "observability.rs",
     },
 }
 

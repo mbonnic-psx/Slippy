@@ -192,6 +192,18 @@ class SeveralServicesTest(FactoryTestCase):
         self.assertIn("`make demo`", two)
         self.assertNotIn("share one `target/`", one)
 
+    def test_the_shared_target_sentence_counts_the_rust_services_that_serve(self) -> None:
+        """R8 says two Rust services *with a transport*: one that serves beside one that does not has no second dev
+        server to contend with, so it is told nothing — whichever order they are in."""
+        serving = selected("rust", http="axum")
+        quiet = selected("rust", http="none")
+        for first, second in ((serving, quiet), (quiet, serving)):
+            apps = add_service(default_apps("rust", "none", first), "payments", "rust", second)
+            skill = project_files("mixed", "event-modelling", "none", apps)["skills/run-the-app/SKILL.md"]
+
+            self.assertNotIn("share one `target/`", skill)
+            self.assertNotIn("Two Rust services", skill)
+
     def test_a_rust_service_beside_a_go_one_gets_its_own_container_port_and_dev_target(self) -> None:
         apps = add_service(
             default_apps("rust", "none", selected("rust", http="axum")),

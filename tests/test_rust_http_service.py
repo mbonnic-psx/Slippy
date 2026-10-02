@@ -169,7 +169,12 @@ mod accepted_by_the_events_module {
         tokio::runtime::Builder::new_current_thread().build().expect("a runtime").block_on(async {
             use tower::ServiceExt;
             let response = router
-                .oneshot(axum::http::Request::builder().uri("/seen").body(axum::body::Body::empty()).expect("a request"))
+                .oneshot(
+                    axum::http::Request::builder()
+                        .uri("/seen")
+                        .body(axum::body::Body::empty())
+                        .expect("a request"),
+                )
                 .await
                 .expect("a response");
             assert_eq!(response.status(), 200);

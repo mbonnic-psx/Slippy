@@ -129,7 +129,8 @@ class EntryPointTest(FactoryTestCase):
         with tempfile.TemporaryDirectory() as directory:
             for profile, store in ANSWERS:
                 repo = self.generate_answered(directory, profile, store)
-                admitted = re.search(r"BINARIES: \[&str; \d+\] = \[(.*?)\]", (repo / "apps/service/src/observability.rs").read_text())
+                source = (repo / "apps/service/src/observability.rs").read_text()
+                admitted = re.search(r"BINARIES: \[&str; \d+\] = \[(.*?)\]", source)
                 self.assertIsNotNone(admitted)
                 assert admitted is not None
                 binaries = sorted((repo / "apps/service/src/bin").glob("*.rs"))

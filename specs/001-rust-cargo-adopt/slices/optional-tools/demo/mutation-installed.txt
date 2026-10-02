@@ -1,0 +1,10 @@
+$ make -f delivery/Makefile mutation   # cargo-mutants 27.1.0 installed
+cargo mutants
+Found 0 mutants to test
+ WARN No mutants found under the active filters
+exit=0
+$ ls -d mutants.out*
+mutants.out
+$ git status --short --ignored | grep -v "^!! target"
+?? Cargo.lock
+!! mutants.out/

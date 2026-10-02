@@ -164,3 +164,80 @@
 - **Confidence:** medium · **Would reverse if:** the owner wants the fallback for every ecosystem pair, not only a Cargo workspace — a change to existing answers, a slice of its own
 - **Written to:** specs/001-rust-cargo-adopt/slices/workspace/tasks.md, specs/001-rust-cargo-adopt/adversary-log.md, specs/001-rust-cargo-adopt/decisions.md
 - **Status:** standing
+
+## D16 — Kick-off: what is this run for?
+- **Stage:** kick-off · **Slice:** none · **When:** 2026-10-01T19:37:07Z · **Iteration:** 2
+- **Question:** The run was started as `/cruise Rust issues`; which work does that scope?
+- **Options:** the fork's two open Rust issues, #10 first (the slices left in this feature: `optional-tools`, `toolchain-pin`, `ci-toolchain`), then #11 (Rust answers every axis) as a specification of its own (recommended) · #10 only · #11 only
+- **Decision:** Both open Rust issues, in order: finish #10 through this feature's split, then bring #11 in as feature `002` through the ladder's own stages, the issue as its brief. #15 and #22 are not Rust issues and are not taken; #22 is being fixed beside this run (`slice-scope-root-application`).
+- **Why:** The kick-off, `/cruise Rust issues`, read by the host: "Rust issues" names the issues, plural; #10 is half-built and its remaining slices are ready, and #11's own text orders its work.
+- **Decided by:** human
+- **Confidence:** medium · **Would reverse if:** the person meant only one of the two issues, or wants #15 taken with them
+- **Written to:** specs/001-rust-cargo-adopt/decisions.md
+- **Status:** standing
+
+## D17 — Slice branches: `slice/<id>` while #22 refuses every file of a root application?
+- **Stage:** ready set · **Slice:** optional-tools, toolchain-pin · **When:** 2026-10-01T19:37:07Z · **Iteration:** 2
+- **Question:** `slipwai` is recorded at path `.`, and `check-slice-scope` on a `slice/<id>` branch refuses every file under a root application (#22), so a slice that changes `src/slipwai/` cannot pass `make verify` there.
+- **Options:** claim with `slice/<id>` and do the work on a feature-named branch, as #18 and #20 did, holding the shared-surface rule by brief (recommended) · park until #22 lands · edit the gate (not available: the catastrophic list)
+- **Decision:** Claim with a `slice/<id>` ref; work and push on `001-rust-cargo-adopt-<id>`; each delegate's brief carries the shared-surface rule.
+- **Why:** The precedent of this feature's two merged slices (PRs #18 and #20); the gate is fixed in the factory, not here, and the fix is in flight.
+- **Decided by:** host (stage recommendation)
+- **Confidence:** high · **Would reverse if:** #22's fix lands on `main` before these slices push — then they move to `slice/<id>`
+- **Written to:** specs/001-rust-cargo-adopt/decisions.md
+- **Status:** standing
+
+## D18 — Gaps: a Cargo candidate with a `deny.toml`; what audit command does the survey propose?
+- **Stage:** slice gaps · **Slice:** optional-tools · **When:** 2026-10-01T20:00:00Z · **Iteration:** 2
+- **Question:** When a Cargo candidate carries a `deny.toml` beside its manifest (US1 scenario 3, FR-003), what audit is proposed? Plain `cargo deny check` runs all four checks (advisories, bans, licenses, sources), a section the file leaves out running on its defaults; with cargo-deny 0.20.2 a `deny.toml` holding only `[advisories]` exited 4, `licenses FAILED`, on an unlicensed crate.
+- **Options:** (a) `cargo deny check`, as the spec text says (recommended by the gaps pass) · (b) `cargo deny check advisories`, as the factory's generated Rust projects run · (c) `cargo deny --locked check advisories`
+- **Decision:** (b). Audit is `cargo deny check advisories`, in the candidate's own directory (FR-004), with `--workspace` at a workspace root (D20); no `deny.toml`, a written no-answer (FR-003). US1 scenario 3's "Then" reads `cargo deny check advisories`; FR-003 is unchanged.
+- **Why:** The constitution's audit is a dependency vulnerability scan — the Platform row's `audited` rung means a known-exploitable critical finding blocks release (§IX) — and every other ecosystem's proposed audit is exactly that (`npm audit --audit-level=critical`, `pip-audit`, `composer audit`, … in `src/slipwai/ecosystems/rows.py`); licence, ban and source rules are policy. (a) proposes a command red on day one for sections the maintainer never configured, and lifts their rung to `audited` on a target red for licence reasons, which `verify` never runs to show. (c) puts `--locked` on one proposal when only install carries it (D10, D11). A maintainer who wants the whole policy widens it with one override.
+- **Decided by:** drive-skipper (claude-opus-5-5[1m])
+- **Confidence:** high · **Would reverse if:** the owner wants an adopted repository's audit to apply its whole `deny.toml` policy rather than vulnerabilities alone — which would redefine what `audited` claims for every ecosystem
+- **Written to:** specs/001-rust-cargo-adopt/spec.md, specs/001-rust-cargo-adopt/decisions.md
+- **Status:** standing
+
+## D19 — Gaps: where does the survey look for a Cargo candidate's toolchain pin, and what does the record carry for `ci-toolchain`?
+- **Stage:** slice gaps · **Slice:** toolchain-pin · **When:** 2026-10-01T19:44:15Z · **Iteration:** 2
+- **Question:** For a Cargo candidate (FR-005, US2 scenarios 1–3), is `rust-toolchain` / `rust-toolchain.toml` read only in the candidate's own directory, as the sibling rows read their pins, or walking up toward the repository root as rustup does? And what must the record carry for `ci-toolchain` (FR-007), where `actions-rust-lang/setup-rust-toolchain` reads a toolchain file only at the repository root and ignores it whenever a `toolchain` input is given?
+- **Options:** (a) the candidate's own directory only · (b) walk up from the candidate's directory to the repository root and stop there, nearest file wins (recommended by the gaps pass); for the hand-over: the version string only · the version plus whether the pin was found at the root
+- **Decision:** (b), version string only. The survey looks in the candidate's directory, then each parent up to and including the repository root, never above; the first directory holding a toolchain file decides and the search stops there (D21 says which file wins within it and what is read). A file that names no channel records an empty version and does not search further; no file anywhere on the way up, an empty version (US2 scenario 3). The record keeps its shape, `{"kind": "rust", "version": "<pin or empty>"}`: no new field, no new published contract. Other ecosystems keep reading their own directory (SC-004). `ci-toolchain` gets the recorded version as its one input — a non-empty version can go to the action's `toolchain` input wherever the file sits — and its map owns the step's exact text, including the components the gate needs once the file is ignored.
+- **Why:** The gate runs `cd <dir> && cargo …`, and from there rustup walks up and builds with the nearest pin; recording anything else names a toolchain the build does not use. For the Tauri shape (WG5) the pin commonly sits at the root above `src-tauri`, and (a) would record no pin for a repository that has one — CI would install a default and fail on the first push, the failure US2 exists to prevent. Stopping at the root keeps the answer inside the checked-out tree, so `adopt --refresh` stays a no-op (Principle II). A "found at root" flag would be a new field and go stale the moment the maintainer overrides the version.
+- **Decided by:** drive-skipper (claude-opus-5-5[1m])
+- **Confidence:** high · **Would reverse if:** `ci-toolchain` finds no setup step can be written correctly from the version alone (components or targets only the file lists, dropped by the action and not installed by rustup on use) — then where the pin was found is a needed fact, and adding it is an ADR first
+- **Written to:** specs/001-rust-cargo-adopt/spec.md, specs/001-rust-cargo-adopt/decisions.md
+- **Status:** standing
+
+## D20 — Gaps: which configuration files make audit and mutation appear, and how do they cover a workspace?
+- **Stage:** slice gaps · **Slice:** optional-tools · **When:** 2026-10-01T19:46:00Z · **Iteration:** 2
+- **Question:** cargo-deny reads `deny.toml`, `.deny.toml` or `.cargo/deny.toml`, from the directory it runs in and each one above; cargo-mutants reads `.cargo/mutants.toml` at the workspace root only, never a member's and never a bare `mutants.toml` (cargo-mutants 27.1.0, probed); at a root that is both `[workspace]` and `[package]`, `cargo mutants` mutates only the root package unless given `--workspace`. Which files count, and what do the commands carry?
+- **Options:** FR-003's `deny.toml` beside the manifest only · any of cargo-deny's three names in the candidate's directory, mutation from `.cargo/mutants.toml` there, `--workspace` on both at a workspace root, no `--in-diff`, no missing-tool guard (recommended by the gaps pass)
+- **Decision:** The recommended set. Audit appears where the candidate's directory holds `deny.toml`, `.deny.toml` or `.cargo/deny.toml`; mutation where it holds `.cargo/mutants.toml`, the candidate's directory being its workspace root when it is one. A file only in a member, or only above the candidate, proposes nothing. Where the candidate declares a workspace (WG1) the commands are `cargo deny --workspace check advisories` and `cargo mutants --workspace`; otherwise `cargo deny check advisories` and `cargo mutants`; in a subdirectory, prefixed once (SG3). No `--in-diff` or Make variable, and no `command -v` guard, as the sibling rows record theirs. The existing fragment is amended rather than a new one written, and both fixtures stay unconfigured.
+- **Why:** The proposal has to be what the tool itself reads, or the maintainer is offered audit or mutation on a file the tool ignores and denied it on one the tool reads; `--workspace` is WG2's rule for the same reason. A missing tool fails `make audit` loudly (cargo exit 101) and nothing is baselined, since neither target is ratcheted. No release carried the old fragment's wording (Principle I).
+- **Decided by:** host (stage recommendation)
+- **Confidence:** high · **Would reverse if:** the owner wants a `deny.toml` at the repository root to count for a crate below it, which cargo-deny honours and this reading does not
+- **Written to:** specs/001-rust-cargo-adopt/spec.md, specs/001-rust-cargo-adopt/decisions.md
+- **Status:** standing
+
+## D21 — Gaps: which file wins, what is recorded for a channel that is not a version, and is `rust-version` a pin?
+- **Stage:** slice gaps · **Slice:** toolchain-pin · **When:** 2026-10-01T19:46:30Z · **Iteration:** 2
+- **Question:** rustup uses `rust-toolchain` over `rust-toolchain.toml` when both are in one directory ("for backwards compatibility", https://rust-lang.github.io/rustup/overrides.html); a channel may be `stable`, `nightly-2025-01-01` or `1.85-beta`, which `first_line` (strips a leading `v`) and `platform.numbers` would misread; `channel` and `path` are mutually exclusive; and `Cargo.toml`'s `rust-version` is an MSRV, though Node and Python fall back to their floors.
+- **Options:** FR-005's word order, dotted versions only, `rust-version` as a fallback · `rust-toolchain` first, the channel recorded as written, `path` never recorded, `rust-version` not read (recommended by the gaps pass)
+- **Decision:** The recommended set. Within one directory `rust-toolchain` wins; its content is TOML where it starts with `[`, otherwise its first non-blank line, stripped, no leading `v` removed. `rust-toolchain.toml`'s `toolchain.channel` is read with `tomllib`. The version is the channel exactly as written; a table with no `channel`, a non-string one, a `path` toolchain, invalid TOML, an empty, oversize or non-regular file all record an empty version and never an error. `rust-version` is not read. The candidate's evidence stays `Cargo.toml`. Rust has no row in `support.json`, so the Platform row says nothing about a pin — out of scope here.
+- **Why:** The recorded value is what rustup and the setup action will consume, so it is rustup's reading or nothing; installing the MSRV would test a compiler the developers do not use.
+- **Decided by:** host (stage recommendation)
+- **Confidence:** high · **Would reverse if:** rustup is shown not to accept TOML in a `rust-toolchain` file (assumed), or the owner wants the MSRV recorded where no pin exists
+- **Written to:** specs/001-rust-cargo-adopt/spec.md, specs/001-rust-cargo-adopt/decisions.md
+- **Status:** standing
+
+## D25 — Phase 4: `make verify` is red in this clone for one changelog test; whose red is it?
+- **Stage:** after acceptance · **Slice:** optional-tools, toolchain-pin · **When:** 2026-10-01T22:05:00Z · **Iteration:** 2
+- **Question:** On both slice branches, and on the trunk checkout at `dc904ea`, `test_changelog.ChangelogTest.test_every_release_this_repository_has_ever_tagged_has_an_entry` fails: the clone holds tags `v1.4.0`, `v1.5.0` and `v1.5.1` fetched from the `upstream` remote (`git ls-remote --tags upstream` lists them; `origin` has none), and this fork's `CHANGELOG.md` has no entry for releases it never cut.
+- **Options:** park on the gate's own output · treat the tree as green where every other test passes and that one fails only for tags `origin` does not carry, and say so on each PR (recommended, D8's precedent) · delete the local tags (changes refs a person fetched; not taken)
+- **Decision:** The tree is green for this run: 920 and 930 tests, one failure each, that test, red on trunk the same way. Each PR says so; CI on the fork, which fetches no upstream tags, is the gate that decides. No test and no tag is changed.
+- **Why:** The failure is the clone's refs, not anything a maintainer running `slipwai` gets; it is red before either slice and identically after. Deleting tags a person fetched is not this run's to do.
+- **Decided by:** host (stage recommendation)
+- **Confidence:** high · **Would reverse if:** the fork's CI fails the same test, or a person wants the fork to carry upstream's release entries
+- **Written to:** specs/001-rust-cargo-adopt/decisions.md
+- **Status:** standing

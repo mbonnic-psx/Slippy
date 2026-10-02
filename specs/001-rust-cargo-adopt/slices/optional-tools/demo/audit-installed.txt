@@ -1,0 +1,4 @@
+$ make -f delivery/Makefile audit   # cargo-deny 0.20.2 installed
+cargo deny check advisories
+advisories ok
+exit=0

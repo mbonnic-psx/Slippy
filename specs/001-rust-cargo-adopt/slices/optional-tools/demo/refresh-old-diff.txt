@@ -1,0 +1,46 @@
+diff --git a/delivery/Makefile b/delivery/Makefile
+index 7b1ac86..0442a12 100644
+--- a/delivery/Makefile
++++ b/delivery/Makefile
+@@ -76,9 +76,9 @@ test-integration: ## Run native integration tests (an empty integration suite is
+ adversarial: ## Re-run tests named or tagged adversarial
+ 	@echo 'r-old: no adversarial command recorded in project.json (.)'
+ mutation: ## Run native mutation testing, or explain the missing project decision
+-	@echo 'r-old: no mutation command recorded in project.json (.)'
++	cargo mutants
+ audit: ## Run the ecosystem-native dependency vulnerability audit
+-	@echo 'r-old: no audit command recorded in project.json (.)'
++	cargo deny check advisories
+ 
+ .PHONY: verify ci
+ verify: check-python lint typecheck check-imports check-migrations check-slice-scope check-extensions check-agents check-speckit check-codegraph check-ux-gates check-constitution check-benchmark check-decisions test check-convergence ## Full deterministic pre-commit gate
+diff --git a/delivery/docs/adoption.md b/delivery/docs/adoption.md
+index 8b31d3b..09a3044 100644
+--- a/delivery/docs/adoption.md
++++ b/delivery/docs/adoption.md
+@@ -21,8 +21,8 @@ Provenance: language `detected`, commands `detected`, kind `unrecorded`.
+ | `test` | `cargo test` |
+ | `integration` | *none recorded — a written no; the target passes and says so* |
+ | `adversarial` | *none recorded — a written no; the target passes and says so* |
+-| `audit` | *none recorded — a written no; the target passes and says so* |
+-| `mutation` | *none recorded — a written no; the target passes and says so* |
++| `audit` | `cargo deny check advisories` |
++| `mutation` | `cargo mutants` |
+ 
+ `rust` is a language this factory generates, so `add-service --language rust` can put a generated service beside the existing one, with every axis and gate a generated service has.
+ 
+diff --git a/project.json b/project.json
+index 8dfc74b..8ad1e56 100644
+--- a/project.json
++++ b/project.json
+@@ -27,8 +27,8 @@
+         "test": "cargo test",
+         "integration": null,
+         "adversarial": null,
+-        "audit": null,
+-        "mutation": null
++        "audit": "cargo deny check advisories",
++        "mutation": "cargo mutants"
+       },
+       "toolchain": {
+         "kind": "rust",

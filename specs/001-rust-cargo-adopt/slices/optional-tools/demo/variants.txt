@@ -1,0 +1,48 @@
+### none
+seeded (commit before adoption): Cargo.toml src/lib.rs
+adopt: adopted v-none with slipwai 1.4.0.dev0 — experimental: this ...
+  deployable v-none at '.': audit = null | mutation = null
+  .gitignore: ['mutants.out/', 'mutants.out.old/']
+
+### dotdeny
+seeded (commit before adoption): .deny.toml Cargo.toml src/lib.rs
+adopt: adopted v-dotdeny with slipwai 1.4.0.dev0 — experimental: th...
+  deployable v-dotdeny at '.': audit = "cargo deny check advisories" | mutation = null
+  .gitignore: ['mutants.out/', 'mutants.out.old/']
+
+### cargodeny
+seeded (commit before adoption): .cargo/deny.toml Cargo.toml src/lib.rs
+adopt: adopted v-cargodeny with slipwai 1.4.0.dev0 — experimental: ...
+  deployable v-cargodeny at '.': audit = "cargo deny check advisories" | mutation = null
+  .gitignore: ['mutants.out/', 'mutants.out.old/']
+
+### baremutants
+seeded (commit before adoption): Cargo.toml mutants.toml src/lib.rs
+adopt: adopted v-baremutants with slipwai 1.4.0.dev0 — experimental...
+  deployable v-baremutants at '.': audit = null | mutation = null
+  .gitignore: ['mutants.out/', 'mutants.out.old/']
+
+### ws_root
+seeded (commit before adoption): .cargo/mutants.toml Cargo.lock Cargo.toml README.md crates/ledger/Cargo.toml crates/ledger/src/lib.rs crates/report/Cargo.toml crates/report/src/lib.rs deny.toml
+adopt: adopted v-ws_root with slipwai 1.4.0.dev0 — experimental: th...
+  deployable v-ws-root at '.': audit = "cargo deny --workspace check advisories" | mutation = "cargo mutants --workspace"
+  .gitignore: ['mutants.out/', 'mutants.out.old/']
+
+### ws_member_only
+seeded (commit before adoption): Cargo.lock Cargo.toml README.md crates/ledger/.cargo/mutants.toml crates/ledger/Cargo.toml crates/ledger/deny.toml crates/ledger/src/lib.rs crates/report/Cargo.toml crates/report/src/lib.rs
+adopt: adopted v-ws_member_only with slipwai 1.4.0.dev0 — experimen...
+  deployable v-ws-member-only at '.': audit = null | mutation = null
+  .gitignore: ['mutants.out/', 'mutants.out.old/']
+
+### sub
+seeded (commit before adoption): crates/ledger/.cargo/mutants.toml crates/ledger/Cargo.toml crates/ledger/deny.toml crates/ledger/src/lib.rs
+adopt: adopted v-sub with slipwai 1.4.0.dev0 — experimental: this p...
+  deployable ledger at 'crates/ledger': audit = "cd crates/ledger && cargo deny check advisories" | mutation = "cd crates/ledger && cargo mutants"
+  .gitignore: ['mutants.out/', 'mutants.out.old/']
+
+### sub_above_only
+seeded (commit before adoption): .cargo/deny.toml .cargo/mutants.toml crates/ledger/Cargo.toml crates/ledger/src/lib.rs deny.toml
+adopt: adopted v-sub_above_only with slipwai 1.4.0.dev0 — experimen...
+  deployable ledger at 'crates/ledger': audit = null | mutation = null
+  .gitignore: ['mutants.out/', 'mutants.out.old/']
+

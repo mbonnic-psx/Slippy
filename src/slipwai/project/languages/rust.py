@@ -72,6 +72,12 @@ def service_files(event: bool, selection: Selection, target: str = "none") -> di
 ADAPTERS = """//! The adapters: `driven` implements the ports the application owns; `driving` is how a request reaches a use
 //! case, when this service has a way to be asked.
 """
+# What a service with a store and no transport has always been told, word for word: its tree is the one it had
+# before there was a transport, and a different sentence over the same two lines is a different file.
+ADAPTERS_DRIVEN_ONLY = """//! The adapters: `driven` implements the ports the application owns; a driving adapter, when this service has
+//! one, calls a use case.
+
+"""
 
 
 def region(feature: str, body: str) -> str:
@@ -90,7 +96,8 @@ def declare_adapters(files: dict[str, str]) -> None:
         # `driving` is the transport's, so it sits in the transport's region and is cut with the directory;
         # `driven` is the store's and is never cut, because the in-memory adapter cannot be pruned.
         declared = {"driven": "pub mod driven;\n", "driving": region(TRANSPORT, "pub mod driving;\n")}
-        files["src/adapters/mod.rs"] = ADAPTERS + "".join(declared[kind] for kind in kinds)
+        docs = ADAPTERS if "driving" in kinds else ADAPTERS_DRIVEN_ONLY
+        files["src/adapters/mod.rs"] = docs + "".join(declared[kind] for kind in kinds)
 
 
 def declare_modules(files: dict[str, str]) -> str:

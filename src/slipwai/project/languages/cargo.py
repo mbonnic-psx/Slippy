@@ -122,11 +122,20 @@ def dependencies(selection: Selection) -> str:
     return text
 
 
+# The whole section, comment and header, written only when something goes in it: a service with nothing to
+# dispatch a request with has no such table, and its manifest is the one it had before there was a transport.
+DEV_DEPENDENCIES_HEAD = """# What the service's own tests dispatch with. Like a transport's crates they sit in its marked region, so
+# `./init --http none` takes them out with the router they exercise.
+[dev-dependencies]
+"""
+
+
 def dev_dependencies(selection: Selection) -> str:
-    """The `[dev-dependencies]` the router's own tests need, in the transport's region."""
+    """The `[dev-dependencies]` section the router's own tests need, crates in the transport's region."""
     if not served(selection):
         return ""
-    return region(TRANSPORT, "".join(f"{name} = {spec}\n" for name, spec in sorted(TRANSPORT_DEV_CRATES.items())))
+    crates = region(TRANSPORT, "".join(f"{name} = {spec}\n" for name, spec in sorted(TRANSPORT_DEV_CRATES.items())))
+    return f"{DEV_DEPENDENCIES_HEAD}{crates}\n"
 
 
 def region(feature: str, body: str) -> str:

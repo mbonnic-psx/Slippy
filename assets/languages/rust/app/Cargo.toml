@@ -12,10 +12,6 @@ publish = false
 [dependencies]
 __DEPENDENCIES__
 
-# What the service's own tests dispatch with. Like a transport's crates they sit in its marked region, so
-# `./init --http none` takes them out with the router they exercise.
-[dev-dependencies]
 __DEV_DEPENDENCIES__
-
 [lints]
 workspace = true

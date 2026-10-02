@@ -51,7 +51,8 @@ OPEN_HEAD = """    // The event store this project answered the event-store ques
 """
 # The store's own names are imported inside its region, where they are used: a `use` line that is a plain path is one
 # the formatter never wraps, whatever the crate is called, and no import outside a region names a store the prune may
-# have taken away.
+# have taken away. Only the crate's own paths are imported there: the formatter sorts a block of `use` lines by path,
+# and where `sqlx` falls among them would depend on what the project is called.
 SQLITE = (
     "    use delivery_starter::adapters::driven::event_store_sqlite::SqliteEventStore;\n"
     "    drop(store);\n"
@@ -62,12 +63,11 @@ SQLITE = (
 POSTGRES = (
     "    use delivery_starter::adapters::driven::event_store_postgres::PostgresEventStore;\n"
     "    use delivery_starter::application::ports::events::default_tags_of;\n"
-    "    use sqlx::postgres::PgPoolOptions;\n"
     "    // The pool connects lazily, so this opens no socket while the process is starting: an unreachable\n"
     "    // database shows up as /ready answering 503, which is what it is. A bad connection string is a\n"
     "    // different thing and does stop the process, because nothing about it will get better on its own.\n"
     "    drop(store);\n"
-    "    let pool = PgPoolOptions::new().connect_lazy(&settings.database_url)?;\n"
+    "    let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy(&settings.database_url)?;\n"
     "    let store: Store = std::sync::Arc::new(StoreProbe(PostgresEventStore::from_pool(\n"
     "        pool,\n"
     "        default_tags_of(),\n"

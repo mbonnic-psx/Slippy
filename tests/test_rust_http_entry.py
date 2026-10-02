@@ -98,6 +98,17 @@ class EntryPointTest(FactoryTestCase):
                 with self.subTest(store=store):
                     self.holds_the_gate(self.generate_answered(directory, profile, store))
 
+    def test_formatting_does_not_depend_on_how_long_the_project_is_called(self) -> None:
+        """The crate is named after the project and its name opens every `use` line and some string literals, so a
+        line the formatter leaves alone for one name is one it wraps, or sorts differently, for another."""
+        with tempfile.TemporaryDirectory() as directory:
+            for profile, store in ANSWERS:
+                name = f"verify-{profile}-rust-react-vite-{store or 'none'}"
+                answers = {"event_store": store} if store is not None else {}
+                repo = self.generate(directory, name, profile, "rust", http="axum", **answers)
+                with self.subTest(project=name):
+                    self.cargo(repo, "fmt", "--check")
+
     def test_make_dev_answers_health_and_ready_and_stops_when_asked(self) -> None:
         """Proven by running, in isolation: a free port, a throwaway project, and only the process this test started
         is signalled — by the group it made, so `make`, `cargo` and the server are all and only what is stopped."""

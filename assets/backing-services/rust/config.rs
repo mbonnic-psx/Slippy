@@ -119,7 +119,7 @@ pub fn load_from(lookup: impl Fn(&str) -> Option<String>) -> Result<Config, Conf
         public_base_url,
         log_level: value("LOG_LEVEL", "info"),
         log_format: value("LOG_FORMAT", "json"),
-        otel_service_name: value("OTEL_SERVICE_NAME", "delivery-starter"),
+        otel_service_name: value("OTEL_SERVICE_NAME", env!("CARGO_PKG_NAME")),
         otel_exporter_otlp_endpoint,
         cors_allowed_origins: split_origins(&value("CORS_ALLOWED_ORIGINS", "")),
         // backing-service:sqlite:begin
@@ -218,7 +218,7 @@ mod tests {
             (config.log_level.as_str(), config.log_format.as_str()),
             ("info", "json")
         );
-        assert_eq!(config.otel_service_name, "delivery-starter");
+        assert_eq!(config.otel_service_name, env!("CARGO_PKG_NAME"));
         assert_eq!(config.otel_exporter_otlp_endpoint, "");
         assert!(config.cors_allowed_origins.is_empty());
     }

@@ -127,9 +127,13 @@ SYSROOT_CRATES = frozenset({"test", "std", "core", "alloc", "proc_macro"})
 # Every Rust keyword, strict and reserved, plus the path words: a package may not be named one, and a name that
 # is one cannot head a `use` line. The language's list, fixed by the edition.
 KEYWORDS = frozenset(
-    "as break const continue crate else enum extern false fn for if impl in let loop match mod move mut pub ref "
-    "return self static struct super trait true type unsafe use where while async await dyn abstract become box "
-    "do final macro override priv typeof unsized virtual yield try gen".split()
+    {
+        "as", "break", "const", "continue", "crate", "else", "enum", "extern", "false", "fn", "for", "if",
+        "impl", "in", "let", "loop", "match", "mod", "move", "mut", "pub", "ref", "return", "self", "static",
+        "struct", "super", "trait", "true", "type", "unsafe", "use", "where", "while", "async", "await", "dyn",
+        "abstract", "become", "box", "do", "final", "macro", "override", "priv", "typeof", "unsized", "virtual",
+        "yield", "try", "gen",
+    }
 )
 
 

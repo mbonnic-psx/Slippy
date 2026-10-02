@@ -1,4 +1,4 @@
-"""The entry point's two deadlines, proven by running the built binary: a drain that ends, and a header that must arrive.
+"""The entry point's two deadlines, proven by running the built binary: a drain that ends, a header that arrives.
 
 Isolated as `test_rust_http_entry` is: a free port, a throwaway project, and only the process this test started is
 signalled. A client that opens a connection and sends part of a request line is the one that holds a server open —
@@ -46,7 +46,12 @@ class RunningServiceTest(FactoryTestCase):
                 [str(target / "debug/serve")], cwd=service, env={**env, "PORT": str(port)},
                 stdout=log, stderr=subprocess.STDOUT, start_new_session=True,
             )
-        self.addCleanup(lambda: server.poll() is None and os.killpg(server.pid, signal.SIGKILL))
+
+        def reap() -> None:
+            if server.poll() is None:
+                os.killpg(server.pid, signal.SIGKILL)
+
+        self.addCleanup(reap)
         deadline = time.monotonic() + 30
         while time.monotonic() < deadline:
             try:

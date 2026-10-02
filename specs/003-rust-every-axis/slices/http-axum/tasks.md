@@ -741,3 +741,24 @@ here; the LOW rides in Phase 4.
 - [ ] T032 [US1] **LOW (Phase 4)** — after `./init --http none`, `.env.example` keeps `NODE_ENV`, `LOG_LEVEL`,
   `LOG_FORMAT` that nothing reads, and `src/adapters/mod.rs`'s comment still names `driving`; a fresh `--http none`
   has no `.env.example`. Cosmetic; R10 asks no byte equality.
+
+## Gate (2026-10-02, `7547d2d`)
+
+T015, run by the slice's host session:
+
+- **`make verify` green**: 941 tests, OK (8 skipped), `verify: all gates passed`, in a `git clone --no-tags` of the
+  worktree at `7547d2d` (so `test_changelog` ran green there; this checkout's local `v1.4.0`/`v1.5.0`/`v1.5.1` tags
+  make it red here only). The baseline before the slice was green the same way at `7e4291e` (888 tests).
+- **SC-003**: a generated standard Rust project (`--http` defaulted to `axum`), `make demo` on a first container
+  build reported `ledger-service-1 Healthy` after 215 s, inside the healthcheck's 320 s window; `/health` →
+  `{"status":"ok"}`, `/ready` → `{"status":"ready"}`, an unknown path → 404; `make demo-down` left no container.
+  `make dev` on the host is held by `tests/test_rust_http_entry.py` (both bodies, SIGTERM stop by PID).
+- **`make check-locks` could not run clean**: it stops in npm (`Cannot read properties of null (reading
+  'edgesOut')`) before uv and Go — and does the same at the base `7e4291e`, so the failure is this machine's npm, not
+  the slice. The nine Rust and six Go locks match their resolution (convergence pass 2, resolvers called directly);
+  the four uv locks are stale from upstream drift (T024).
+- **Not run**: the `make starters` before/after diff over every backend. The Rust `--http none` trees are held byte
+  for byte by `tests/test_rust_http_none.py`; every other backend's event-modelling tree differs from the base in the
+  shipped `scripts/backing-services.py`, which carries the `axum` rows (the shared pruner — Blocked question 1).
+
+T015 stays open for the `make starters` diff and a clean `make check-locks` on a machine whose npm resolves.

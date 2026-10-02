@@ -8,6 +8,7 @@ so a rule whose tests were not generated cannot pass as a filter that matched no
 """
 from __future__ import annotations
 
+import json
 import os
 import re
 import subprocess
@@ -15,7 +16,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from support import FactoryTestCase
+from support import FactoryTestCase, commit_all
+from test_add_service import add_service
 
 from slipwai.project.openapi import DOCUMENTS, EXPORTERS
 from slipwai.project.rules import API_CONTRACTS
@@ -229,3 +231,27 @@ class GeneratedEnvironmentTest(FactoryTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AddedServiceTest(FactoryTestCase):
+    def test_a_record_that_never_asked_the_transport_question_gives_the_new_service_no_transport(self) -> None:
+        """A Rust project recorded before it was asked the transport question has no `http` key, which reads as the
+        axis's `absent` (D2), so the service added beside its first one inherits that — not the catalog default."""
+        with tempfile.TemporaryDirectory() as directory:
+            repo = self.generate(directory, "older", "event-modelling", "rust", event_store="sqlite", http="none")
+            document = json.loads((repo / "project.json").read_text())
+            for deployable in document["deployables"].values():
+                deployable.get("selection", {}).pop("http", None)
+            (repo / "project.json").write_text(json.dumps(document, indent=2) + "\n")
+            commit_all(repo, "as recorded before the transport question")
+
+            result = add_service(repo, "payments")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            payments = json.loads((repo / "project.json").read_text())["deployables"]["payments"]
+            self.assertEqual(payments["selection"].get("http"), "none")
+            self.assertFalse((repo / "apps/payments/src/bin/serve.rs").exists())
+            # A flag still wins over the inherited answer.
+            commit_all(repo, "payments")
+            result = add_service(repo, "billing", "--http", "axum")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue((repo / "apps/billing/src/bin/serve.rs").is_file())

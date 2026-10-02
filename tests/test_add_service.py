@@ -121,28 +121,6 @@ class AddServiceTest(FactoryTestCase):
             self.assertIn("go.work", porcelain(repo))
             self.assertTrue((repo / "apps/payments/migrations/apply.py").is_file())
 
-    def test_a_record_that_never_asked_the_transport_question_gives_the_new_service_no_transport(self) -> None:
-        """A Rust project recorded before it was asked the transport question has no `http` key, which reads as the
-        axis's `absent` (D2), so the service added beside its first one inherits that — not the catalog default."""
-        with tempfile.TemporaryDirectory() as directory:
-            repo = self.generate(directory, "older", "event-modelling", "rust", event_store="sqlite", http="none")
-            document = json.loads((repo / "project.json").read_text())
-            for deployable in document["deployables"].values():
-                deployable.get("selection", {}).pop("http", None)
-            (repo / "project.json").write_text(json.dumps(document, indent=2) + "\n")
-            commit_all(repo, "as recorded before the transport question")
-
-            result = add_service(repo, "payments")
-            self.assertEqual(result.returncode, 0, result.stderr)
-            payments = json.loads((repo / "project.json").read_text())["deployables"]["payments"]
-            self.assertEqual(payments["selection"].get("http"), "none")
-            self.assertFalse((repo / "apps/payments/src/bin/serve.rs").exists())
-            # A flag still wins over the inherited answer.
-            commit_all(repo, "payments")
-            result = add_service(repo, "billing", "--http", "axum")
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertTrue((repo / "apps/billing/src/bin/serve.rs").is_file())
-
     def test_a_project_gains_a_first_and_a_second_browser_app_and_passes_its_gate(self) -> None:
         """A Go project generated with no frontend gets one; a TypeScript project with one gets a second,
         proxying to a second service. Each project's own `make verify` is the judge."""

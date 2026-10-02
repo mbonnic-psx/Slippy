@@ -56,7 +56,9 @@ class NoTransportBuildsTest(FactoryTestCase):
     def test_a_rust_project_with_no_transport_passes_its_own_gate_on_both_profiles(self) -> None:
         """Scenario 9's promised proof. Since the default became `axum`, nothing else builds a Rust project with no
         transport, so what `--http none` generates is held to the project's own `make verify` here."""
-        answers = (("standard", {}), ("event-modelling", {"event_store": "sqlite"}))
+        answers: tuple[tuple[str, dict[str, str]], ...] = (
+            ("standard", {}), ("event-modelling", {"event_store": "sqlite"}),
+        )
         with tempfile.TemporaryDirectory() as directory:
             for profile, axes in answers:
                 with self.subTest(profile=profile):

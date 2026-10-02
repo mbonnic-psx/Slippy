@@ -227,12 +227,12 @@ class StoreOpenTest(FactoryTestCase):
             target = Path(directory) / "target"
             postgres = self.generate(directory, "pg", "event-modelling", "rust", http="axum", event_store="postgres")
             sqlite = self.generate(directory, "lite", "event-modelling", "rust", http="axum", event_store="sqlite")
-            cases = (
+            cases: tuple[tuple[str, Path, dict[str, str], tuple[str, str]], ...] = (
                 ("postgres unset", postgres, {}, ("running", "503")),
                 ("postgres wrong scheme", postgres, {"DATABASE_URL": "mysql://db/app"}, ("stopped", "DATABASE_URL")),
-                ("postgres unparseable", postgres, {"DATABASE_URL": "postgres://db:nope/app"}, ("stopped", "DATABASE_URL")),
+                ("postgres unparseable", postgres, {"DATABASE_URL": "postgres://db:no/a"}, ("stopped", "DATABASE_URL")),
                 ("sqlite unset", sqlite, {}, ("running", "200")),
-                ("sqlite unopenable", sqlite, {"EVENT_STORE_PATH": "/nonexistent-dir/events.db"}, ("stopped", "sqlite")),
+                ("sqlite unopenable", sqlite, {"EVENT_STORE_PATH": "/no-dir/events.db"}, ("stopped", "sqlite")),
             )
             for label, repo, extra, (outcome, expected) in cases:
                 with self.subTest(case=label):

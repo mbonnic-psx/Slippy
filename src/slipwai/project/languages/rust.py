@@ -12,7 +12,8 @@ from ..backing_services import backing_service_service_files
 from ..composition import wire_store
 from ..flag_route import wire_entry
 from ..flags import flag_reader
-from .cargo import lock, with_dependencies
+from ..rust_layouts import RUST_WRITE_SIDE
+from .cargo import TRANSPORT, lock, with_dependencies
 
 # The toolchain every Rust service in a project builds with, pinned in `rust-toolchain.toml` at the root so
 # rustup installs exactly this on a laptop, in a container and in CI, with the components the gate runs.
@@ -40,6 +41,12 @@ TEMPLATE = "delivery-starter"
 # the selection and the target, so the list is computed from the files actually present.
 MODULES = "__MODULES__"
 TOP_LEVEL_MODULE = re.compile(r"^src/(\w+)(?:\.rs|/mod\.rs)$")
+# The top-level modules only the transport adds — `adapters` is the store's too — which `src/lib.rs` declares inside
+# the transport's region, so taking the transport away takes the declaration with the file. Read off the layout
+# table, where the files are named, rather than listed a second time.
+TRANSPORT_MODULES = frozenset(
+    match.group(1) for path in RUST_WRITE_SIDE[TRANSPORT] if (match := TOP_LEVEL_MODULE.match(path))
+)
 
 
 def service_files(event: bool, selection: Selection, target: str = "none") -> dict[str, str]:
@@ -60,10 +67,15 @@ def service_files(event: bool, selection: Selection, target: str = "none") -> di
     return files
 
 
+# No blank line after the docs: a service whose every adapter is pruned away is left with the docs alone, and a
+# trailing blank line is what the formatter objects to.
 ADAPTERS = """//! The adapters: `driven` implements the ports the application owns; `driving` is how a request reaches a use
 //! case, when this service has a way to be asked.
-
 """
+
+
+def region(feature: str, body: str) -> str:
+    return f"// backing-service:{feature}:begin\n{body}// backing-service:{feature}:end\n"
 
 
 def declare_adapters(files: dict[str, str]) -> None:
@@ -75,7 +87,10 @@ def declare_adapters(files: dict[str, str]) -> None:
     """
     kinds = [kind for kind in ("driven", "driving") if any(path.startswith(f"src/adapters/{kind}/") for path in files)]
     if kinds:
-        files["src/adapters/mod.rs"] = ADAPTERS + "".join(f"pub mod {kind};\n" for kind in kinds)
+        # `driving` is the transport's, so it sits in the transport's region and is cut with the directory;
+        # `driven` is the store's and is never cut, because the in-memory adapter cannot be pruned.
+        declared = {"driven": "pub mod driven;\n", "driving": region(TRANSPORT, "pub mod driving;\n")}
+        files["src/adapters/mod.rs"] = ADAPTERS + "".join(declared[kind] for kind in kinds)
 
 
 def declare_modules(files: dict[str, str]) -> str:
@@ -89,10 +104,13 @@ def declare_modules(files: dict[str, str]) -> str:
         {match.group(1) for path in files if (match := TOP_LEVEL_MODULE.match(path))} - {"lib", "main"}
     )
     # The contract suites are what every adapter's tests run, and nothing else: compiled for tests only.
-    lines = "".join(
-        f"#[cfg(test)]\npub mod {module};\n" if module.endswith("_contract") else f"pub mod {module};\n"
-        for module in found
-    )
+    def declaration(module: str) -> str:
+        if module.endswith("_contract"):
+            return f"#[cfg(test)]\npub mod {module};\n"
+        line = f"pub mod {module};\n"
+        return region(TRANSPORT, line) if module in TRANSPORT_MODULES else line
+
+    lines = "".join(declaration(module) for module in found)
     return files["src/lib.rs"].replace(f"{MODULES}\n", lines)
 
 

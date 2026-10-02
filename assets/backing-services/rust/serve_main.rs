@@ -83,8 +83,8 @@ __STORE_OPEN__
     // and `security::secure` carries the headers a browser is told to enforce and the answer to whether this
     // origin may ask at all. The router a test drives is the routes and nothing else — instrumentation a test
     // has to install proves nothing — and a preflight is a question no route has an answer to.
-    let app = observability::instrument(security::secure(
-        build_app(vec![readiness(__STORE_ARGUMENT__)]),
+    let app = observability::instrument(http::security::secure(
+        http::build_app(vec![http::readiness(__STORE_ARGUMENT__)]),
         settings.cors_allowed_origins.clone(),
     ));
 

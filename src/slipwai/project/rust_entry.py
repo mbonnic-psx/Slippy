@@ -9,22 +9,22 @@ warning-free in both states the pruner leaves behind — rustc warns on an assig
 binding shadowed before it is used, and the gate runs clippy with `-D warnings` — so a project generated with
 SQLite and one pruned to the in-memory store both build clean.
 
-No import sits inside a marked region: the formatter sorts a block of `use` lines and would carry a marker
-comment to wherever its line sorted. The store's own types are named by their path where they are used, inside
-the region, and every import is one the entry point uses whatever the pruner leaves.
+No import at the top of the file sits inside a marked region: the formatter sorts a block of `use` lines and would
+carry a marker comment to wherever its line sorted. The store's own names are imported in the region, inside the
+function, and every import at the top is one the entry point uses whatever the pruner leaves.
 """
 from __future__ import annotations
 
 from .entry_stores import STORED, EntryStore, marked
 
-# The one block of imports, per answer, in the order the formatter writes them.
-NO_STORE_IMPORTS = """use delivery_starter::adapters::driving::http::{build_app, readiness, security};
+# The one block of imports, per answer, in the order the formatter writes them. The adapter's module is imported and
+# its items named through it, so no line is long enough for the formatter to wrap — which it would for one project
+# name and not for another, since the crate's name is the first thing on the line.
+NO_STORE_IMPORTS = """use delivery_starter::adapters::driving::http;
 use delivery_starter::{config, observability};
 """
 STORE_IMPORTS = """use delivery_starter::adapters::driven::event_store_memory::InMemoryEventStore;
-use delivery_starter::adapters::driving::http::{
-    ProbeFuture, ReadinessProbe, build_app, readiness, security,
-};
+use delivery_starter::adapters::driving::http;
 use delivery_starter::application::ports::events::EventStore;
 use delivery_starter::{config, observability};
 
@@ -33,13 +33,13 @@ use delivery_starter::{config, observability};
 /// here, because this is the one place that knows both the port and the adapter — the adapter imports no port.
 struct StoreProbe<S>(S);
 
-impl<S: EventStore + 'static> ReadinessProbe for StoreProbe<S> {
-    fn check(&self) -> ProbeFuture<'_> {
+impl<S: EventStore + 'static> http::ReadinessProbe for StoreProbe<S> {
+    fn check(&self) -> http::ProbeFuture<'_> {
         Box::pin(async move { self.0.head().await.map(drop).map_err(Into::into) })
     }
 }
 
-type Store = std::sync::Arc<dyn ReadinessProbe>;
+type Store = std::sync::Arc<dyn http::ReadinessProbe>;
 """
 OPEN_HEAD = """    // The event store this project answered the event-store question with, opened once, here, and handed to
     // whatever needs it. Nothing else in this service constructs one.
@@ -49,27 +49,29 @@ OPEN_HEAD = """    // The event store this project answered the event-store ques
     // because pruning only ever subtracts.
     let store: Store = std::sync::Arc::new(StoreProbe(InMemoryEventStore::new()));
 """
+# The store's own names are imported inside its region, where they are used: a `use` line that is a plain path is one
+# the formatter never wraps, whatever the crate is called, and no import outside a region names a store the prune may
+# have taken away.
 SQLITE = (
+    "    use delivery_starter::adapters::driven::event_store_sqlite::SqliteEventStore;\n"
     "    drop(store);\n"
     "    let store: Store = std::sync::Arc::new(StoreProbe(\n"
-    "        delivery_starter::adapters::driven::event_store_sqlite::SqliteEventStore::open(\n"
-    "            &settings.event_store_path,\n"
-    "        )\n"
-    "        .await?,\n"
+    "        SqliteEventStore::open(&settings.event_store_path).await?,\n"
     "    ));"
 )
 POSTGRES = (
+    "    use delivery_starter::adapters::driven::event_store_postgres::PostgresEventStore;\n"
+    "    use delivery_starter::application::ports::events::default_tags_of;\n"
+    "    use sqlx::postgres::PgPoolOptions;\n"
     "    // The pool connects lazily, so this opens no socket while the process is starting: an unreachable\n"
     "    // database shows up as /ready answering 503, which is what it is. A bad connection string is a\n"
     "    // different thing and does stop the process, because nothing about it will get better on its own.\n"
     "    drop(store);\n"
-    "    let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy(&settings.database_url)?;\n"
-    "    let store: Store = std::sync::Arc::new(StoreProbe(\n"
-    "        delivery_starter::adapters::driven::event_store_postgres::PostgresEventStore::from_pool(\n"
-    "            pool,\n"
-    "            delivery_starter::application::ports::events::default_tags_of(),\n"
-    "        ),\n"
-    "    ));"
+    "    let pool = PgPoolOptions::new().connect_lazy(&settings.database_url)?;\n"
+    "    let store: Store = std::sync::Arc::new(StoreProbe(PostgresEventStore::from_pool(\n"
+    "        pool,\n"
+    "        default_tags_of(),\n"
+    "    )));"
 )
 
 RUST = EntryStore(

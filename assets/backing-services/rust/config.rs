@@ -330,8 +330,8 @@ mod tests {
             "orders"
         );
     }
-
     // backing-service:sqlite:begin
+
     #[test]
     fn the_sqlite_store_has_a_path_and_a_default_one() {
         assert_eq!(loaded(&[]).event_store_path, "./events.sqlite3");
@@ -341,8 +341,8 @@ mod tests {
         );
     }
     // backing-service:sqlite:end
-
     // backing-service:postgres:begin
+
     #[test]
     fn the_postgres_store_url_is_refused_unless_it_is_one() {
         // Empty is not refused — a service that cannot reach its store reports /ready as 503 rather than

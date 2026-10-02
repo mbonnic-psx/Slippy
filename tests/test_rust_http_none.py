@@ -6,6 +6,8 @@
 from __future__ import annotations
 
 import hashlib
+import os
+import subprocess
 import tempfile
 from pathlib import Path
 
@@ -48,3 +50,20 @@ class NoTransportIsTheTreeOfBeforeTest(FactoryTestCase):
                     if digest != before[path] and path not in NAMED_AND_PENDING | RE_RESOLVED
                 )
                 self.assertEqual(changed, [])
+
+
+class NoTransportBuildsTest(FactoryTestCase):
+    def test_a_rust_project_with_no_transport_passes_its_own_gate_on_both_profiles(self) -> None:
+        """Scenario 9's promised proof. Since the default became `axum`, nothing else builds a Rust project with no
+        transport, so what `--http none` generates is held to the project's own `make verify` here."""
+        answers = (("standard", {}), ("event-modelling", {"event_store": "sqlite"}))
+        with tempfile.TemporaryDirectory() as directory:
+            for profile, axes in answers:
+                with self.subTest(profile=profile):
+                    repo = self.generate(directory, f"quiet-{profile}", profile, "rust", http="none", **axes)
+                    self.assertFalse((repo / "apps/service/src/bin/serve.rs").exists())
+                    result = subprocess.run(
+                        ["make", "verify"], cwd=repo, text=True, capture_output=True,
+                        env={**os.environ, "CARGO_BUILD_JOBS": "2"},
+                    )
+                    self.assertEqual(result.returncode, 0, result.stdout[-3000:] + result.stderr[-3000:])

@@ -66,7 +66,7 @@ the service (T012), the factory's own suite and docs held to the new rows (T013)
 
 ## Phase 1: Setup — the Pin
 
-- [ ] T001 **Pin — characterise today's Rust no-transport tree on both profiles, and a migrate of a record with no
+- [x] T001 **Pin — characterise today's Rust no-transport tree on both profiles, and a migrate of a record with no
   `http` key, green before any production change** (plan *Pin* rows 1 and 2; scenarios 2 and 9 as the baseline they
   will later hold; the edge case *a project generated before this feature*).
   Files: `tests/test_rust_http.py` (new). No production file is touched. Not a
@@ -97,7 +97,7 @@ request, reads a checked environment, publishes an `openapi.yaml` a test holds t
 **Independent test**: generate a Rust project with `--http axum`, run its `make verify`, `make dev` and request
 `GET /health` and `GET /ready`; generate one with `--http none` and see the file set T001 recorded.
 
-- [ ] T002 [US1] **Rule R1 — Rust is asked the HTTP question** (scenario 1; FR-001 for `http`; D2). Depends on T001.
+- [x] T002 [US1] **Rule R1 — Rust is asked the HTTP question** (scenario 1; FR-001 for `http`; D2). Depends on T001.
   Files: `tests/test_rust_http.py`, `catalog.json`, `assets/backing-services/prune.py`, and
   only those existing suites the catalog change turns red, each edited to the new answer and nothing more (their
   structural flips are T013).
@@ -115,7 +115,7 @@ request, reads a checked environment, publishes an `openapi.yaml` a test holds t
   - REFACTOR: none expected; suite green.
   - Run: `make test TESTS="test_rust_http test_catalog test_axes"`.
 
-- [ ] T003 [US1] **Rule R2 — `--http none` is today's tree** (scenarios 2 and 9; edge case *generated before*).
+- [x] T003 [US1] **Rule R2 — `--http none` is today's tree** (scenarios 2 and 9; edge case *generated before*).
   Depends on T002.
   Files: `tests/test_rust_http.py`, and production files only if the RED exposes a difference (expected: none).
   - RED: on each profile, `--http none` generates exactly the file set T001 recorded and the same bytes as
@@ -129,7 +129,7 @@ request, reads a checked environment, publishes an `openapi.yaml` a test holds t
   - Run: `make test TESTS="test_rust_http"` (the cargo `make verify` test is the slow one; run it alone with
     `CARGO_BUILD_JOBS=2`).
 
-- [ ] T004 [US1] **Rule R9 — the manifest and the locks** (scenarios 5, 7 and 10; FR-006). Depends on T002. Moved
+- [x] T004 [US1] **Rule R9 — the manifest and the locks** (scenarios 5, 7 and 10; FR-006). Depends on T002. Moved
   ahead of R3 on purpose: the assets of T005 to T010 cannot compile in a generated project until the manifest and
   its lock carry axum's crates (see *Dependencies & execution order*).
   Files: `tests/test_rust_http.py`, `src/slipwai/project/languages/cargo.py`,
@@ -156,7 +156,7 @@ request, reads a checked environment, publishes an `openapi.yaml` a test holds t
   - Run: `make test TESTS="test_rust_http test_cargo test_rust_locks"` (use the names the suite actually has;
     `ls tests | grep -i "cargo\|lock"`).
 
-- [ ] T005 [US1] **Rule R3 — the adapter's routes** (scenario 3). Depends on T004.
+- [x] T005 [US1] **Rule R3 — the adapter's routes** (scenario 3). Depends on T004.
   Files: `tests/test_rust_http.py`, `assets/backing-services/rust/driving_mod.rs`,
   `assets/backing-services/rust/http_app.rs`, `src/slipwai/project/rust_layouts.py`,
   `src/slipwai/project/languages/rust.py`.
@@ -176,7 +176,7 @@ request, reads a checked environment, publishes an `openapi.yaml` a test holds t
   - REFACTOR: the routes' body constants in one place; `cargo clippy -D warnings` clean in the generated project.
   - Run: `make test TESTS="test_rust_http"` (factory) and, in the scratch project, `cargo test --locked --lib`.
 
-- [ ] T006 [US1] **Rule R4 — what a browser meets first** (scenario 3). Depends on T005 (same `mod.rs`, same layout
+- [x] T006 [US1] **Rule R4 — what a browser meets first** (scenario 3). Depends on T005 (same `mod.rs`, same layout
   table).
   Files: `tests/test_rust_http.py`, `assets/backing-services/rust/http_security.rs`,
   `assets/backing-services/rust/http_app.rs` (only the `pub mod security;` line),
@@ -193,7 +193,7 @@ request, reads a checked environment, publishes an `openapi.yaml` a test holds t
   - Run: `make test TESTS="test_rust_http"`; `cargo test --locked --lib adapters::driving::http::security` in the
     scratch project.
 
-- [ ] T007 [US1] **Rule R5 — the checked environment** (scenario 11). Depends on T006 (same layout table and
+- [x] T007 [US1] **Rule R5 — the checked environment** (scenario 11). Depends on T006 (same layout table and
   `lib.rs` module region).
   Files: `tests/test_rust_http.py`, `assets/backing-services/rust/config.rs`,
   `src/slipwai/project/rust_layouts.py`, `src/slipwai/project/languages/rust.py`,
@@ -210,7 +210,7 @@ request, reads a checked environment, publishes an `openapi.yaml` a test holds t
   - REFACTOR: one table of keys read by both the loader and the `.env.example`, if that reads better; clippy clean.
   - Run: `make test TESTS="test_rust_http"`; `cargo test --locked --lib config` in the scratch project.
 
-- [ ] T008 [US1] **Rule R6 — one span per request** (scenario 3). Depends on T007 (same layout table and
+- [x] T008 [US1] **Rule R6 — one span per request** (scenario 3). Depends on T007 (same layout table and
   `lib.rs` module region).
   Files: `tests/test_rust_http.py`, `assets/backing-services/rust/observability.rs`,
   `src/slipwai/project/rust_layouts.py`, `src/slipwai/project/languages/rust.py`.
@@ -224,7 +224,7 @@ request, reads a checked environment, publishes an `openapi.yaml` a test holds t
   - REFACTOR: none expected; clippy clean.
   - Run: `make test TESTS="test_rust_http"`; `cargo test --locked --lib observability` in the scratch project.
 
-- [ ] T009 [US1] **Rule R7 — the published contract** (scenario 12; D4). Depends on T008 (it reads the adapter's
+- [x] T009 [US1] **Rule R7 — the published contract** (scenario 12; D4). Depends on T008 (it reads the adapter's
   routes, written by T005, and shares the layout table).
   Files: `tests/test_rust_http.py`, `assets/backing-services/rust/openapi.yaml`,
   `assets/backing-services/rust/http_openapi.rs`, `src/slipwai/project/openapi.py`,
@@ -240,7 +240,7 @@ request, reads a checked environment, publishes an `openapi.yaml` a test holds t
   - Guard: break the document (rename a path), run, restore with `git checkout -- <path>`, to see the test fail.
   - Run: `make test TESTS="test_rust_http"`; `cargo test --locked --lib openapi` in the scratch project.
 
-- [ ] T010 [US1] **Rule R8 — the entry point, and running it** (scenario 4; SC-003; D5). Depends on T009 (it wires
+- [x] T010 [US1] **Rule R8 — the entry point, and running it** (scenario 4; SC-003; D5). Depends on T009 (it wires
   every module written before it).
   Files: `tests/test_rust_http.py`, `assets/backing-services/rust/serve_main.rs`,
   `src/slipwai/project/rust_entry.py` (new), `src/slipwai/project/composition.py`,
@@ -268,7 +268,7 @@ request, reads a checked environment, publishes an `openapi.yaml` a test holds t
   - REFACTOR: none expected; suite green, clippy clean.
   - Run: `make test TESTS="test_rust_http test_running"`.
 
-- [ ] T011 [US1] **Rule R10 — taking the transport away** (scenario 8). Depends on T010.
+- [x] T011 [US1] **Rule R10 — taking the transport away** (scenario 8). Depends on T010.
   Files: `tests/test_rust_http.py`, `assets/backing-services/prune.py`,
   `src/slipwai/project/languages/rust.py`, `src/slipwai/project/languages/cargo.py`,
   `assets/backing-services/rust/adapters_mod.rs` (or its replacement by `rust.py`'s computation).
@@ -287,7 +287,7 @@ request, reads a checked environment, publishes an `openapi.yaml` a test holds t
   - REFACTOR: none expected; suite green.
   - Run: `make test TESTS="test_rust_http test_prune"` (cargo verify per profile is slow; `CARGO_BUILD_JOBS=2`).
 
-- [ ] T012 [US1] **Rule R11 — a browser app beside a Rust service** (scenario 6). Depends on T009 and T011.
+- [x] T012 [US1] **Rule R11 — a browser app beside a Rust service** (scenario 6). Depends on T009 and T011.
   Files: `tests/test_rust_http.py`, and `src/slipwai/project/openapi.py`, `src/slipwai/project/rules.py`, or
   `assets/backing-services/prune.py` only if the RED shows a table row is missing.
   - RED: with `--frontend react-vite --http axum`, `packages/api-client` is generated from the Rust service's
@@ -298,7 +298,7 @@ request, reads a checked environment, publishes an `openapi.yaml` a test holds t
     `event-modelling` / `react-vite` row is the native proof (T013).
   - Run: `make test TESTS="test_rust_http"`.
 
-- [ ] T013 [US1] **Rule R12 — the factory holds Rust to the transport rows** (FR-007 for this slice).
+- [x] T013 [US1] **Rule R12 — the factory holds Rust to the transport rows** (FR-007 for this slice).
   Depends on T010, T011 and T012.
   Files: `tests/test_rust_http.py`, `tests/test_catalog.py`, `tests/test_matrix.py`, `tests/test_readiness.py`,
   `tests/test_running.py` (plus whatever the sweep below finds, named in the commit), `docs/axes.md`, `README.md`,
@@ -316,7 +316,7 @@ request, reads a checked environment, publishes an `openapi.yaml` a test holds t
   - Guard: the `make starters` before/after diff (every non-Rust tree identical) is recorded in T015, not here.
   - Run: `make test TESTS="test_rust_http test_catalog test_matrix test_readiness test_running"`.
 
-- [ ] T014 [P] [US1] **Rule R13 — the changelog** (FR-008; D2; D6). Depends on nothing from the other tasks; its
+- [x] T014 [P] [US1] **Rule R13 — the changelog** (FR-008; D2; D6). Depends on nothing from the other tasks; its
   wording is checked once T013 is done.
   Files: `changelog.d/rust-http-axum.md` (new), `changelog.d/rust-backend.md`, `changelog.d/rust-event-store.md`.
   Not a RED-GREEN increment: a fragment is a document and `tests/test_changelog.py` is its check.

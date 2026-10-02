@@ -56,6 +56,27 @@ request `GET /health` and `GET /ready`; generate one with `--http none` and see 
 6. **Given** a browser frontend beside a Rust `axum` service, **When** the project is generated, **Then** the
    frontend reaches it the way it reaches any other transport (the generated API client and the routes the
    frontend proxies), and `make verify` passes.
+7. **Given** `--profile standard --http axum` (no event store — the default Rust project after D2), **When** the
+   project is generated, **Then** its committed `Cargo.lock` accepts `--locked` and `make verify` passes: the lock
+   variants are {no store, `memory`, `memory`+`sqlite`, `memory`+`postgres`, `memory`+`sqlite`+`postgres`} ×
+   {axum, no transport}, and `scripts/regenerate-locks.py` makes every one of them.
+8. **Given** a generated Rust `axum` project, **When** the actor runs `./init --http none`, **Then** the project
+   that remains passes `make verify` and its `Cargo.lock` is re-locked without network, axum's crates gone from it:
+   every module the transport adds is declared inside a marked region, and the entry point, the config module,
+   `src/lib.rs` and `src/adapters/mod.rs` are listed for Rust in `MARKED_FILES_BY_LANGUAGE`, as Go's are.
+9. **Given** `--http none` on either profile, **When** the project is generated, **Then** its files are
+   byte-identical to what Rust generates today except `project.json`'s selection, which now records `http: none`,
+   and a factory test generates it and runs `make verify`.
+10. **Given** any Rust selection, **When** its manifest is written, **Then** `tokio` is declared once, with the
+    features axum and the store need together, never as a second key in a marked region.
+11. **Given** `--http axum`, **When** the service reads its environment, **Then** it reads the keys Go's transport
+    reads, with the same refusals — `HOST`, `PORT` (3000 by default), `PUBLIC_BASE_URL`, `LOG_LEVEL`, `LOG_FORMAT`,
+    `OTEL_SERVICE_NAME`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `CORS_ALLOWED_ORIGINS` — the store's keys staying in their
+    marked regions of `.env.example`; on the Standard profile `/ready` answers ready with no dependency to ask, as
+    Go's does.
+12. **Given** `--http axum`, **When** the OpenAPI document is checked, **Then** it is a committed, hand-written
+    `openapi.yaml` that a Rust test holds to the routes the router registers, as Go's is — no exporter, no
+    `check-openapi` recipe (D4).
 
 ---
 
@@ -185,6 +206,34 @@ are cloud-only, so they become reachable with US4 and US5); Rust's default trans
 project generated before (D2); what "every Rust combination" in the issue's *done when* is held by (FR-007,
 SC-002: the starters plus the matrix rows every backend has, not a full cross product no backend is run
 against). Each slice's own gaps pass runs at its own stage.
+
+`http-axum` (iteration 4): fourteen findings, scenarios 7–12 above and the lines below. Already answered in the
+tree, so the slice proves rather than adds them: `/health` answers `{"status":"ok"}` and readiness is `/ready`
+(`probes.py`), `dev_command` is `cargo run --locked --bin serve`, `COMPOSE_CACHES` holds cargo's registry, git and
+target directories (`backends.py`). Decided: D4 (the OpenAPI document), D5 (two Rust services' `serve` binaries),
+D6 (the unreleased Rust fragments). No control file changes; `scripts/regenerate-locks.py` does, and `make locks`
+needs cargo and network on whoever runs it.
+
+- **`/api/flags` and the flag wiring arrive with `aws`**: Rust's targets in this slice are `none` and `existing`,
+  neither managed, so the flag route, `ENTRY_WIRING['axum']` and the flagged document are slice 4's; the entry
+  point here carries no flag placeholder.
+- **The transport-keyed tables** this slice gives an `axum` (or `rust`) row, beside section 3's per-backend ones,
+  with Go's `net-http` rows as the pattern: `ENTRY_STORES`, `ENTRY_WIRING` (no flag, above), `DOCUMENTS`,
+  `API_CONTRACTS`, `ENV_FEATURES`, and in `prune.py` `FEATURES`, the `AXES` http option and its capability
+  `http-axum`, `OWNED_FILES` (with the `any: packages/api-client` entry), `OWNED_FILES_PER_WEB_APP`,
+  `APP_SERVICE_FEATURES` and `PACKAGE_EDITS['rust']`. With a browser app, `packages/api-client` is generated from
+  the Rust service's document (scenario 6).
+- **The factory suite this slice must move with it**: `TRANSPORTS['rust'] = 'axum'`; `PARTIAL['rust']` becomes
+  `{event-store, http}`; the matrix's maximal row gives Rust only the auth and users answers it is offered until
+  `users` lands; `test_catalog`'s default-project checks take Rust's `auth`/`users` as `none`; `test_readiness`
+  reads `.rs`; `test_running` has a Rust row.
+- **Locks, verifiably**: generation needs no network; a factory test holds each lock variant to contain every crate
+  its manifest names directly; the variants are refreshed with `make check-locks` before the PR, since no CI job
+  runs it.
+- **SC-003's window** is the Compose healthcheck's (`start_period` 20s, 60 retries at 5s): `make demo` reports the
+  service healthy within it on a first container build.
+- **FR-007's documents**: `docs/axes.md`'s `--http` row, its "every backend but Rust" sentence, Rust's coverage
+  row and the "what arrives" row, and `README.md`'s `--http` list name `axum`.
 
 ## Requirements *(mandatory)*
 

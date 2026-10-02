@@ -32,3 +32,47 @@
 - **Confidence:** high · **Would reverse if:** the lock is restructured so the identity crates live in a region of their own that two branches can add without conflict
 - **Written to:** specs/003-rust-every-axis/story-split.md, specs/003-rust-every-axis/decisions.md
 - **Status:** standing
+
+## D4 — Gaps: how is a Rust `axum` service's OpenAPI document produced and held?
+- **Stage:** slice gaps · **Slice:** http-axum · **When:** 2026-10-02T02:47:00Z · **Iteration:** 4
+- **Question:** The http obligations include an OpenAPI document and its test. Fastify and FastAPI export theirs from the framework (`EXPORTERS`, `make check-openapi`); Go's `net-http` commits a hand-written `openapi.yaml` that a test holds to the routes (`openapi.py`, `http_openapi_test.go`).
+- **Options:** (a) hand-written `openapi.yaml`, a Rust test holding it to the router's routes, as Go (recommended by the gaps pass) · (b) generated with utoipa, an `EXPORTERS` row and `check-openapi`
+- **Decision:** (a). The document is committed and hand-written; a test in the service holds its paths to the routes the router registers; no exporter, no `check-openapi` recipe, no YAML crate added for the test's sake.
+- **Why:** The parity bar is the backends that own no startup, and axum, like Go's mux, cannot list its own routes without a macro layer the other such backends do not carry; the person generating the service gets the same document and the same guarantee Go's user gets.
+- **Decided by:** host (stage recommendation)
+- **Confidence:** high · **Would reverse if:** the owner wants every backend's document generated from code, which would change Go's as well — a feature of its own
+- **Written to:** specs/003-rust-every-axis/spec.md, specs/003-rust-every-axis/decisions.md
+- **Status:** standing
+
+## D5 — Gaps: two Rust `axum` services in one workspace both build a `serve` binary; name them apart?
+- **Stage:** slice gaps · **Slice:** http-axum · **When:** 2026-10-02T02:47:30Z · **Iteration:** 4
+- **Question:** Rust services share one Cargo workspace and one `target/`, so two services' `serve` binaries collide in name (as their `migrate` binaries already do); running two `make dev` at once on the host can trip over it.
+- **Options:** accept it and say so in the generated docs (recommended by the gaps pass) · name each binary after its crate
+- **Decision:** Accept it: every service keeps a `serve` binary, `dev_command` stays `cargo run --locked --bin serve` run from the service's own package, and the generated Rust page says two services' dev servers are run one at a time on the host or through Compose, where each has its own container.
+- **Why:** `dev_command` is already recorded as `--bin serve` and the `migrate` binary already lives with the same shape; renaming one binary per crate changes a recorded command for a case `make demo` (one container per service) does not have.
+- **Decided by:** host (stage recommendation)
+- **Confidence:** medium · **Would reverse if:** a generated two-service Rust project's `make dev` fails rather than warns — then the binaries are named per crate
+- **Written to:** specs/003-rust-every-axis/decisions.md
+- **Status:** standing
+
+## D6 — Gaps: the unreleased Rust fragments say "no transport"; amend them or supersede them?
+- **Stage:** slice gaps · **Slice:** http-axum · **When:** 2026-10-02T02:47:45Z · **Iteration:** 4
+- **Question:** `changelog.d/rust-backend.md` says Rust has no transport and `rust-event-store.md` says axum comes next; assembled into 1.4.0 beside this slice's fragment they contradict it.
+- **Options:** amend the unreleased fragments (recommended by the gaps pass) · leave them and let the new fragment supersede
+- **Decision:** Amend them: the sentences that will be false at release are corrected in place, and this slice's own fragment says what `axum` adds.
+- **Why:** None of them has been released, so no reader has read them as a promise (Principle I); a release entry that contradicts itself is what the person upgrading would read. Feature 001's D20 amended its unreleased fragment the same way.
+- **Decided by:** host (standing decision 001/D20)
+- **Confidence:** high · **Would reverse if:** 1.4.0 is released before this slice merges — then the old lines are history and a new fragment supersedes them
+- **Written to:** specs/003-rust-every-axis/decisions.md
+- **Status:** standing
+
+## D7 — Release constraint: how does `http-axum` reach users, and what gates it?
+- **Stage:** release constraint · **Slice:** http-axum · **When:** 2026-10-02T02:48:00Z · **Iteration:** 4
+- **Question:** `release: flagged` asks every slice to land dark; the factory has no flag mechanism of its own.
+- **Options:** releasable on merge · held behind the `.dev` pre-release only `make release` turns into a release (recommended; 001's D7) · a coordinated deploy
+- **Decision:** Held behind the pre-release, exactly as feature 001's D7: a merge to `main` publishes a `1.4.0.dev<N>` snapshot installers pass over unless asked; a person merges the PR and a person runs `make release`. No flag file.
+- **Why:** That is this repository's dark launch; someone who generates with a released slipwai never meets a half-finished Rust transport, and the four later slices land behind the same gate.
+- **Decided by:** host (standing decision 001/D7)
+- **Confidence:** high · **Would reverse if:** the owner wants snapshots treated as releases
+- **Written to:** specs/003-rust-every-axis/slices/http-axum/plan.md, specs/003-rust-every-axis/decisions.md
+- **Status:** standing

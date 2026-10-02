@@ -46,12 +46,12 @@ class ReadinessTest(FactoryTestCase):
                     sources = "\n".join(
                         path.read_text()
                         for path in (repo / "apps/service").rglob("*")
-                        if path.is_file() and path.suffix in {".ts", ".py", ".go", ".java"}
+                        if path.is_file() and path.suffix in {".ts", ".py", ".go", ".java", ".rs"}
                     )
                     if ready_path(backend) == "/ready":
                         self.assertIn("/ready", sources, backend)
                         # Through the port's own `head`, never through an adapter and never as SQL.
-                        self.assertRegex(sources, r"[Ss]tore\.[Hh]ead\(", backend)
+                        self.assertRegex(sources, r"[Ss]tore\.[Hh]ead\(|self\.0\.head\(", backend)
                     else:
                         # The framework's readiness endpoint, which this project points at HEALTH_PATH.
                         self.assertIn("Readiness", sources, backend)
@@ -63,6 +63,7 @@ class ReadinessTest(FactoryTestCase):
             "typescript": ("src/main.ts", "openSqliteEventStore"),
             "python": ("src/ready_store_python/main.py", "open_sqlite_event_store"),
             "go": ("cmd/serve/main.go", "eventstoresqlite.Open"),
+            "rust": ("src/bin/serve.rs", "SqliteEventStore::open"),
         }
         with tempfile.TemporaryDirectory() as directory:
             for backend, (entry, opener) in entries.items():

@@ -5,7 +5,7 @@ import json
 import tempfile
 from unittest.mock import patch
 
-from support import FactoryTestCase
+from support import FactoryTestCase, offering
 
 from slipwai.assets import PRUNER, ROOT
 from slipwai.catalog import (
@@ -28,6 +28,7 @@ TRANSPORTS = {
     "typescript": "fastify",
     "python": "fastapi",
     "go": "net-http",
+    "rust": "axum",
     "java-quarkus": "quarkus-rest",
     "java-spring": "spring-web",
 }
@@ -70,9 +71,7 @@ class CatalogTest(FactoryTestCase):
                 "frontend": "react-vite",
                 "event-store": "postgres",
                 # One answer per backend, because the options themselves are per backend.
-                # Rust is not in the map yet: it answers only the axes `PARTIAL` names, and its default
-                # transport is spelled here until the generated-project checks that read the map follow.
-                "http": {**TRANSPORTS, "rust": "axum"},
+                "http": TRANSPORTS,
                 "auth": "none",
                 "users": "none",
             },
@@ -105,7 +104,7 @@ class CatalogTest(FactoryTestCase):
         # The transport default is per backend because the options are: Fastify is not something a Go
         # project can be given, so one flat answer would refuse to generate on two backends out of three.
         self.assertEqual(
-            {language: axis_default("http", language, "none") for language in ANSWERING},
+            {language: axis_default("http", language, "none") for language in offering("http")},
             TRANSPORTS,
         )
 
@@ -114,9 +113,12 @@ class CatalogTest(FactoryTestCase):
             for language, transport in transports.items():
                 repo = self.generate(directory, f"default-{language}", language=language)
                 selection = json.loads((repo / "project.json").read_text())["deployables"]["service"]["selection"]
-                self.assertEqual(
-                    selection, {"event-store": "postgres", "http": transport, "auth": "none", "users": "none"}, language
-                )
+                # A backend answers only the axes it is asked: an identity axis `PARTIAL` still names is one
+                # whose answer is `none` because it is not a question yet, and the record does not carry it.
+                answered = PARTIAL.get(language, {"event-store", "http", "auth", "users"})
+                expected = {"event-store": "postgres", "http": transport, "auth": "none", "users": "none"}
+                recorded = {axis: answer for axis, answer in expected.items() if axis in answered}
+                self.assertEqual(selection, recorded, language)
                 compose = (repo / "docker-compose.yml").read_text()
                 self.assertIn("postgres", compose)
                 # The axes stay independent: taking the event-store default does not bring an identity

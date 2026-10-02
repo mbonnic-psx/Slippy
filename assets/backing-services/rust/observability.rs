@@ -266,6 +266,27 @@ pub fn instrument(router: Router) -> Router {
     router.layer(middleware::from_fn(request_span))
 }
 
+/// The request method as it may be exported: one of the nine the standards define, and `_OTHER` for anything else,
+/// as OpenTelemetry's HTTP conventions say. A method is whatever token the client sent, so exporting it as sent
+/// puts a client-chosen string of any length into every span name and into the attribute's cardinality.
+fn known_method(method: &axum::http::Method) -> &'static str {
+    use axum::http::Method;
+    [
+        Method::CONNECT,
+        Method::DELETE,
+        Method::GET,
+        Method::HEAD,
+        Method::OPTIONS,
+        Method::PATCH,
+        Method::POST,
+        Method::PUT,
+        Method::TRACE,
+    ]
+    .iter()
+    .find(|known| *known == method)
+    .map_or("_OTHER", Method::as_str)
+}
+
 async fn request_span(request: Request, next: Next) -> Response {
     let parent = TraceContextPropagator::new().extract(&Headers(request.headers()));
     let route = request
@@ -273,7 +294,7 @@ async fn request_span(request: Request, next: Next) -> Response {
         .get::<MatchedPath>()
         .map_or("unmatched", MatchedPath::as_str)
         .to_owned();
-    let method = request.method().to_string();
+    let method = known_method(request.method());
     let name = format!("{method} {route}");
     let span = tracing::info_span!(
         "request",
@@ -476,6 +497,47 @@ mod tests {
             "{}",
             harness.written.text()
         );
+    }
+
+    #[tokio::test]
+    async fn a_method_outside_the_standard_nine_is_exported_as_other_and_never_as_sent() {
+        let harness = harness("info", "json");
+        let long = "X".repeat(3000);
+
+        for method in ["GET", "PATCH", "PURGE", "get", long.as_str()] {
+            let request = Request::builder()
+                .method(method)
+                .uri("/orders/1")
+                .body(Body::empty())
+                .expect("a request");
+            app().oneshot(request).await.expect("a response");
+        }
+
+        let spans = spans(&harness);
+        let seen: Vec<(String, String)> = spans
+            .iter()
+            .map(|span| {
+                let method = span
+                    .attributes
+                    .iter()
+                    .find(|attribute| attribute.key.as_str() == "http.request.method")
+                    .map(|attribute| attribute.value.to_string())
+                    .expect("a method attribute");
+                (span.name.to_string(), method)
+            })
+            .collect();
+        let expected: Vec<(String, String)> = [
+            ("GET /orders/{id}", "GET"),
+            ("PATCH /orders/{id}", "PATCH"),
+            ("_OTHER /orders/{id}", "_OTHER"),
+            ("_OTHER /orders/{id}", "_OTHER"),
+            ("_OTHER /orders/{id}", "_OTHER"),
+        ]
+        .iter()
+        .map(|(name, method)| ((*name).to_owned(), (*method).to_owned()))
+        .collect();
+        assert_eq!(seen, expected);
+        assert!(!harness.written.text().contains(&long));
     }
 
     #[tokio::test]

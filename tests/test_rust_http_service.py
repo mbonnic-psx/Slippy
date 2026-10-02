@@ -73,7 +73,7 @@ class GeneratedServiceTest(FactoryTestCase):
         self.cargo_test("config::tests", at_least=11)
 
     def test_one_span_per_request_is_held_by_its_own_tests(self) -> None:
-        self.cargo_test("observability::tests", at_least=18)
+        self.cargo_test("observability::tests", at_least=19)
 
     def test_the_published_contract_is_held_to_the_router_by_its_own_test(self) -> None:
         self.cargo_test("adapters::driving::http::openapi", at_least=2)

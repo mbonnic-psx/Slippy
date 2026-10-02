@@ -14,6 +14,10 @@ with the variable named. `openapi.yaml` is hand-written beside the service and a
 the router registers. `src/bin/serve.rs` binds the port, so `make dev`, the Compose `service` and `make demo`
 now exist for Rust, and the generated run page says two Rust services' dev servers share one `target/`.
 Each router rule is a `#[cfg(test)]` module dispatched through `Router::oneshot`, with no socket.
+The entry point bounds what a slow or silent client can hold: shutdown drains for at most 10s, a client has 5s to
+finish its request's headers, and a request method outside the standard nine is exported as `_OTHER`. A project
+named after a crate the service depends on (`axum`, `tokio`), a Rust keyword or `core` gets its crate prefixed
+`app-`, as `test` already did.
 
 **A new Rust project is now generated with this by default; one generated before keeps what it recorded.**
 `axum` is Rust's default answer, as every backend's own transport is its default. A project generated before

@@ -101,11 +101,41 @@ __STORE_OPEN__
         exporting_traces = exporting,
         "service listening"
     );
-    axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal())
-        .await?;
+    // The signal is heard once and told to two listeners: the server, which stops accepting and lets what is in
+    // flight finish, and the clock that gives that a deadline. Without one a single connection that never
+    // finishes — a client that sent half a request and went away — keeps the process from ever exiting.
+    let (stop, stopped) = tokio::sync::watch::channel(false);
+    tokio::spawn(async move {
+        shutdown_signal().await;
+        stop.send_replace(true);
+    });
+    let draining = {
+        let mut stopped = stopped.clone();
+        async move {
+            let _ = stopped.wait_for(|stopping| *stopping).await;
+        }
+    };
+    let deadline = {
+        let mut stopped = stopped;
+        async move {
+            let _ = stopped.wait_for(|stopping| *stopping).await;
+            tokio::time::sleep(DRAIN_TIMEOUT).await;
+        }
+    };
+    tokio::select! {
+        served = axum::serve(listener, app).with_graceful_shutdown(draining) => served?,
+        () = deadline => tracing::warn!(
+            seconds = DRAIN_TIMEOUT.as_secs(),
+            "connections still open at the shutdown deadline were dropped"
+        ),
+    }
     Ok(())
 }
+
+/// How long the requests in flight are given to finish once this process is asked to stop, as the Go service's
+/// `Shutdown` is given: an orchestrator's own grace period is usually longer than this, and one that is not
+/// would kill the process in the middle of a flush.
+const DRAIN_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
 
 /// Resolves when this process is asked to stop: SIGTERM, which is what `docker compose down` and every
 /// orchestrator send, or Ctrl-C. The server then lets the requests already in flight finish — without it a

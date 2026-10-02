@@ -70,6 +70,15 @@ LOCKS = LANGUAGE_ROOT / "rust/locks"
 PLACEHOLDER = "delivery-starter"
 
 
+def declared_crates() -> frozenset[str]:
+    """Every crate any Rust manifest region can declare, spelled as code names it (`-` read as `_`).
+
+    Read off the tables above, so a crate added to one is guarded against as a project name without a second list.
+    """
+    names = {*EVENT_STORE_CRATES, *TRANSPORT_CRATES, *TRANSPORT_DEV_CRATES, "sqlx"}
+    return frozenset(name.replace("-", "_") for name in names)
+
+
 def sqlx(store: str) -> str:
     features = ", ".join(f'"{feature}"' for feature in SQLX_FEATURES[store])
     return f'sqlx = {{ version = "{SQLX_VERSION}", default-features = false, features = [{features}] }}\n'

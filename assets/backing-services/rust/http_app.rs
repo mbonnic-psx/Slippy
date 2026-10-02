@@ -34,6 +34,8 @@ use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 use std::{future::Future, pin::Pin, sync::Arc};
 
+pub mod security;
+
 /// What a slice's routes are mounted with: a function over the router, so this module never grows a list of
 /// the application's features. Registrars are handed to [`build_app`] from the composition root.
 pub type Registrar = Box<dyn FnOnce(Router) -> Router>;

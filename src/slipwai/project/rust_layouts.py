@@ -32,6 +32,8 @@ RUST_WRITE_SIDE: dict[str, dict[str, str]] = {
     "axum": {
         "src/adapters/driving/mod.rs": "driving_mod.rs",
         "src/adapters/driving/http/mod.rs": "http_app.rs",
+        # What a browser meets before any route does: an outer wrapper, applied by the entry point.
+        "src/adapters/driving/http/security.rs": "http_security.rs",
     },
 }
 

@@ -712,14 +712,14 @@ corrections for whoever decides:
 `drive-gaps` over `7e4291e..57f04d3` found six gaps no earlier task held. The HIGH and the MEDIUMs are implemented
 here; the LOW rides in Phase 4.
 
-- [ ] T027 [US1] **HIGH — `make dev` on the default event-modelling project (Postgres) exits at start when
+- [x] T027 [US1] **HIGH — `make dev` on the default event-modelling project (Postgres) exits at start when
   `DATABASE_URL` is unset** (scenario 4; R8's "nothing connects while the process starts"). `connect_lazy("")` fails
   to parse (`rust_entry.py`), where Go's `pgxpool.New(ctx, "")` falls back to libpq defaults and the process starts,
   answering `/health` 200 and `/ready` 503. GREEN: an empty URL opens lazily from libpq-style defaults
   (`PgConnectOptions::new()`), a malformed one still stops the process naming `DATABASE_URL`. Sweep: **every store
   answer's open with its variable unset and malformed** (sqlite, postgres), each starting or refusing as Go's does;
   a factory case starts `serve` on a Postgres project with no `DATABASE_URL` and sees `/health` 200, `/ready` 503.
-- [ ] T028 [US1] **MEDIUM — `add-service` into a Rust project recorded before this slice gives the new service
+- [x] T028 [US1] **MEDIUM — `add-service` into a Rust project recorded before this slice gives the new service
   `axum`** (edge case *generated before*; D2, whose premise is that an unrecorded axis reads as its `absent`).
   `add_service.py` reads the first service's answer with `choices.get(axis)` and falls back to the catalog default.
   The artifacts settle the answer (D2's premise, the spec's edge case "only a new project gets `axum` by default",
@@ -727,14 +727,14 @@ here; the LOW rides in Phase 4.
   never asked is inherited as its `absent`. GREEN: that reading in `add_service`, pinned by a case adding a service
   to a record with no `http` key. Sweep: **every place a recorded selection is replayed** (`add-service`, `migrate`,
   `replay.py`) reads an unasked axis as its `absent`.
-- [ ] T029 [US1] **MEDIUM — scenario 9's promised factory test that runs `make verify` on `--http none` does not
+- [x] T029 [US1] **MEDIUM — scenario 9's promised factory test that runs `make verify` on `--http none` does not
   exist**, and since defaults became `axum` nothing builds a no-transport Rust project. GREEN: one test generating
   `--http none` on standard and on event-modelling with a store, running its `make verify`.
-- [ ] T030 [US1] **MEDIUM — a Rust project named `test` or `std` fails its own gate** (the new `serve` binary, and
+- [x] T030 [US1] **MEDIUM — a Rust project named `test` or `std` fails its own gate** (the new `serve` binary, and
   Postgres's `migrate` before it, collide with the sysroot crates). GREEN: `crate_name` prefixes every reserved
   sysroot crate name (`test`, `std`, `alloc`, `proc_macro` — `core` builds and is left alone) as it prefixes a leading digit, with a case per
   name.
-- [ ] T031 [US1] **LOW–MEDIUM — the fragment's Catch-up says nothing is asked of an existing project**, but
+- [x] T031 [US1] **LOW–MEDIUM — the fragment's Catch-up says nothing is asked of an existing project**, but
   `slipwai migrate` on a Rust project generated before moves its `Cargo.lock`'s transitive patch versions (T022).
   GREEN: one Catch-up sentence in `changelog.d/rust-http-axum.md` saying so and that a conflicting lock is resolved by
   re-locking.

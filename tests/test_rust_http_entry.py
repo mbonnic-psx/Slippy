@@ -7,6 +7,7 @@ store away — and that the thing starts, answers and stops. Everything the rout
 from __future__ import annotations
 
 import os
+import re
 import signal
 import socket
 import subprocess
@@ -109,16 +110,35 @@ class EntryPointTest(FactoryTestCase):
                 with self.subTest(project=name):
                     self.cargo(repo, "fmt", "--check")
 
+    def test_every_binary_that_logs_is_one_the_log_filter_admits(self) -> None:
+        """A binary is a crate of its own and its records carry its name as their target, so a `tracing::` call in
+        `src/bin/<name>.rs` is shown only where `observability.rs` names `<name>`. Swept over every answer, since
+        which binaries exist depends on the store (`migrate` is where there is one to migrate)."""
+        with tempfile.TemporaryDirectory() as directory:
+            for profile, store in ANSWERS:
+                repo = self.generate_answered(directory, profile, store)
+                admitted = re.search(r"BINARIES: \[&str; \d+\] = \[(.*?)\]", (repo / "apps/service/src/observability.rs").read_text())
+                self.assertIsNotNone(admitted)
+                assert admitted is not None
+                binaries = sorted((repo / "apps/service/src/bin").glob("*.rs"))
+                self.assertTrue(binaries)
+                for binary in binaries:
+                    with self.subTest(store=store, binary=binary.name):
+                        if "tracing::" in binary.read_text():
+                            self.assertIn(f'"{binary.stem}"', admitted.group(1))
+
     def test_make_dev_answers_health_and_ready_and_stops_when_asked(self) -> None:
         """Proven by running, in isolation: a free port, a throwaway project, and only the process this test started
         is signalled — by the group it made, so `make`, `cargo` and the server are all and only what is stopped."""
         port = free_port()
         with tempfile.TemporaryDirectory() as directory:
             repo = self.generate(directory, "running", "standard", "rust", http="axum")
-            server = subprocess.Popen(
-                ["make", "dev"], cwd=repo, env={**CARGO_ENVIRONMENT, "PORT": str(port)},
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True,
-            )
+            output = Path(directory) / "dev.log"
+            with output.open("w") as log:
+                server = subprocess.Popen(
+                    ["make", "dev"], cwd=repo, env={**CARGO_ENVIRONMENT, "PORT": str(port)},
+                    stdout=log, stderr=subprocess.STDOUT, start_new_session=True,
+                )
             try:
                 deadline = time.monotonic() + 240
                 body = None
@@ -131,6 +151,9 @@ class EntryPointTest(FactoryTestCase):
                 self.assertEqual(body, '{"status":"ok"}')
                 with urllib.request.urlopen(f"http://127.0.0.1:{port}/ready", timeout=5) as response:
                     self.assertEqual(response.read().decode(), '{"status":"ready"}')
+                # `make dev` is how somebody finds where the service is: the entry point's own line says so,
+                # at the level `make dev` runs at (the default), and is not filtered out as a binary's.
+                self.assertIn(f"http://localhost:{port}", output.read_text())
             finally:
                 os.killpg(server.pid, signal.SIGTERM)
                 server.wait(timeout=60)

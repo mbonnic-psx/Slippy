@@ -134,9 +134,15 @@ pub fn init_logging(level: &str, format: &str, tracing: &Tracing) {
     subscriber(level, format, tracing.tracer.clone(), std::io::stdout).init();
 }
 
+/// The binaries in this package, each a crate of its own whose records carry its own name as their target.
+/// `src/bin/serve.rs` is the process that runs; `migrate` is the one that exists where there is a store to
+/// migrate. Named here, where the filter is, because a binary's `tracing::info!` is otherwise a line
+/// nobody sees — a factory test holds that every `src/bin/*.rs` that logs is in this list.
+const BINARIES: [&str; 2] = ["serve", "migrate"];
+
 /// The subscriber `init_logging` installs, over a writer of its choosing so a test can read what it wrote.
 ///
-/// `level` filters this service's own records; everything else — the exporter's connection pool, the HTTP
+/// `level` filters this service's own records — the library's and each of its [`BINARIES`]; everything else — the exporter's connection pool, the HTTP
 /// server's — is held at `warn`, or a `LOG_LEVEL=debug` run drowns in what its dependencies say about
 /// themselves. An unrecognised level is `info` rather than a refusal to start: a typo in a log variable must
 /// never be what stops a deployment. The filter sits on the *log* layer only, so the request span still exists
@@ -151,14 +157,11 @@ where
     W: for<'a> MakeWriter<'a> + Send + Sync + 'static,
 {
     let level = LevelFilter::from_str(level).unwrap_or(LevelFilter::INFO);
-    let own = module_path!()
-        .split("::")
-        .next()
-        .unwrap_or_default()
-        .to_owned();
-    let targets = Targets::new()
-        .with_default(LevelFilter::WARN)
-        .with_target(own, level);
+    let library = module_path!().split("::").next().unwrap_or_default();
+    let targets = std::iter::once(library).chain(BINARIES).fold(
+        Targets::new().with_default(LevelFilter::WARN),
+        |targets, own| targets.with_target(own, level),
+    );
     let lines = filter_fn(move |metadata| {
         metadata.is_span() || targets.would_enable(metadata.target(), metadata.level())
     });
@@ -442,6 +445,27 @@ mod tests {
             text.contains("this service, at debug") && text.contains("a dependency, at warn"),
             "{text}"
         );
+        assert!(!text.contains("a dependency, at info"), "{text}");
+    }
+
+    // An entry point is a crate of its own, so its records carry its own name as their target and not this
+    // library's. The one that says where the service is listening is `serve`'s, and a filter that admitted
+    // only this crate would drop it at every level but `warn`.
+    #[test]
+    fn the_package_s_own_binaries_log_at_the_asked_level_as_this_library_does() {
+        let harness = harness("info", "json");
+
+        tracing::info!(target: "serve", "service listening");
+        tracing::info!(target: "migrate", "migrations applied");
+        tracing::debug!(target: "serve", "below the asked level");
+        tracing::info!(target: "hyper_util", "a dependency, at info");
+
+        let text = harness.written.text();
+        assert!(
+            text.contains("service listening") && text.contains("migrations applied"),
+            "{text}"
+        );
+        assert!(!text.contains("below the asked level"), "{text}");
         assert!(!text.contains("a dependency, at info"), "{text}");
     }
 

@@ -203,9 +203,9 @@ fn schema_failure_for(path: &str, error: &serde_json::Error) -> SchemaFailure {
         return SchemaFailure::new("", "invalid request body");
     }
     let message = error.to_string();
-    // serde reports these as messages and nothing else, so what is needed is read back out of them. The
-    // quoted part of the first two is the caller's own key, never their value; `invalid type` and
-    // `invalid value` carry the value, and are reduced to the type that was wanted.
+    // serde reports these as messages and nothing else, so what is needed is read back out of them — and a
+    // message is read only for what does not depend on the input.
+    //
     // The path already ends in the unknown key — it is where the parser stopped — so it is not joined again.
     if between_backticks(&message, "unknown field ").is_some() {
         return SchemaFailure::new(path, "is not a field this route accepts");
@@ -213,11 +213,39 @@ fn schema_failure_for(path: &str, error: &serde_json::Error) -> SchemaFailure {
     if let Some(field) = between_backticks(&message, "missing field ") {
         return SchemaFailure::new(&join(path, field), "is required");
     }
-    if let Some((_, wanted)) = message.split_once(", expected ") {
-        let wanted = wanted.split(" at line ").next().unwrap_or(wanted);
+    if let Some(wanted) = wanted_by(&message) {
         return SchemaFailure::new(path, &format!("must be {wanted}"));
     }
     SchemaFailure::new(path, "is not an accepted value")
+}
+
+/// What the type asked for, from the four of serde's own messages that say so: `invalid type`, `invalid
+/// value`, `invalid length` and `unknown variant`.
+///
+/// Every one of them is "<what was found>, expected <what was wanted>", and what was found is the caller's:
+/// a string, a variant name, written into the message in whatever words the caller chose — including
+/// `, expected `. So the wanted side is the one after the *last* delimiter, which the caller's text precedes and
+/// so cannot reach, with the position serde appends (` at line N column M`) cut off the end first for the same
+/// reason. Any other message — `Error::custom`, whose words are the type's author's, and may hold the input
+/// anywhere — is not read at all.
+fn wanted_by(message: &str) -> Option<String> {
+    const SAYS_WHAT_WAS_WANTED: [&str; 4] = [
+        "invalid type: ",
+        "invalid value: ",
+        "invalid length ",
+        "unknown variant ",
+    ];
+    if !SAYS_WHAT_WAS_WANTED
+        .iter()
+        .any(|prefix| message.starts_with(prefix))
+    {
+        return None;
+    }
+    let without_position = message
+        .rsplit_once(" at line ")
+        .map_or(message, |(before, _)| before);
+    let (_, wanted) = without_position.rsplit_once(", expected ")?;
+    Some(wanted.to_owned())
 }
 
 fn between_backticks<'a>(message: &'a str, prefix: &str) -> Option<&'a str> {
@@ -508,5 +536,140 @@ mod tests {
         let failure: serde_json::Value = serde_json::from_str(&body).expect("json");
         assert_eq!(failure["field"], "(root)");
         assert_eq!(failure["message"], "invalid request body");
+    }
+
+    // What the 400 says is read out of serde's message, and serde's message quotes the caller's input in more
+    // than one shape. One case per shape that carries it, each with a value holding the delimiters the parser
+    // splits on — so a rule read from the wrong side of a delimiter, or from a message the type's author
+    // wrote, hands the token back.
+    const TOKEN: &str = "SECRET-TOKEN";
+
+    fn refusal<T: DeserializeOwned + std::fmt::Debug>(body: &str) -> Value {
+        let failure = parse::<T>(body.as_bytes()).expect_err("a refusal");
+        let body = failure.body().to_string();
+        assert!(!body.contains(TOKEN), "{body}");
+        failure.body()
+    }
+
+    // These types are only ever refused, so nothing reads their fields.
+    #[derive(Debug, Deserialize)]
+    #[allow(dead_code)]
+    struct Quantity {
+        quantity: u32,
+    }
+
+    // These types are only ever refused, so nothing reads their fields.
+    #[derive(Debug, Deserialize)]
+    #[allow(dead_code)]
+    struct Initial {
+        initial: char,
+    }
+
+    // These types are only ever refused, so nothing reads their fields.
+    #[derive(Debug, Deserialize)]
+    #[allow(dead_code)]
+    enum Colour {
+        Red,
+        Green,
+    }
+
+    // These types are only ever refused, so nothing reads their fields.
+    #[derive(Debug, Deserialize)]
+    #[allow(dead_code)]
+    struct Paint {
+        colour: Colour,
+    }
+
+    // These types are only ever refused, so nothing reads their fields.
+    #[derive(Debug, Deserialize)]
+    #[allow(dead_code)]
+    struct Pair {
+        pair: (String, String),
+    }
+
+    // These types are only ever refused, so nothing reads their fields.
+    #[derive(Debug, Deserialize)]
+    #[allow(dead_code)]
+    #[serde(deny_unknown_fields)]
+    struct Both {
+        a: String,
+        b: String,
+    }
+
+    fn custom<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<String, D::Error> {
+        let raw = String::deserialize(deserializer)?;
+        Err(serde::de::Error::custom(format!("{raw}, expected a word")))
+    }
+
+    // These types are only ever refused, so nothing reads their fields.
+    #[derive(Debug, Deserialize)]
+    #[allow(dead_code)]
+    struct Word {
+        #[serde(deserialize_with = "custom")]
+        word: String,
+    }
+
+    #[test]
+    fn an_invalid_type_does_not_quote_a_value_that_holds_the_delimiter() {
+        let failure = refusal::<Quantity>(r#"{"quantity":"x, expected SECRET-TOKEN"}"#);
+
+        assert_eq!(failure["field"], "quantity");
+        assert_eq!(failure["message"], "must be u32");
+    }
+
+    #[test]
+    fn an_invalid_type_does_not_quote_a_value_that_holds_the_position_suffix() {
+        let failure =
+            refusal::<Quantity>(r#"{"quantity":"SECRET-TOKEN at line 1 column 1, expected u8"}"#);
+
+        assert_eq!(failure["message"], "must be u32");
+    }
+
+    #[test]
+    fn an_invalid_value_does_not_quote_a_value_that_holds_the_delimiter() {
+        let failure = refusal::<Initial>(r#"{"initial":"SECRET-TOKEN, expected a character"}"#);
+
+        assert_eq!(failure["field"], "initial");
+        assert_eq!(failure["message"], "must be a character");
+    }
+
+    #[test]
+    fn an_invalid_length_does_not_quote_the_elements() {
+        let failure = refusal::<Pair>(r#"{"pair":["SECRET-TOKEN`, expected x"]}"#);
+
+        assert_eq!(failure["field"], "pair");
+        assert_eq!(failure["message"], "must be a tuple of size 2");
+    }
+
+    #[test]
+    fn an_unknown_variant_does_not_quote_the_variant() {
+        let failure = refusal::<Paint>(r#"{"colour":"SECRET-TOKEN`, expected `Red`"}"#);
+
+        assert_eq!(failure["field"], "colour");
+        assert_eq!(failure["message"], "must be `Red` or `Green`");
+    }
+
+    #[test]
+    fn a_message_the_type_wrote_is_not_read_for_a_rule() {
+        let failure = refusal::<Word>(r#"{"word":"SECRET-TOKEN"}"#);
+
+        assert_eq!(failure["field"], "word");
+        assert_eq!(failure["message"], "is not an accepted value");
+    }
+
+    #[test]
+    fn an_unknown_field_is_named_by_the_path_and_not_by_the_message() {
+        let failure = refusal::<Both>(r#"{"a":"x","b":"y","c`, expected x":1}"#);
+
+        // The key is the caller's own, and the path is where it is named; what the message adds is nothing.
+        assert_eq!(failure["message"], "is not a field this route accepts");
+    }
+
+    #[test]
+    fn a_missing_field_is_named_whatever_the_other_values_hold() {
+        let failure = refusal::<Both>(r#"{"a":"` at line 1, expected SECRET-TOKEN"}"#);
+
+        assert_eq!(failure["field"], "b");
+        assert_eq!(failure["message"], "is required");
     }
 }

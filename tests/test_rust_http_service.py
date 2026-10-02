@@ -62,7 +62,7 @@ class GeneratedServiceTest(FactoryTestCase):
         self.cargo("clippy", "--locked", "--all-targets", "--", "-D", "warnings")
 
     def test_the_adapter_s_routes_are_held_by_its_own_tests(self) -> None:
-        self.cargo_test("adapters::driving::http::tests", at_least=13)
+        self.cargo_test("adapters::driving::http::tests", at_least=21)
 
     def test_what_a_browser_meets_first_is_held_by_the_wrapper_s_own_tests(self) -> None:
         self.cargo_test("adapters::driving::http::security", at_least=7)

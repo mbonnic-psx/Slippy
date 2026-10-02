@@ -82,7 +82,10 @@ def selection_for(
         if named.get(axis) is not None:
             resolved[axis] = named[axis]
             continue
-        theirs = first.selection.choices.get(axis) if first is not None else None
+        # An axis the first service's record never asked reads as its `absent`, as `Selection.option` reads it
+        # everywhere else (D2) — not as nothing, which would hand the new service the catalog's default for an
+        # answer the project never gave.
+        theirs = first.selection.option(axis) if first is not None else None
         if theirs is not None and theirs in axis_options(axis, backend, target):
             resolved[axis] = theirs
             inherited.add(axis)

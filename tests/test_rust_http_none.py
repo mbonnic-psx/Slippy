@@ -20,6 +20,10 @@ PROFILES = ("standard", "event-modelling")
 # await a decision on whether they are acceptable differences — the spec names only `project.json` — and are not
 # settled by being listed here. Nothing else may differ.
 NAMED_AND_PENDING = {"project.json", "README.md", "scripts/backing-services.py"}
+# Re-resolved since the base by `make locks`, which moves transitive crates to their newest patch release and
+# changes no dependency a service names; that the lock names the crates the manifest does is
+# `test_rust_http_locks.py`'s, and that it resolves is the build's (`--locked`). Not a difference in what is generated.
+RE_RESOLVED = {"Cargo.lock"}
 
 
 def digests(root: Path) -> dict[str, str]:
@@ -41,6 +45,6 @@ class NoTransportIsTheTreeOfBeforeTest(FactoryTestCase):
                 self.assertEqual(sorted(generated), sorted(before))
                 changed = sorted(
                     path for path, digest in generated.items()
-                    if digest != before[path] and path not in NAMED_AND_PENDING
+                    if digest != before[path] and path not in NAMED_AND_PENDING | RE_RESOLVED
                 )
                 self.assertEqual(changed, [])

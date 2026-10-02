@@ -1,0 +1,29 @@
+docker compose --profile app up -d --wait
+ Network ledger_default Creating 
+ Network ledger_default Created 
+ Container ledger-service-1 Creating 
+ Container ledger-service-1 Created 
+ Container ledger-service-1 Starting 
+ Container ledger-service-1 Started 
+ Container ledger-service-1 Waiting 
+ Container ledger-service-1 Healthy 
+
+  API   http://localhost:3000/health
+
+  make demo-down stops it; make demo again after an edit only if a dependency changed
+exit=0 seconds=47
+
+$ curl -s -w ' %{http_code}' localhost:3000/health
+{"status":"ok"} 200
+$ curl -s -w ' %{http_code}' localhost:3000/ready
+{"status":"ready"} 200
+$ curl -s -w ' %{http_code}' localhost:3000/nope
+{"error":"notFound"} 404
+docker compose --profile app down
+ Container ledger-service-1 Stopping 
+ Container ledger-service-1 Stopped 
+ Container ledger-service-1 Removing 
+ Container ledger-service-1 Removed 
+ Network ledger_default Removing 
+ Network ledger_default Removed 
+demo-down exit=0

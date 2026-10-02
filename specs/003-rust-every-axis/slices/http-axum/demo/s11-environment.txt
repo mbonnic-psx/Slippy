@@ -1,0 +1,54 @@
+$ env PORT=abc serve
+2026-10-02T09:51:31.202130Z ERROR serve: the environment this service was given cannot be used error=PORT must be a port number between 1 and 65535, not "abc"
+exit=1
+
+$ env PORT=70000 serve
+2026-10-02T09:51:31.307493Z ERROR serve: the environment this service was given cannot be used error=PORT must be a port number between 1 and 65535, not "70000"
+exit=1
+
+$ env PUBLIC_BASE_URL=service.internal:3000 serve
+2026-10-02T09:51:31.413163Z ERROR serve: the environment this service was given cannot be used error=PUBLIC_BASE_URL must begin with http:// or https://, not "service.internal:3000"
+exit=1
+
+$ env OTEL_EXPORTER_OTLP_ENDPOINT=collector:4318 serve
+2026-10-02T09:51:31.518324Z ERROR serve: the environment this service was given cannot be used error=OTEL_EXPORTER_OTLP_ENDPOINT must begin with http:// or https://, not "collector:4318"
+exit=1
+
+$ env CORS_ALLOWED_ORIGINS=* serve
+2026-10-02T09:51:31.627129Z  INFO serve: service listening url=http://localhost:3000 service=ledger exporting_traces=false
+exit=124
+
+$ env CORS_ALLOWED_ORIGINS=http://a.example/path serve
+2026-10-02T09:51:36.639755Z  INFO serve: service listening url=http://localhost:3000 service=ledger exporting_traces=false
+exit=124
+
+
+# HOST=127.0.0.1 PORT=3001 CORS_ALLOWED_ORIGINS=http://localhost:5173,* OTEL_SERVICE_NAME=orders
+LISTEN 0      128         127.0.0.1:3001       0.0.0.0:*   
+$ curl -si -X OPTIONS -H "Origin: http://localhost:5173" -H "Access-Control-Request-Method: POST" localhost:3001/health
+HTTP/1.1 204 No Content
+x-content-type-options: nosniff
+x-frame-options: DENY
+referrer-policy: no-referrer
+content-security-policy: default-src 'none'; frame-ancestors 'none'
+vary: Origin
+access-control-allow-origin: http://localhost:5173
+access-control-allow-credentials: true
+access-control-allow-methods: GET, POST, PUT, PATCH, DELETE, OPTIONS
+access-control-allow-headers: content-type
+access-control-max-age: 600
+date: Fri, 02 Oct 2026 09:51:53 GMT
+
+
+$ curl -si -H "Origin: http://anything.example" (wildcard must not be honoured)
+HTTP/1.1 200 OK
+vary: Origin
+$ curl -si -H "Origin: http://localhost:5173" /ready
+HTTP/1.1 200 OK
+vary: Origin
+access-control-allow-origin: http://localhost:5173
+access-control-allow-credentials: true
+
+# log lines (json)
+exit after SIGTERM=0
+{"timestamp":"2026-10-02T09:51:52.213571Z","level":"INFO","fields":{"message":"service listening","url":"http://localhost:3001","service":"orders","exporting_traces":false},"target":"serve"}

@@ -1,0 +1,92 @@
+11a12
+> - HTTP transport: `none`
+22c22,24
+<       "selection": {},
+---
+>       "selection": {
+>         "http": "none"
+>       },
+== event-modelling
+12a13
+> - HTTP transport: `none`
+25c25,26
+<         "event-store": "postgres"
+---
+>         "event-store": "postgres",
+>         "http": "none"
+561c561
+< version = "0.3.105"
+---
+> version = "0.3.106"
+563c563
+< checksum = "ce57d20d1ea864ce2ac172ab472d409214f4fd359f0b2a2775abdf522e2af99e"
+---
+> checksum = "7883d941dae510fb2d978fc3fe018c71c9e2892fd38854de3e8b92c2e5ad9cc5"
+876c876
+< version = "1.16.1"
+---
+> version = "1.16.2"
+878c878
+< checksum = "ba467056f1b547ed52077911161fc86985becbc60e8e1857c8a144dab0def891"
+---
+> checksum = "f9395f0f0eee849a9b707b2f06bb92a6a422090e2123bb2ef8e87a0e61892a8e"
+1338c1338
+< version = "0.2.128"
+---
+> version = "0.2.129"
+1340c1340
+< checksum = "aecb87a33d3b0c5e3b7aa46336eaf486cffafbd281b195e4c8b80d50df2351bf"
+---
+> checksum = "9bb54f33acc68fd454578d9820b0bde1a1a3d17aa17bb7b6595806d02886d409"
+1351c1351
+< version = "0.2.128"
+---
+> version = "0.2.129"
+1353c1353
+< checksum = "a690d511e3c1a8b3a55e33511e3c2c00c78415cd23650f32b808627f5696b9ed"
+---
+> checksum = "2e29d0c35b16e224a7eeb5cd2d25e3e1968fbd65604117b44d3b789d00ee8535"
+1361c1361
+< version = "0.2.128"
+---
+> version = "0.2.129"
+1363c1363
+< checksum = "411e4887f0071ef2d2164a9d5fdf2d20efbef78fccd3a78b0c10a1dc5295e48a"
+---
+> checksum = "6f501a8bc3719dba86ef8ae4728879c08001bea749eb1333ac5b91e040e2a6b7"
+1374c1374
+< version = "0.2.128"
+---
+> version = "0.2.129"
+1376c1376
+< checksum = "81941cd78d0c92026c33e5e01312845a4cb1e9af3407f9134b100dd03144103e"
+---
+> checksum = "23f0c9c52aa7cd7d77769a4cfe2a9adb1b331f489a41d912ce14513d5ab995c6"
+1421c1421
+< version = "0.8.3"
+---
+> version = "0.8.4"
+1423c1423
+< checksum = "33811428bee40dbceb6d545e95754741d17a6aef9a4849f0fd62e2ba4f412a78"
+---
+> checksum = "ec8ebde2db3681e8c9980cc27822030e68752690ddfa9473e739aeb4dbde6d71"
+46a47
+>     "axum",
+174a176,186
+>             "axum": {
+>                 "capabilities": ("http-axum",),
+>                 "features": ("axum",),
+>                 "targets": ("none", "existing", "aws", "azure"),
+>                 "label": (
+>                     "axum — JSON API on tokio, with the browser hardening and a request span, held to a "
+>                     "hand-written openapi.yaml; the in-process router tests prove the routes, not a socket "
+>                     "or a collector"
+>                 ),
+>                 "note": "",
+>             },
+430,432c442,453
+<     # The manifest holds each store's `sqlx` in its region, and the driven adapters' module list declares
+<     # each store's two adapters in theirs.
+<     "rust": ("Cargo.toml", "src/adapters/driven/mod.rs"),
+---
+>     # The manifest holds each store's `sqlx` and the transport's crates in their regions, the driven adapters'

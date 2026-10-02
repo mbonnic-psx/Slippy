@@ -189,6 +189,18 @@ is a probe for whatever runs the process, not API surface, so ask the service fo
         f"`{service.port_variable}` in `.env` moves the port `make demo` publishes\n"
         for service in services
     )
+    # Rust's workspace has one `target/` and every service's entry point is a binary named `serve`, so two dev
+    # servers started at once on a host contend for the one build directory; each has a container of its own in
+    # `make demo`, which is why that is the way to run them together.
+    shared_target = (
+        """
+Two Rust services share one `target/`, because Cargo keeps one per workspace, and each one's dev server is the
+binary named `serve`. Start their dev servers one at a time on the host, or together through `make demo`, where
+each has a container of its own.
+"""
+        if sum(service.language == "rust" for service in services) > 1
+        else ""
+    )
     several_services = f"""
 ## Several services
 
@@ -197,7 +209,7 @@ This project has {len(services)} services, each on its own port and each answeri
 {ports}
 `make demo` starts them all. In the foreground each one is its own terminal, and `PORT` applies to whichever
 you start — the targets above set each service's own port as the default.
-""" if several else ""
+{shared_target}""" if several else ""
     where = (
         "the service it belongs to (" + ", ".join(f"`{service.path}`" for service in services) + ")"
         if several

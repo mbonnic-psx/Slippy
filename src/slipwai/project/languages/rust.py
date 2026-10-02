@@ -12,7 +12,8 @@ from ..backing_services import backing_service_service_files
 from ..composition import wire_store
 from ..flag_route import wire_entry
 from ..flags import flag_reader
-from .cargo import lock, with_dependencies
+from ..rust_layouts import RUST_WRITE_SIDE
+from .cargo import TRANSPORT, declared_crates, lock, with_dependencies
 
 # The toolchain every Rust service in a project builds with, pinned in `rust-toolchain.toml` at the root so
 # rustup installs exactly this on a laptop, in a container and in CI, with the components the gate runs.
@@ -40,6 +41,12 @@ TEMPLATE = "delivery-starter"
 # the selection and the target, so the list is computed from the files actually present.
 MODULES = "__MODULES__"
 TOP_LEVEL_MODULE = re.compile(r"^src/(\w+)(?:\.rs|/mod\.rs)$")
+# The top-level modules only the transport adds — `adapters` is the store's too — which `src/lib.rs` declares inside
+# the transport's region, so taking the transport away takes the declaration with the file. Read off the layout
+# table, where the files are named, rather than listed a second time.
+TRANSPORT_MODULES = frozenset(
+    match.group(1) for path in RUST_WRITE_SIDE[TRANSPORT] if (match := TOP_LEVEL_MODULE.match(path))
+)
 
 
 def service_files(event: bool, selection: Selection, target: str = "none") -> dict[str, str]:
@@ -55,8 +62,42 @@ def service_files(event: bool, selection: Selection, target: str = "none") -> di
     files.update(flag_reader(target, "rust"))
     wire_entry(files, target)
     wire_store(files, selection, "rust")
+    declare_adapters(files)
     files["src/lib.rs"] = declare_modules(files)
     return files
+
+
+# No blank line after the docs: a service whose every adapter is pruned away is left with the docs alone, and a
+# trailing blank line is what the formatter objects to.
+ADAPTERS = """//! The adapters: `driven` implements the ports the application owns; `driving` is how a request reaches a use
+//! case, when this service has a way to be asked.
+"""
+# What a service with a store and no transport has always been told, word for word: its tree is the one it had
+# before there was a transport, and a different sentence over the same two lines is a different file.
+ADAPTERS_DRIVEN_ONLY = """//! The adapters: `driven` implements the ports the application owns; a driving adapter, when this service has
+//! one, calls a use case.
+
+"""
+
+
+def region(feature: str, body: str) -> str:
+    return f"// backing-service:{feature}:begin\n{body}// backing-service:{feature}:end\n"
+
+
+def declare_adapters(files: dict[str, str]) -> None:
+    """`src/adapters/mod.rs`, naming the kinds of adapter this service was generated with and no others.
+
+    Written from the files present for the reason `declare_modules` is: the in-memory store and the transport
+    each add an adapter directory, either can be there without the other, and a `pub mod` for a directory that
+    is not there is a build that fails. A service with neither has no `adapters` module at all.
+    """
+    kinds = [kind for kind in ("driven", "driving") if any(path.startswith(f"src/adapters/{kind}/") for path in files)]
+    if kinds:
+        # `driving` is the transport's, so it sits in the transport's region and is cut with the directory;
+        # `driven` is the store's and is never cut, because the in-memory adapter cannot be pruned.
+        declared = {"driven": "pub mod driven;\n", "driving": region(TRANSPORT, "pub mod driving;\n")}
+        docs = ADAPTERS if "driving" in kinds else ADAPTERS_DRIVEN_ONLY
+        files["src/adapters/mod.rs"] = docs + "".join(declared[kind] for kind in kinds)
 
 
 def declare_modules(files: dict[str, str]) -> str:
@@ -70,21 +111,43 @@ def declare_modules(files: dict[str, str]) -> str:
         {match.group(1) for path in files if (match := TOP_LEVEL_MODULE.match(path))} - {"lib", "main"}
     )
     # The contract suites are what every adapter's tests run, and nothing else: compiled for tests only.
-    lines = "".join(
-        f"#[cfg(test)]\npub mod {module};\n" if module.endswith("_contract") else f"pub mod {module};\n"
-        for module in found
-    )
+    def declaration(module: str) -> str:
+        if module.endswith("_contract"):
+            return f"#[cfg(test)]\npub mod {module};\n"
+        line = f"pub mod {module};\n"
+        return region(TRANSPORT, line) if module in TRANSPORT_MODULES else line
+
+    lines = "".join(declaration(module) for module in found)
     return files["src/lib.rs"].replace(f"{MODULES}\n", lines)
+
+
+# The sysroot's crates a package of the same name collides with (`test` shadows the test harness, `core` the one
+# every `std` path is built on). Compared with `-` read as `_`, which is how cargo spells a package as a crate.
+SYSROOT_CRATES = frozenset({"test", "std", "core", "alloc", "proc_macro"})
+# Every Rust keyword, strict and reserved, plus the path words: a package may not be named one, and a name that
+# is one cannot head a `use` line. The language's list, fixed by the edition.
+KEYWORDS = frozenset(
+    {
+        "as", "break", "const", "continue", "crate", "else", "enum", "extern", "false", "fn", "for", "if",
+        "impl", "in", "let", "loop", "match", "mod", "move", "mut", "pub", "ref", "return", "self", "static",
+        "struct", "super", "trait", "true", "type", "unsafe", "use", "where", "while", "async", "await", "dyn",
+        "abstract", "become", "box", "do", "final", "macro", "override", "priv", "typeof", "unsized", "virtual",
+        "yield", "try", "gen",
+    }
+)
 
 
 def crate_name(project_name: str, service: App) -> str:
     """This service's package name: the project's for the first service, `<project>-<service>` after.
 
-    A package name may not start with a digit, which a project name may; such a name is prefixed so the
-    workspace still builds.
+    A package name may not start with a digit, which a project name may, and a name that is a sysroot crate
+    (`test`, `core`), a keyword or a crate the manifest declares (`axum`, `tokio`) collides with it as a
+    dependency or as a path in the code; such a name is prefixed so the workspace still builds.
     """
     name = service_qualifier(project_name, service).lower()
-    return f"app-{name}" if name[:1].isdigit() else name
+    crate = name.replace("-", "_")
+    collides = name[:1].isdigit() or crate in SYSROOT_CRATES or crate in KEYWORDS or crate in declared_crates()
+    return f"app-{name}" if collides else name
 
 
 def name_service(project_name: str, service: App, files: dict[str, str]) -> dict[str, str]:

@@ -13,7 +13,6 @@ RUST_WRITE_SIDE: dict[str, dict[str, str]] = {
         "src/application/mod.rs": "application_mod.rs",
         "src/application/ports/mod.rs": "ports_mod.rs",
         "src/application/ports/events.rs": "events.rs",
-        "src/adapters/mod.rs": "adapters_mod.rs",
         "src/adapters/driven/mod.rs": "driven_mod.rs",
         "src/adapters/driven/event_store_memory.rs": "event_store_memory.rs",
         "src/event_store_contract.rs": "event_store_contract.rs",
@@ -27,6 +26,25 @@ RUST_WRITE_SIDE: dict[str, dict[str, str]] = {
         "build.rs": "migrations_build.rs",
         "migrations/001_events.sql": "../sql/001_events.sql",
         "migrations/002_events_append_only.sql": "../sql/002_events_append_only.sql",
+    },
+    # The driving adapter: the routes, and the router's own tests beside them. `src/adapters/mod.rs` is not
+    # here because the store shares it — `languages/rust.py` writes it from the files present.
+    "axum": {
+        "src/adapters/driving/mod.rs": "driving_mod.rs",
+        "src/adapters/driving/http/mod.rs": "http_app.rs",
+        # What a browser meets before any route does: an outer wrapper, applied by the entry point.
+        "src/adapters/driving/http/security.rs": "http_security.rs",
+        # The contract the routes make, published as a file — no generator, for the reason Go's has none: an
+        # axum router cannot list its own routes. `openapi.rs` is what holds the two together.
+        "src/adapters/driving/http/openapi.rs": "http_openapi.rs",
+        "openapi.yaml": "openapi.yaml",
+        # The environment's one struct, read and checked before anything binds. A module of its own because
+        # `src/bin/serve.rs` is the one file with no test, and checking the environment is a rule.
+        "src/config.rs": "config.rs",
+        # The SDK's wiring, under the transport: a span per request is what only a transport produces.
+        "src/observability.rs": "observability.rs",
+        # The one file with no test: it reads the environment, builds the router, binds and shuts down.
+        "src/bin/serve.rs": "serve_main.rs",
     },
 }
 

@@ -44,6 +44,7 @@ from pathlib import Path
 # Every marker feature this script knows how to prune. A feature owns files and marked regions; an axis
 # option is answered *with* a set of features. The factory asserts this tuple against its catalog.
 FEATURES = (
+    "axum",
     "fastapi",
     "fastify",
     "keycloak",
@@ -171,6 +172,17 @@ AXES: dict[str, dict] = {
                     "Dropping this drops Actuator with it, so the project loses its readiness probe as "
                     "well as its routes — there is no hand-written /health to fall back to, on purpose."
                 ),
+            },
+            "axum": {
+                "capabilities": ("http-axum",),
+                "features": ("axum",),
+                "targets": ("none", "existing", "aws", "azure"),
+                "label": (
+                    "axum — JSON API on tokio, with the browser hardening and a request span, held to a "
+                    "hand-written openapi.yaml; the in-process router tests prove the routes, not a socket "
+                    "or a collector"
+                ),
+                "note": "",
             },
             "none": {
                 "capabilities": (),
@@ -427,9 +439,18 @@ MARKED_FILES_BY_LANGUAGE: dict[str, tuple[str, ...]] = {
     # Globs because a Python service's package directory is named after the project.
     "python": ("src/*/settings.py", "src/*/main.py"),
     "go": ("config/config.go", "cmd/serve/main.go"),
-    # The manifest holds each store's `sqlx` in its region, and the driven adapters' module list declares
-    # each store's two adapters in theirs.
-    "rust": ("Cargo.toml", "src/adapters/driven/mod.rs"),
+    # The manifest holds each store's `sqlx` and the transport's crates in their regions, the driven adapters'
+    # module list declares each store's two adapters in theirs, and the transport declares the modules only it
+    # adds — `config` and `observability` in `src/lib.rs`, `driving` in `src/adapters/mod.rs`. The entry point
+    # and the checked environment are the composition root and the one schema, as in every other backend.
+    "rust": (
+        "Cargo.toml",
+        "src/adapters/driven/mod.rs",
+        "src/adapters/mod.rs",
+        "src/bin/serve.rs",
+        "src/config.rs",
+        "src/lib.rs",
+    ),
     # Java's per-feature dependencies live in marked regions of the pom rather than in PACKAGE_EDITS
     # below, and `application.properties` carries the configuration that reads them. Both are XML- and
     # properties-comment marked, so one mechanism removes a dependency and its configuration together.
@@ -557,6 +578,18 @@ OWNED_FILES: dict[str, dict[str, tuple[str, ...]]] = {
         "any": ("packages/api-client",),
         "java": (),
     },
+    "axum": {
+        "rust": (
+            "src/adapters/driving",
+            "src/config.rs",
+            "src/observability.rs",
+            "src/bin/serve.rs",
+            "openapi.yaml",
+        ),
+        # And the typed client the browser app generates from this transport's published document, as every
+        # transport has: with the document gone there is nothing to generate from.
+        "any": ("packages/api-client",),
+    },
     "net-http": {
         "typescript": (),
         "python": (),
@@ -680,6 +713,7 @@ OWNED_FILES_PER_WEB_APP: dict[str, tuple[str, ...]] = {
     "fastify": ("src/routes", "tests/routes"),
     "fastapi": ("src/routes", "tests/routes"),
     "net-http": ("src/routes", "tests/routes"),
+    "axum": ("src/routes", "tests/routes"),
 }
 
 # Compose services a feature needs. A feature absent from here needs no container at all, which is what
@@ -690,6 +724,7 @@ CONTAINERS: dict[str, str] = {"postgres": "postgres", "keycloak": "keycloak", "u
 # and a frontend gives it a `web`. Compose is deleted only when nothing is left to compose — dropping the
 # last container is not the same question, now that `make demo` runs the app from this file too.
 APP_SERVICE_FEATURES: tuple[str, ...] = (
+    "axum",
     "fastapi",
     "fastify",
     "net-http",
@@ -761,6 +796,23 @@ PACKAGE_EDITS: dict[str, dict[str, dict[str, tuple[str, ...]]]] = {
     "rust": {
         "sqlite": {"packages": ("sqlx",), "scripts": ()},
         "postgres": {"packages": ("sqlx",), "scripts": ()},
+        # The transport's own crates, and the ones its router tests dispatch with. `tokio`, `serde` and
+        # `serde_json` are not here: the event store needs them too, so they stay declared.
+        "axum": {
+            "packages": (
+                "axum",
+                "http-body-util",
+                "opentelemetry",
+                "opentelemetry-otlp",
+                "opentelemetry_sdk",
+                "serde_path_to_error",
+                "tower",
+                "tracing",
+                "tracing-opentelemetry",
+                "tracing-subscriber",
+            ),
+            "scripts": (),
+        },
     },
     "go": {
         "postgres": {"packages": ("github.com/jackc/pgx/v5",), "scripts": ()},

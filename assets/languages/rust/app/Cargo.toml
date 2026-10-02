@@ -12,5 +12,6 @@ publish = false
 [dependencies]
 __DEPENDENCIES__
 
+__DEV_DEPENDENCIES__
 [lints]
 workspace = true

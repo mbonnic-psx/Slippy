@@ -1,0 +1,13 @@
+# Scenario 6 (optional): Rust axum service beside the react-vite browser app
+$ slipwai generate ledger --language rust --profile standard --frontend react-vite --output ~/.cache/slippy-cruise-tmp/axum-web
+$ make verify          -> 63 Rust tests ok, TOTAL lines 97.94%; vitest Test Files 3 passed, Tests 11 passed; "verify: all gates passed", exit=0
+$ make dev & make dev-web &
+$ curl -s localhost:5173/health      -> 200 {"status":"ok"}   (Vite proxy -> axum)
+$ curl -si localhost:5173/api/nope   -> 404 {"error":"notFound"}   (/api forwarded with prefix intact)
+$ agent-browser --allowed-domains localhost open http://localhost:5173/ ; agent-browser snapshot
+- banner: heading "ledger" (h1); navigation "Sections": link "Overview"
+- main: heading "Ready" (h2); heading "This project's API" (h3)
+  paragraph: code "/health", ", through the typed client generated from the service's published contract."
+  status: "The service answered" code {"status":"ok"}
+- contentinfo: "Replace this walking skeleton with the first actor-visible slice." / "docs/design.md — what this project looks like, and why"
+(screenshot taken and viewed; not kept, the brief asks for no binaries: the "Overview" nav link renders browser-default blue and underlined)

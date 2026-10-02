@@ -372,7 +372,7 @@ Beyond the profile, each role is a separate question, answered independently:
 | Framework, where a language offers more than one | `--framework` | `quarkus`, `spring-boot` (or name the pair at once: `--backend java-spring`) |
 | Frontend | `--frontend` | `none`, `react-vite` |
 | Event store | `--event-store` | `memory`, `sqlite`, `postgres` |
-| HTTP transport | `--http` | `none`, `fastify`, `fastapi`, `net-http`, `quarkus-rest`, `spring-web` |
+| HTTP transport | `--http` | `none`, `fastify`, `fastapi`, `net-http`, `axum`, `quarkus-rest`, `spring-web` |
 | Staff authentication | `--auth` | `none`, `keycloak` (local only), `cognito` (AWS), `entra` (Azure), `auth0` (either cloud) |
 | Customer authentication | `--users` | `none`, `keycloak` (local only), `cognito` (AWS), `auth0` (either cloud) |
 | Dev tooling | `--extension` | `codegraph`, `uipro`, `ux-gates` |

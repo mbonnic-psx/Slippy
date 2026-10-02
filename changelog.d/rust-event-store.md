@@ -12,6 +12,6 @@ task-local and nests as savepoints. Each store's `sqlx` line sits in its own mar
 workspace. The committed `Cargo.lock` is chosen per union of stores across the workspace's services, so
 `--locked` builds offline. Coverage skips code that only integration tests reach (the Postgres adapters and
 `src/bin`), and a committed `.cargo/mutants.toml` keeps cargo-mutants off that code and off the contract
-suites. Rust still answers no transport and no identity provider; axum comes next.
+suites. Rust answers the HTTP transport too, as `--http axum`, and no identity provider yet.
 
 **Catch-up.** Nothing for an existing project: this only adds what a new Rust service is generated with.

@@ -26,6 +26,7 @@ class RunningTest(FactoryTestCase):
                 "uv run --project apps/service --no-sync python -m runnable.main",
             ),
             "go": ("net-http", "apps/service/cmd/serve/main.go", "go run ./cmd/serve"),
+            "rust": ("axum", "apps/service/src/bin/serve.rs", "cargo run --locked --bin serve"),
         }
         for language, (transport, entry, command) in entry_points.items():
             with tempfile.TemporaryDirectory() as directory:

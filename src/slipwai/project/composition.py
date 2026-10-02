@@ -26,7 +26,13 @@ so the Python entry point defers the open to the first probe and keeps the store
 from __future__ import annotations
 
 from ..selection import Selection
-from .entry_stores import ENTRY_STORES, FEATURE
+from .entry_stores import ENTRY_STORES as SHARED_ENTRY_STORES
+from .entry_stores import FEATURE
+from .rust_entry import RUST
+
+#: Every backend's row, Rust's merged in from the module it lives in: `entry_stores.py` is at the line budget a
+#: module is held to, and a table is read from where the mechanism is.
+ENTRY_STORES = {**SHARED_ENTRY_STORES, "rust": RUST}
 
 #: What a transport's entry point carries where the store is wired in. Several rather than one because an
 #: import cannot be written where an argument goes, and Python's import groups are sorted by a linter.

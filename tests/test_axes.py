@@ -141,6 +141,8 @@ class AxesTest(FactoryTestCase):
             # Cross-axis: an identity provider with no transport is configuration a project cannot
             # use. The suggested fix is this backend's transport.
             for language, transport in transports.items():
+                if language not in offering("auth", "keycloak"):
+                    continue
                 message = self.refuse(
                     directory,
                     f"gated-auth-{language}",

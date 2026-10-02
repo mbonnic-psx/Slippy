@@ -19,6 +19,7 @@ API_CONTRACTS = {
     "fastify": "`GET /openapi.json`",
     "fastapi": "`GET /openapi.json` (and `/docs` for a person)",
     "net-http": "`__APP__/openapi.yaml`",
+    "axum": "`__APP__/openapi.yaml`",
 }
 
 

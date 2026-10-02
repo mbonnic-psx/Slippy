@@ -272,6 +272,7 @@ ENV_FEATURES = {
     "fastify",
     "fastapi",
     "net-http",
+    "axum",
     "quarkus-rest",
     "spring-web",
 }

@@ -1,0 +1,86 @@
+$ curl -si localhost:3000/health
+HTTP/1.1 200 OK
+content-type: application/json
+content-length: 15
+x-content-type-options: nosniff
+x-frame-options: DENY
+referrer-policy: no-referrer
+content-security-policy: default-src 'none'; frame-ancestors 'none'
+date: Fri, 02 Oct 2026 09:51:02 GMT
+
+{"status":"ok"}
+
+$ curl -si localhost:3000/ready
+HTTP/1.1 200 OK
+content-type: application/json
+cache-control: no-store
+content-length: 18
+x-content-type-options: nosniff
+x-frame-options: DENY
+referrer-policy: no-referrer
+content-security-policy: default-src 'none'; frame-ancestors 'none'
+date: Fri, 02 Oct 2026 09:51:02 GMT
+
+{"status":"ready"}
+
+$ curl -si localhost:3000/nope
+HTTP/1.1 404 Not Found
+content-type: application/json
+x-content-type-options: nosniff
+x-frame-options: DENY
+referrer-policy: no-referrer
+content-security-policy: default-src 'none'; frame-ancestors 'none'
+content-length: 20
+date: Fri, 02 Oct 2026 09:51:02 GMT
+
+{"error":"notFound"}
+
+$ curl -si localhost:3000/api/flags
+HTTP/1.1 404 Not Found
+content-type: application/json
+x-content-type-options: nosniff
+x-frame-options: DENY
+referrer-policy: no-referrer
+content-security-policy: default-src 'none'; frame-ancestors 'none'
+content-length: 20
+date: Fri, 02 Oct 2026 09:51:02 GMT
+
+{"error":"notFound"}
+
+$ curl -si -X POST localhost:3000/health
+HTTP/1.1 404 Not Found
+content-type: application/json
+content-length: 20
+x-content-type-options: nosniff
+x-frame-options: DENY
+referrer-policy: no-referrer
+content-security-policy: default-src 'none'; frame-ancestors 'none'
+date: Fri, 02 Oct 2026 09:51:02 GMT
+
+{"error":"notFound"}
+
+$ curl -si -X OPTIONS -H "Origin: http://evil.example" -H "Access-Control-Request-Method: GET" localhost:3000/health
+HTTP/1.1 404 Not Found
+content-type: application/json
+content-length: 20
+x-content-type-options: nosniff
+x-frame-options: DENY
+referrer-policy: no-referrer
+content-security-policy: default-src 'none'; frame-ancestors 'none'
+vary: Origin
+date: Fri, 02 Oct 2026 09:51:02 GMT
+
+{"error":"notFound"}
+
+$ curl -si -H "Origin: http://evil.example" localhost:3000/health
+HTTP/1.1 200 OK
+content-type: application/json
+content-length: 15
+x-content-type-options: nosniff
+x-frame-options: DENY
+referrer-policy: no-referrer
+content-security-policy: default-src 'none'; frame-ancestors 'none'
+vary: Origin
+date: Fri, 02 Oct 2026 09:51:02 GMT
+
+{"status":"ok"}

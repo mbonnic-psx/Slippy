@@ -1,0 +1,22 @@
+
+test result: ok. 63 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running unittests src/bin/serve.rs (~/.cache/slippy-cruise-tmp/axum-demo/ledger/target/llvm-cov-target/debug/deps/serve-6e6bcf51e55673ba)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+Filename                              Regions    Missed Regions     Cover   Functions  Missed Functions  Executed       Lines      Missed Lines     Cover    Branches   Missed Branches     Cover
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+adapters/driving/http/mod.rs              818                 9    98.90%         101                 1    99.01%         475                 3    99.37%           0                 0         -
+adapters/driving/http/openapi.rs          121                 9    92.56%           8                 0   100.00%          67                 4    94.03%           0                 0         -
+adapters/driving/http/security.rs         324                 0   100.00%          30                 0   100.00%         207                 0   100.00%           0                 0         -
+config.rs                                 237                 6    97.47%          28                 2    92.86%         156                 4    97.44%           0                 0         -
+health.rs                                   7                 0   100.00%           2                 0   100.00%           6                 0   100.00%           0                 0         -
+observability.rs                          730                28    96.16%          62                 7    88.71%         398                16    95.98%           0                 0         -
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+TOTAL                                    2237                52    97.68%         231                10    95.67%        1309                27    97.94%           0                 0         -
+
+verify: all gates passed
+exit=0

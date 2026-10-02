@@ -1,0 +1,75 @@
+$ curl -si localhost:3000/health
+HTTP/1.1 200 OK
+content-type: application/json
+content-length: 15
+
+{"status":"ok"}
+
+$ curl -si localhost:3000/ready
+HTTP/1.1 200 OK
+content-type: application/json
+cache-control: no-store
+content-length: 18
+
+{"status":"ready"}
+
+$ curl -si localhost:3000/nope
+HTTP/1.1 404 Not Found
+content-type: application/json
+content-length: 20
+
+{"error":"notFound"}
+
+# 1. a path the store cannot open
+{"timestamp":"2026-10-02T09:57:25.811936Z","level":"ERROR","fields":{"message":"the service stopped","error":"open sqlite: error returned from database: (code: 14) unable to open database file"},"target":"serve"}
+exit=1
+# 2. a store that goes bad while the service runs
+$ curl -si localhost:3002/ready   (store healthy)
+HTTP/1.1 200 OK
+content-type: application/json
+cache-control: no-store
+content-length: 18
+
+{"status":"ready"}
+
+e.sqlite3
+e.sqlite3-shm
+e.sqlite3-wal
+$ curl -si localhost:3002/ready   (file overwritten with garbage)
+HTTP/1.1 200 OK
+content-type: application/json
+cache-control: no-store
+content-length: 18
+
+{"status":"ready"}
+
+$ curl -si localhost:3002/health
+HTTP/1.1 200 OK
+serve exit after SIGTERM=0
+# service log
+{"timestamp":"2026-10-02T09:57:25.937294Z","level":"INFO","fields":{"message":"service listening","url":"http://localhost:3002","service":"ledger","exporting_traces":false},"target":"serve"}
+
+# 3. the events table taken away under a running service (disposable store)
+$ curl -si localhost:3002/ready   (store healthy)
+{"status":"ready"} 200
+$ curl -si localhost:3002/ready   (events table renamed away)
+HTTP/1.1 503 Service Unavailable
+content-type: application/json
+cache-control: no-store
+content-length: 42
+
+{"reason":"eventStore","status":"unready"}
+
+$ curl -s localhost:3002/health
+{"status":"ok"} 200
+serve exit after SIGTERM=0
+# service log
+{"timestamp":"2026-10-02T09:57:40.704009Z","level":"INFO","fields":{"message":"service listening","url":"http://localhost:3002","service":"ledger","exporting_traces":false},"target":"serve"}
+{"timestamp":"2026-10-02T09:57:42.219538Z","level":"ERROR","fields":{"message":"the event store did not answer; reporting not ready","error":"read the store head: error returned from database: (code: 1) no such table: events"},"target":"ledger::adapters::driving::http","span":{"http.request.method":"GET","http.route":"/ready","otel.name":"GET /ready","span_id":"2832fd1a69e87ea1","trace_id":"2a525c07efaaee8173c0d406e678945c","name":"request"}}
+
+# make verify (offline cargo) tail
+test result: ok. 95 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+TOTAL                                             6551               271    95.86%         611                53    91.33%        4243               160    96.23%           0                 0         -
+verify: all gates passed
+exit=0

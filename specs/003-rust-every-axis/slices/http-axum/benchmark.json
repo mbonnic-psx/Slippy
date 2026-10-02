@@ -658,6 +658,150 @@
         "split": 0,
         "driver": "cruise"
       }
+    },
+    {
+      "stage": "demo",
+      "started": "2026-10-02T09:44:18Z",
+      "planned": "demo: strong → host model — `strong` maps to the host model",
+      "tasks": {
+        "start": {
+          "open": 5,
+          "done": 27
+        },
+        "end": {
+          "open": 5,
+          "done": 27
+        }
+      },
+      "ended": "2026-10-02T09:44:18Z",
+      "seconds": 0,
+      "span": {
+        "from": {
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141.jsonl": 943339,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-a421b28fce85afffa.jsonl": 1071238,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-a5ada061021655ed3.jsonl": 1151599,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-a805963fcefa0e87e.jsonl": 394764,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-a949755bdb4b46953.jsonl": 633097,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-ac26938642bd37838.jsonl": 853757,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-ac733950123fbd8a4.jsonl": 3012699,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-ade171d2668447a4f.jsonl": 1153637,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-aeef7147a85a2d637.jsonl": 717868,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-afc9675d92c905626.jsonl": 1742083
+        },
+        "to": {
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141.jsonl": 950825,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-a421b28fce85afffa.jsonl": 1071238,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-a5ada061021655ed3.jsonl": 1151599,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-a805963fcefa0e87e.jsonl": 394764,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-a949755bdb4b46953.jsonl": 633097,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-ac26938642bd37838.jsonl": 853757,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-ac733950123fbd8a4.jsonl": 3012699,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-ade171d2668447a4f.jsonl": 1153637,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-aeef7147a85a2d637.jsonl": 717868,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-afc9675d92c905626.jsonl": 1742083
+        }
+      },
+      "usage": {
+        "source": "claude",
+        "session": "34c23c3f-a6fd-47c6-8d95-22eca789c141",
+        "read": "message.usage on each assistant line, once per requestId; read after the session that opened the entry had ended",
+        "host": {
+          "claude-opus-5-5": {
+            "input": 2,
+            "output": 552,
+            "cache_read": 128044,
+            "cache_creation": 938
+          }
+        },
+        "subagents": {},
+        "agents": []
+      },
+      "ran": [
+        "claude-opus-5-5"
+      ],
+      "agents": null,
+      "delegated": false,
+      "signals": {},
+      "cut_off": "a new `hand` entry started while it was open"
+    },
+    {
+      "stage": "hand",
+      "started": "2026-10-02T09:44:18Z",
+      "planned": "hand: strong → host model — `strong` maps to the host model",
+      "tasks": {
+        "start": {
+          "open": 5,
+          "done": 27
+        },
+        "end": {
+          "open": 5,
+          "done": 27
+        }
+      },
+      "ended": "2026-10-02T10:02:30Z",
+      "seconds": 1092,
+      "span": {
+        "from": {
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141.jsonl": 950825,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-a421b28fce85afffa.jsonl": 1071238,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-a5ada061021655ed3.jsonl": 1151599,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-a805963fcefa0e87e.jsonl": 394764,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-a949755bdb4b46953.jsonl": 633097,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-ac26938642bd37838.jsonl": 853757,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-ac733950123fbd8a4.jsonl": 3012699,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-ade171d2668447a4f.jsonl": 1153637,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-aeef7147a85a2d637.jsonl": 717868,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-afc9675d92c905626.jsonl": 1742083
+        },
+        "to": {
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141.jsonl": 983384,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-a331c4d45c3ddaacf.jsonl": 738669,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-a421b28fce85afffa.jsonl": 1071238,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-a5ada061021655ed3.jsonl": 1151599,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-a805963fcefa0e87e.jsonl": 394764,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-a949755bdb4b46953.jsonl": 633097,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-ac26938642bd37838.jsonl": 853757,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-ac733950123fbd8a4.jsonl": 3012699,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-ade171d2668447a4f.jsonl": 1153637,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-aeef7147a85a2d637.jsonl": 717868,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-afc9675d92c905626.jsonl": 1742083
+        }
+      },
+      "usage": {
+        "source": "claude",
+        "session": "34c23c3f-a6fd-47c6-8d95-22eca789c141",
+        "read": "message.usage on each assistant line, once per requestId",
+        "host": {
+          "claude-opus-5-5": {
+            "input": 2,
+            "output": 1726,
+            "cache_read": 128982,
+            "cache_creation": 806
+          }
+        },
+        "subagents": {
+          "claude-opus-5-5": {
+            "input": 134,
+            "output": 8972,
+            "cache_read": 4006603,
+            "cache_creation": 86474
+          }
+        },
+        "agents": [
+          "drive-hand"
+        ]
+      },
+      "ran": [
+        "claude-opus-5-5"
+      ],
+      "agents": [
+        "drive-hand"
+      ],
+      "delegated": true,
+      "signals": {
+        "outcome": "accepted",
+        "driver": "cruise"
+      }
     }
   ]
 }

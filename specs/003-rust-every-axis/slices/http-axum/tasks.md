@@ -762,3 +762,15 @@ T015, run by the slice's host session:
   shipped `scripts/backing-services.py`, which carries the `axum` rows (the shared pruner — Blocked question 1).
 
 T015 stays open for the `make starters` diff and a clean `make check-locks` on a machine whose npm resolves.
+
+## Demo feedback (iteration 4, drive-hand, accepted)
+
+- [ ] T033 **LOW — `slipwai generate --help` says `--http … (default: none)`** while every backend defaults to its
+  own transport (D2 makes Rust's `axum`); the line is shared by every option's help. A task for the next slice that
+  touches the CLI's help, not this one's acceptance.
+- [ ] T034 **LOW — after `./init --http none`, `tokio`'s `net`/`signal` features and `serde_json` stay in the
+  manifest and lock**, where a fresh `--http none` project has neither. Scenario 8 does not promise the two match;
+  rides with T025 (the empty `[dev-dependencies]` table).
+- Not this feature: bare `slipwai generate` from a scratch directory proposes the factory checkout's parent as the
+  output parent rather than the current directory — an existing CLI behaviour, every backend alike; for an issue
+  of its own. After `./init --http none` `make demo` remains and fails with no `docker-compose.yml`, as Go's does.

@@ -1,0 +1,28 @@
+Language: rust
+Service name [service]: 
+What does service own? (a sentence or two; Enter to decide later): 
+Bounded contexts service holds, comma-separated [service]: 
+    none
+  ❯ react-vite
+  ❯ none
+    react-vite
+Frontend: none
+HTTP transport:
+  What accepts inbound HTTP. One transport per backend, the ecosystem's own, or none for a library or worker
+    none — None — library or worker only, no inbound HTTP
+  ❯ axum — axum — JSON API on tokio, with the browser hardening and a request
+    span, held to a hand-written openapi.yaml; the in-process router tests prove
+    the routes, not a socket or a collector
+Choose: axum
+Output parent [~/Slippy-worktrees]: 
+created: ~/Slippy-worktrees/ledger
+
+# (the stray output under ~/Slippy-worktrees/ledger was removed straight after)
+# Through the flag
+$ slipwai generate ledger --language rust --output <scratch>   # no --http
+project.json: "http": "axum"
+$ slipwai generate x --language rust --http fastify --output <scratch>
+slipwai generate: error: --http fastify is implemented for the typescript backend only, and this project's backend is rust: a half-ported version is deliberately not emitted. Generate with --http axum, or with --backend typescript.
+$ slipwai generate --help | grep -- --http
+  --http none|fastify|fastapi|net-http|quarkus-rest|spring-web|axum
+                        http transport to scaffold (default: none)

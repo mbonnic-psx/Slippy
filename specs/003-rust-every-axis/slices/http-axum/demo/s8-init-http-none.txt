@@ -1,0 +1,40 @@
+# Scenario 8: the transport taken away from a generated axum project
+# (project: slipwai generate ledger --language rust --profile standard --frontend none, default --http axum)
+$ grep -c 'name = "axum' Cargo.lock
+2
+$ ./init --http none
+http: none — None — library or worker only, no inbound HTTP
+  With no external interface, boundary-level scenarios must bind to whatever the real entry point becomes (a CLI, a queue consumer). Decide that before writing acceptance tests.
+  removed ~/.cache/slippy-cruise-tmp/axum-demo/ledger/apps/service/src/adapters/driving
+  removed ~/.cache/slippy-cruise-tmp/axum-demo/ledger/apps/service/src/config.rs
+  removed ~/.cache/slippy-cruise-tmp/axum-demo/ledger/apps/service/src/observability.rs
+  removed ~/.cache/slippy-cruise-tmp/axum-demo/ledger/apps/service/src/bin/serve.rs
+  removed ~/.cache/slippy-cruise-tmp/axum-demo/ledger/apps/service/src/bin (now empty)
+  removed ~/.cache/slippy-cruise-tmp/axum-demo/ledger/apps/service/openapi.yaml
+  Cargo.lock — dropped what only axum, http-body-util, opentelemetry, opentelemetry-otlp, opentelemetry_sdk, serde_path_to_error, tower, tracing, tracing-opentelemetry, tracing-subscriber needed
+  removed ~/.cache/slippy-cruise-tmp/axum-demo/ledger/docker-compose.yml
+  nothing left to compose; docker-compose.yml is gone
+  pruned: axum
+  project.json — service: http is now none
+  ... (Spec Kit init output) ...
+exit=0
+$ grep -c 'name = "axum' Cargo.lock
+0
+$ CARGO_NET_OFFLINE=true make verify
+test health::tests::reports_ready ... ok
+TOTAL  7 regions 100.00% ... 6 lines 100.00%
+verify: all gates passed
+exit=0
+
+# What remains, compared with a fresh `--http none` project (notes, not failures of scenario 8):
+# - apps/service/Cargo.toml keeps
+#     tokio = { version = "1.53.1", features = ["macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
+#   and Cargo.lock keeps tokio, serde, serde_json and their dependencies (~20 packages a fresh --http none
+#   lock does not carry); apps/service/src/adapters/mod.rs and .env.example stay.
+# - Makefile keeps `demo:` / `demo-down:` while docker-compose.yml is gone:
+#     $ make demo
+#     docker compose --profile app up -d --wait
+#     no configuration file provided: not found
+#     make: *** [Makefile:75: demo] Error 1
+#   A Go project generated with --http net-http and then `./init --http none` keeps the same two targets,
+#   so this predates the slice.

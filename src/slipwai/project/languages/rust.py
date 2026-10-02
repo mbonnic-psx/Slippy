@@ -55,8 +55,27 @@ def service_files(event: bool, selection: Selection, target: str = "none") -> di
     files.update(flag_reader(target, "rust"))
     wire_entry(files, target)
     wire_store(files, selection, "rust")
+    declare_adapters(files)
     files["src/lib.rs"] = declare_modules(files)
     return files
+
+
+ADAPTERS = """//! The adapters: `driven` implements the ports the application owns; `driving` is how a request reaches a use
+//! case, when this service has a way to be asked.
+
+"""
+
+
+def declare_adapters(files: dict[str, str]) -> None:
+    """`src/adapters/mod.rs`, naming the kinds of adapter this service was generated with and no others.
+
+    Written from the files present for the reason `declare_modules` is: the in-memory store and the transport
+    each add an adapter directory, either can be there without the other, and a `pub mod` for a directory that
+    is not there is a build that fails. A service with neither has no `adapters` module at all.
+    """
+    kinds = [kind for kind in ("driven", "driving") if any(path.startswith(f"src/adapters/{kind}/") for path in files)]
+    if kinds:
+        files["src/adapters/mod.rs"] = ADAPTERS + "".join(f"pub mod {kind};\n" for kind in kinds)
 
 
 def declare_modules(files: dict[str, str]) -> str:

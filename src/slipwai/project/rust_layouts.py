@@ -13,7 +13,6 @@ RUST_WRITE_SIDE: dict[str, dict[str, str]] = {
         "src/application/mod.rs": "application_mod.rs",
         "src/application/ports/mod.rs": "ports_mod.rs",
         "src/application/ports/events.rs": "events.rs",
-        "src/adapters/mod.rs": "adapters_mod.rs",
         "src/adapters/driven/mod.rs": "driven_mod.rs",
         "src/adapters/driven/event_store_memory.rs": "event_store_memory.rs",
         "src/event_store_contract.rs": "event_store_contract.rs",
@@ -27,6 +26,12 @@ RUST_WRITE_SIDE: dict[str, dict[str, str]] = {
         "build.rs": "migrations_build.rs",
         "migrations/001_events.sql": "../sql/001_events.sql",
         "migrations/002_events_append_only.sql": "../sql/002_events_append_only.sql",
+    },
+    # The driving adapter: the routes, and the router's own tests beside them. `src/adapters/mod.rs` is not
+    # here because the store shares it — `languages/rust.py` writes it from the files present.
+    "axum": {
+        "src/adapters/driving/mod.rs": "driving_mod.rs",
+        "src/adapters/driving/http/mod.rs": "http_app.rs",
     },
 }
 

@@ -61,7 +61,7 @@
 - **Options:** amend the unreleased fragments (recommended by the gaps pass) · leave them and let the new fragment supersede
 - **Decision:** Amend them: the sentences that will be false at release are corrected in place, and this slice's own fragment says what `axum` adds.
 - **Why:** None of them has been released, so no reader has read them as a promise (Principle I); a release entry that contradicts itself is what the person upgrading would read. Feature 001's D20 amended its unreleased fragment the same way.
-- **Decided by:** host (standing decision 001/D20)
+- **Decided by:** host (stage recommendation)
 - **Confidence:** high · **Would reverse if:** 1.4.0 is released before this slice merges — then the old lines are history and a new fragment supersedes them
 - **Written to:** specs/003-rust-every-axis/decisions.md
 - **Status:** standing
@@ -72,7 +72,7 @@
 - **Options:** releasable on merge · held behind the `.dev` pre-release only `make release` turns into a release (recommended; 001's D7) · a coordinated deploy
 - **Decision:** Held behind the pre-release, exactly as feature 001's D7: a merge to `main` publishes a `1.4.0.dev<N>` snapshot installers pass over unless asked; a person merges the PR and a person runs `make release`. No flag file.
 - **Why:** That is this repository's dark launch; someone who generates with a released slipwai never meets a half-finished Rust transport, and the four later slices land behind the same gate.
-- **Decided by:** host (standing decision 001/D7)
+- **Decided by:** host (stage recommendation)
 - **Confidence:** high · **Would reverse if:** the owner wants snapshots treated as releases
 - **Written to:** specs/003-rust-every-axis/slices/http-axum/plan.md, specs/003-rust-every-axis/decisions.md
 - **Status:** standing

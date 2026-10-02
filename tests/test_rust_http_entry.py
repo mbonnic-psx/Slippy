@@ -62,7 +62,7 @@ class EntryPointTest(FactoryTestCase):
             None: ("readiness(None)", ["StoreProbe", "InMemoryEventStore"]),
             "memory": ("readiness(Some(store))", ["SqliteEventStore", "connect_lazy"]),
             "sqlite": ("SqliteEventStore::open(", ["connect_lazy", "PostgresEventStore"]),
-            "postgres": ("PgPoolOptions::new().connect_lazy(", ["SqliteEventStore"]),
+            "postgres": ("PgPoolOptions::new().connect_lazy_with(", ["SqliteEventStore"]),
         }
         with tempfile.TemporaryDirectory() as directory:
             for profile, store in ANSWERS:
@@ -177,6 +177,71 @@ class EntryPointTest(FactoryTestCase):
                 os.killpg(server.pid, signal.SIGTERM)
                 server.wait(timeout=60)
             self.assertIsNotNone(server.returncode)
+
+
+class StoreOpenTest(FactoryTestCase):
+    """What each store answer's open does with its variable unset and malformed, as Go's `serve` does: an unset one
+    starts the process on the defaults (`/ready` says whether the store answers), a malformed one stops it with the
+    variable named. Proven by running the built binary in isolation, on a free port, stopped by its recorded PID."""
+
+    def serve(self, repo: Path, target: Path, extra: dict[str, str]) -> tuple[int | None, str, str | None, int | None]:
+        """Start `serve`; return (exit code if it stopped, its output, /health body, /ready status)."""
+        service = repo / "apps/service"
+        env = {k: v for k, v in CARGO_ENVIRONMENT.items() if k not in ("DATABASE_URL", "EVENT_STORE_PATH", "PORT")}
+        build = subprocess.run(
+            ["cargo", "build", "--locked", "--bin", "serve"], cwd=service, text=True, capture_output=True,
+            env={**env, "CARGO_TARGET_DIR": str(target)},
+        )
+        self.assertEqual(build.returncode, 0, build.stdout + build.stderr)
+        port = free_port()
+        output = repo / "serve.log"
+        with output.open("w") as log:
+            server = subprocess.Popen(
+                [str(target / "debug/serve")], cwd=service, env={**env, "PORT": str(port), **extra},
+                stdout=log, stderr=subprocess.STDOUT, start_new_session=True,
+            )
+        try:
+            deadline = time.monotonic() + 30
+            health = ready = None
+            while time.monotonic() < deadline and server.poll() is None and health is None:
+                try:
+                    with urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=2) as response:
+                        health = response.read().decode()
+                except OSError:
+                    time.sleep(0.2)
+            if health is not None:
+                try:
+                    with urllib.request.urlopen(f"http://127.0.0.1:{port}/ready", timeout=10) as response:
+                        ready = response.status
+                except urllib.error.HTTPError as unready:
+                    ready = unready.code
+                    unready.close()
+            return server.poll(), output.read_text(), health, ready
+        finally:
+            if server.poll() is None:
+                os.killpg(server.pid, signal.SIGTERM)
+            server.wait(timeout=60)
+
+    def test_every_store_answer_starts_with_its_variable_unset_and_refuses_it_malformed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "target"
+            postgres = self.generate(directory, "pg", "event-modelling", "rust", http="axum", event_store="postgres")
+            sqlite = self.generate(directory, "lite", "event-modelling", "rust", http="axum", event_store="sqlite")
+            cases = (
+                ("postgres unset", postgres, {}, ("running", "503")),
+                ("postgres wrong scheme", postgres, {"DATABASE_URL": "mysql://db/app"}, ("stopped", "DATABASE_URL")),
+                ("postgres unparseable", postgres, {"DATABASE_URL": "postgres://db:nope/app"}, ("stopped", "DATABASE_URL")),
+                ("sqlite unset", sqlite, {}, ("running", "200")),
+                ("sqlite unopenable", sqlite, {"EVENT_STORE_PATH": "/nonexistent-dir/events.db"}, ("stopped", "sqlite")),
+            )
+            for label, repo, extra, (outcome, expected) in cases:
+                with self.subTest(case=label):
+                    code, log, health, ready = self.serve(repo, target, extra)
+                    if outcome == "running":
+                        self.assertEqual((health, str(ready)), ('{"status":"ok"}', expected), log)
+                    else:
+                        self.assertIn(code, (1,), log)
+                        self.assertIn(expected, log)
 
 
 class SeveralServicesTest(FactoryTestCase):

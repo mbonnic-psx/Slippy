@@ -1,0 +1,400 @@
+---
+
+description: "Tasks for slice http-axum: a Rust service serves HTTP through axum"
+---
+
+# Tasks: http-axum — a Rust service serves HTTP through axum
+
+**Input**: `specs/003-rust-every-axis/slices/http-axum/plan.md` (Rules R1–R13, Pin, Design, Source Code, Not working
+yet), `research.md`, `quickstart.md`, `specs/003-rust-every-axis/spec.md` (US1 scenarios 1–12; the `http-axum`
+paragraph under *Gaps reviewed*; SC-003), `decisions.md` D1–D7. There is no `data-model.md` or `contracts/`: the slice
+stores no entity, and its one published contract is the generated service's `openapi.yaml` (R7).
+
+**Cycle**: one task per rule of the plan's example map, each its own RED-GREEN-REFACTOR, one local commit per task,
+never pushed. Every factory-level test enters at the boundary (`write_project` / `slipwai generate` /
+`slipwai migrate` into a scratch directory under `$TMPDIR`) and uses no mocking library (`AGENTS.md`): fakes are
+classes or functions in the test tree. The generated service's own rules are `#[cfg(test)]` modules in the assets,
+dispatched through `Router::oneshot` (no socket) and `config::load_from(lookup)` (an environment handed in), and run
+by a generated project's `cargo test`.
+
+**Format**: `[ID] [P?] [Story] Description` — `[P]` only where the task's files are disjoint from its siblings' and no
+RED depends on another task's behaviour.
+
+**Test command** (every task; from the worktree root):
+`env -u CRUISE_RUNNER -u CRUISE_ITERATION make test TESTS="test_rust_http"` — narrow it to the one class the task
+adds (`TESTS="test_rust_http.<Class>"` where the runner accepts it). The suite `tests/test_rust_http.py` is new and
+holds the slice's factory-level rules; `scripts/check-structure.py`'s 350-line module budget applies to it, so when
+it nears the budget split it by rule family (`tests/test_rust_http_<family>.py`) and keep the same prefix so
+`TESTS="test_rust_http"` still selects all of them.
+
+## HARD SAFETY RULES (every implementer reads these; follow them for every command you run)
+
+- The session is already inside a 4G-capped systemd unit. Do **not** wrap commands in `systemd-run` again.
+- `TMPDIR=$HOME/.cache/slippy-cruise-tmp` (on disk) stays set. Never use `/tmp`: it is a RAM-backed tmpfs. Probe
+  projects, scratch generations and cargo target directories go under `$HOME/.cache/slippy-cruise-tmp/`, and big
+  scratch directories are cleaned up when the task is done.
+- Cargo builds of generated projects run with `CARGO_BUILD_JOBS=2` (and `CARGO_TARGET_DIR` under the cache
+  directory, shared across a task's probes).
+- Every test run and `make verify` runs under `env -u CRUISE_RUNNER -u CRUISE_ITERATION` (001's D8).
+- `make verify` takes over half an hour, beyond one foreground tool call. Run it in the background with its output
+  to a log under `$HOME/.cache/` (for example `env -u CRUISE_RUNNER -u CRUISE_ITERATION make verify >
+  $HOME/.cache/slippy-http-axum-verify.log 2>&1`, with `run_in_background`) and poll the log; never wait in the
+  foreground.
+- Known, not yours: the local tags `v1.4.0`, `v1.5.0` and `v1.5.1` make
+  `tests/test_changelog.py::test_every_release_this_repository_has_ever_tagged_has_an_entry` red in this checkout
+  only. Never delete or move those tags. When `tests/test_changelog.py` matters (T014, T015), prove it in a scratch
+  `git clone --no-tags` of the worktree under `$HOME/.cache/slippy-cruise-tmp/`. Any other failure is real.
+- cargo 1.98 has network here, so `make locks` / `scripts/regenerate-locks.py` may run.
+- The one sanctioned way to see a RED on code that exists, or to check a guard has teeth, is
+  `delivery/docs/delegated-agent-safety.md`'s: change the production file, run the test, restore with
+  `git checkout -- <exact path>`. Never `git stash`, never copy a tracked file aside, never `pkill -f`.
+- No mocking library (`AGENTS.md`): no `unittest.mock`, no `mock.patch`; fakes in the test tree only.
+- One task per local commit; never push, never alter branches, tags or remotes. End each commit message with the
+  attribution line the session gives, and say the version level where the task touches a user-visible tree
+  (`AGENTS.md`: MINOR, `VERSION` stays `1.4.0.dev0`).
+- Write nothing under `delivery/` (the pin rows are already in `delivery/survey/pinned.md`), and not the root `Makefile`,
+  `project.json`, `pyproject.toml`, `VERSION` or anything under `.github/`. Needing one is a stop: report it, do not
+  edit it. Edit only the files a task's manifest names; if another file must change, stop and report.
+
+## Layers this slice covers
+
+The catalog and the pruner's tables (T002, T011), the generator's per-feature tables (T003 to T010), the generated
+service end to end — driving adapter, hardening, checked environment, tracing, published contract and entry point
+(T005 to T010), the manifest and the committed locks (T004), taking the transport away (T011), a browser app beside
+the service (T012), the factory's own suite and docs held to the new rows (T013), the changelog (T014) and the gate
+(T015). No screen, no stored entity, no new port: the slice is a transport on a generated service.
+
+## Phase 1: Setup — the Pin
+
+- [ ] T001 **Pin — characterise today's Rust no-transport tree on both profiles, and a migrate of a record with no
+  `http` key, green before any production change** (plan *Pin* rows 1 and 2; scenarios 2 and 9 as the baseline they
+  will later hold; the edge case *a project generated before this feature*).
+  Files: `tests/test_rust_http.py` (new). No production file is touched. Not a
+  RED-GREEN increment: a characterisation is green by design.
+  - First run `env -u CRUISE_RUNNER -u CRUISE_ITERATION make test TESTS="test_catalog test_axes test_readiness
+    test_running"` and confirm green, so a later red is the slice's and not the tree's.
+  - In the new suite, one characterisation per profile (`standard`, `event-modelling`): `--language rust` generated
+    with no `--http` answer has no `src/bin/serve.rs`, no `src/adapters/driving/`, no `src/config.rs`, no
+    `src/observability.rs`, no `openapi.yaml`, no `.env.example` transport keys, no Compose `service`, no `make dev`
+    entry, and `project.json`'s selection has no `http` key. Record the exact file set in the test (a sorted list) so
+    T003 can hold `--http none` to it.
+  - One characterisation of `slipwai migrate` over a generated Rust project whose `project.json` has no `http` key
+    (the record written by today's generator): the migrated tree has no transport and the record is still without an
+    `http` answer that means `axum` (`Selection.option` reads an unasked axis as `absent`, `none`).
+  - Observe each green. Name each test for what it pins; T003 reuses the file-set one.
+  - Rows 1 and 2 of the plan's *Pin* were appended to `delivery/survey/pinned.md` with the plan's commit, naming
+    this suite; confirm the test names you choose match what the rows say they pin, and do not edit the rows (the
+    ledger is append-only — a correction is a new row, reported back).
+  - Run: `make test TESTS="test_rust_http"`.
+
+## Phase 2: User Story 1 — a Rust service serves HTTP through axum (P1)
+
+**Goal**: `slipwai generate --language rust` asks the HTTP question like every backend (`none` or `axum`, default
+`axum`); with `axum` the service serves `/health`, `/ready`, a JSON 404 and the browser hardening, traces each
+request, reads a checked environment, publishes an `openapi.yaml` a test holds to the router, and binds its port with
+`make dev` and `make demo`; `--http none` is today's tree.
+
+**Independent test**: generate a Rust project with `--http axum`, run its `make verify`, `make dev` and request
+`GET /health` and `GET /ready`; generate one with `--http none` and see the file set T001 recorded.
+
+- [ ] T002 [US1] **Rule R1 — Rust is asked the HTTP question** (scenario 1; FR-001 for `http`; D2). Depends on T001.
+  Files: `tests/test_rust_http.py`, `catalog.json`, `assets/backing-services/prune.py`, and
+  only those existing suites the catalog change turns red, each edited to the new answer and nothing more (their
+  structural flips are T013).
+  - RED, in the new suite: `axis_options("http", "rust", "none") == ["none", "axum"]`; the default http answer for
+    Rust is `axum`; `--http axum` and `--http none` both generate for `--language rust`; the interactive prompt reads
+    `Choose (none/axum) [axum]`; `--http net-http --language rust` is refused as every other backend's wrong
+    transport is. Observe it fail on the missing option, not on an import error.
+  - GREEN: `catalog.json` — `rust` under `http.options.none.backends`; the `axum` option (`capabilities:
+    ["http-axum"]`, `features: ["axum"]`, `backends: ["rust"]`, `targets` as `net-http`'s, no containers, no
+    migrations, no integration suite, a label saying what it is and what it does not prove); `default.http.rust =
+    "axum"`. `prune.py` — `FEATURES` and the `AXES` `http` option mirrored. Then run the whole `make test` once and
+    repair, in this commit, only the existing assertions that read Rust as "no transport" because of the default.
+  - Guards: `test_catalog` / `test_axes` parity between `catalog.json` and `prune.py` stay green (FR-004); no branch
+    on the option's name (`test_an_option_s_feature_is_never_branched_on_by_name`).
+  - REFACTOR: none expected; suite green.
+  - Run: `make test TESTS="test_rust_http test_catalog test_axes"`.
+
+- [ ] T003 [US1] **Rule R2 — `--http none` is today's tree** (scenarios 2 and 9; edge case *generated before*).
+  Depends on T002.
+  Files: `tests/test_rust_http.py`, and production files only if the RED exposes a difference (expected: none).
+  - RED: on each profile, `--http none` generates exactly the file set T001 recorded and the same bytes as
+    generation at the base `40dacad`, except `project.json`'s `http: none` (generate once at the base into a scratch
+    worktree under the cache, diff, and record the result for the verdict; the test itself holds the file set and
+    the absence of every transport file); a factory test generates `--http none` and runs its `make verify` with
+    cargo; a record with no `http` key still migrates with no transport (T001's characterisation, still green).
+    The rule's behaviour mostly exists already, so if the RED is green on arrival, fold it into the task that
+    produced the behaviour (T002) and say so in the commit; do not leave a test that is born green and proves
+    nothing. A difference is the RED: fix it in `src/slipwai/` and name the file in the commit.
+  - Run: `make test TESTS="test_rust_http"` (the cargo `make verify` test is the slow one; run it alone with
+    `CARGO_BUILD_JOBS=2`).
+
+- [ ] T004 [US1] **Rule R9 — the manifest and the locks** (scenarios 5, 7 and 10; FR-006). Depends on T002. Moved
+  ahead of R3 on purpose: the assets of T005 to T010 cannot compile in a generated project until the manifest and
+  its lock carry axum's crates (see *Dependencies & execution order*).
+  Files: `tests/test_rust_http.py`, `src/slipwai/project/languages/cargo.py`,
+  `scripts/regenerate-locks.py`, `assets/languages/rust/app/Cargo.toml`,
+  `assets/languages/rust/locks/{axum,memory-axum,memory-sqlite-axum,memory-postgres-axum,memory-sqlite-postgres-axum}/Cargo.lock`.
+  - RED: `lock_variant` returns `axum`, `memory-axum`, `memory-sqlite-axum`, `memory-postgres-axum`,
+    `memory-sqlite-postgres-axum` for the five transport selections beside today's four, and the empty lock
+    unchanged for no store and no transport; `tokio` is declared once with the union of the store's and the
+    transport's features (`net`, `signal` added by axum), never a second key in a marked region; every variant's
+    committed lock lists every crate its manifest names directly, `dependencies` and `dev-dependencies` alike (no
+    cargo needed); a two-service workspace, one on axum and one not, takes the union lock with each member listing
+    only its own crates. Observe the first fail on the missing variant.
+  - GREEN: the transport's crates inside `# backing-service:axum:begin` / `:end` of `[dependencies]` (versions in
+    `research.md`: `axum` with `http1, json, tokio, query`; `tracing`; `tracing-subscriber` with `fmt, json, registry,
+    std, ansi`; the OpenTelemetry trio with `opentelemetry-otlp` at `default-features = false` and `http-proto,
+    reqwest-blocking-client, reqwest-rustls, trace`; `tracing-opentelemetry`), its two dev-dependencies in an `axum`
+    region of their own under a `[dev-dependencies]` placeholder; `tokio`, `serde`, `serde_json` unmarked whenever
+    the store or the transport is present; `direct_crates` naming dependencies and dev-dependencies;
+    `lock_variant`; `scripts/regenerate-locks.py` makes all nine; run `make locks` to write the five new locks.
+  - Guards: `make check-locks` is clean; the matrix's native gate builds `--locked` with each store (run one
+    combination by hand: generate `--http axum --event-store sqlite`, `cargo build --locked --all-targets` with
+    `CARGO_BUILD_JOBS=2`).
+  - REFACTOR: none expected; suite green. Clean up scratch generations.
+  - Run: `make test TESTS="test_rust_http test_cargo test_rust_locks"` (use the names the suite actually has;
+    `ls tests | grep -i "cargo\|lock"`).
+
+- [ ] T005 [US1] **Rule R3 — the adapter's routes** (scenario 3). Depends on T004.
+  Files: `tests/test_rust_http.py`, `assets/backing-services/rust/driving_mod.rs`,
+  `assets/backing-services/rust/http_app.rs`, `src/slipwai/project/rust_layouts.py`,
+  `src/slipwai/project/languages/rust.py`.
+  - RED: a factory test generates `--http axum` (standard profile) and runs the service's
+    `cargo test --locked --lib adapters::driving::http` (`CARGO_BUILD_JOBS=2`); the asset's `#[cfg(test)]` module,
+    written first with a stub implementation so the failure is an assertion and not a compile error, holds:
+    `GET /health` → 200 `{"status":"ok"}`; `GET /ready` with no probe → 200 `{"status":"ready"}`; with a probe that
+    answers → 200; with a probe that fails → 503 `{"status":"unready","reason":"eventStore"}`, `Cache-Control:
+    no-store` either way, the failure logged and not in the body; any unmatched path → 404 `{"error":"notFound"}`
+    saying nothing about path or method, and the same for a known path under the wrong method; a JSON-body
+    extractor whose rejection is the one 400 body `{"error":"schemaValidationFailed","field":…,"message":…}` for an
+    unknown field, a wrong type and not one JSON value, naming the field and the rule and never the value. Every
+    test dispatches through the real router with `oneshot`, no socket.
+  - GREEN: `build_app(registrars)`, the `readiness(probe)` registrar over an object-safe probe trait the adapter
+    declares (it imports no port), the fallback, the extractor; `RUST_WRITE_SIDE['axum']` in `rust_layouts.py`
+    lists the files (destination to asset); `rust.py` declares the modules.
+  - REFACTOR: the routes' body constants in one place; `cargo clippy -D warnings` clean in the generated project.
+  - Run: `make test TESTS="test_rust_http"` (factory) and, in the scratch project, `cargo test --locked --lib`.
+
+- [ ] T006 [US1] **Rule R4 — what a browser meets first** (scenario 3). Depends on T005 (same `mod.rs`, same layout
+  table).
+  Files: `tests/test_rust_http.py`, `assets/backing-services/rust/http_security.rs`,
+  `assets/backing-services/rust/http_app.rs` (only the `pub mod security;` line),
+  `src/slipwai/project/rust_layouts.py`.
+  - RED: the asset's `#[cfg(test)]` cases are Go's `http_security_test.go` cases: `secure(router, allowed_origins)`
+    sets `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer` and `Content-
+    Security-Policy: default-src 'none'; frame-ancestors 'none'` on every response, no HSTS; `Vary: Origin`
+    whenever an `Origin` came; the origin echoed with `Access-Control-Allow-Credentials: true` only when allowed; a
+    preflight from an allowed origin answered 204 before any route with the methods, the requested headers (or
+    `content-type`) and `Max-Age: 600`; an unknown origin gets no allow header; an empty list is same-origin only.
+    Observe a stubbed `secure` fail on the first header assertion.
+  - GREEN: CORS hand-written as an `axum::middleware::from_fn`, no `tower-http` (research).
+  - REFACTOR: none expected; clippy clean.
+  - Run: `make test TESTS="test_rust_http"`; `cargo test --locked --lib adapters::driving::http::security` in the
+    scratch project.
+
+- [ ] T007 [US1] **Rule R5 — the checked environment** (scenario 11). Depends on T006 (same layout table and
+  `lib.rs` module region).
+  Files: `tests/test_rust_http.py`, `assets/backing-services/rust/config.rs`,
+  `src/slipwai/project/rust_layouts.py`, `src/slipwai/project/languages/rust.py`,
+  `src/slipwai/backends.py`.
+  - RED: `config::load_from(lookup)` over a fake lookup: defaults (`HOST` `0.0.0.0`, `PORT` 3000); `PORT`
+    refused unless 1–65535; `PUBLIC_BASE_URL` and `OTEL_EXPORTER_OTLP_ENDPOINT` refused unless `http://` or
+    `https://`; `LOG_LEVEL` and `LOG_FORMAT` read and never refused; `OTEL_SERVICE_NAME` defaults to the service's own
+    name (the placeholder `rust.py` resolves, as Go's `__SERVICE_NAME__` is); `CORS_ALLOWED_ORIGINS` comma-split,
+    blanks dropped; `EVENT_STORE_PATH` only in the `sqlite` region and `DATABASE_URL` (refused unless `postgres://`
+    or `postgresql://`) only in the `postgres` region; every refusal names the variable; `address()` brackets an
+    IPv6 host; `reported_url()` prefers `PUBLIC_BASE_URL`. Factory example: generated `.env.example` carries the
+    transport's keys through the `__TRANSPORT__` region and the store's in theirs.
+  - GREEN: `config.rs`, `ENV_FEATURES` gains `axum`, `__SERVICE_NAME__` resolved in `config.rs`.
+  - REFACTOR: one table of keys read by both the loader and the `.env.example`, if that reads better; clippy clean.
+  - Run: `make test TESTS="test_rust_http"`; `cargo test --locked --lib config` in the scratch project.
+
+- [ ] T008 [US1] **Rule R6 — one span per request** (scenario 3). Depends on T007 (same layout table and
+  `lib.rs` module region).
+  Files: `tests/test_rust_http.py`, `assets/backing-services/rust/observability.rs`,
+  `src/slipwai/project/rust_layouts.py`, `src/slipwai/project/languages/rust.py`.
+  - RED: a request with a `traceparent` yields a span whose trace id is the caller's; a request without one yields a
+    fresh one; the request span is named for its method and matched route and records `trace_id` so a log line
+    written inside it carries it; `LOG_LEVEL` filters this service's records and dependencies at `warn`;
+    `LOG_FORMAT=pretty` for a terminal, JSON otherwise, an unknown level read as `info`; a failing flush or shutdown
+    is reported and never raised. The tests use a recording exporter written in the test module (a fake), not a mock.
+  - GREEN: the provider records spans always and exports only when an endpoint was named, built before the runtime;
+    the per-request layer; the subscriber setup.
+  - REFACTOR: none expected; clippy clean.
+  - Run: `make test TESTS="test_rust_http"`; `cargo test --locked --lib observability` in the scratch project.
+
+- [ ] T009 [US1] **Rule R7 — the published contract** (scenario 12; D4). Depends on T008 (it reads the adapter's
+  routes, written by T005, and shares the layout table).
+  Files: `tests/test_rust_http.py`, `assets/backing-services/rust/openapi.yaml`,
+  `assets/backing-services/rust/http_openapi.rs`, `src/slipwai/project/openapi.py`,
+  `src/slipwai/project/rules.py`, `src/slipwai/project/rust_layouts.py`.
+  - RED: the asset's `#[cfg(test)]` module reads the adapter's source for every route it registers and fails when
+    `openapi.yaml` does not describe that path and method, with a minimum count so a stale pattern cannot pass
+    silently; stub it so the failure is on a route the document lacks. Factory example: the generated service has
+    `openapi.yaml` with `/health`, `/ready` (200 and 503) and the `Health`, `Ready`, `Unready`, `SchemaFailure`,
+    `NotFound` schemas, and no `/api/flags`; `DOCUMENTS['axum'] == "openapi.yaml"` and `API_CONTRACTS['axum']`
+    exist; no exporter, no `EXPORTERS` row, no `check-openapi` recipe.
+  - GREEN: the hand-written document in the shape of Go's, the test module, and the two table rows. No YAML or regex
+    crate (D4).
+  - Guard: break the document (rename a path), run, restore with `git checkout -- <path>`, to see the test fail.
+  - Run: `make test TESTS="test_rust_http"`; `cargo test --locked --lib openapi` in the scratch project.
+
+- [ ] T010 [US1] **Rule R8 — the entry point, and running it** (scenario 4; SC-003; D5). Depends on T009 (it wires
+  every module written before it).
+  Files: `tests/test_rust_http.py`, `assets/backing-services/rust/serve_main.rs`,
+  `src/slipwai/project/rust_entry.py` (new), `src/slipwai/project/composition.py`,
+  `src/slipwai/project/run_skill.py` (or the module that writes the generated run page),
+  `src/slipwai/project/rust_layouts.py`.
+  - RED: factory examples at generation: `src/bin/serve.rs` exists for `--http axum`; Rust's `ENTRY_STORES` row
+    fills `__STORE_IMPORT__`, `__STORE_OPEN__` and `__STORE_ARGUMENT__` for each store (none, `memory`, `sqlite`,
+    `postgres`, more than one) and `ENTRY_WIRING` gains no row (no flag placeholder, slice 4); the generated project
+    builds `cargo build --locked --all-targets` and `cargo clippy -D warnings` with no warning for each store and
+    after `./init --event-store memory` (research: `unused_assignments` and friends); the generated `skills/run-the-
+    app/SKILL.md`, where a project has two Rust services with a transport, says their dev servers share one
+    `target/` and run one at a time on the host, or together through `make demo` (D5); a Rust `axum` service beside a
+    Go `net-http` one gets two Compose services, two ports and two `make dev` entries. `serve.rs` itself has no test
+    (coverage already ignores `src/bin/`), so its RED is the build and the lint of the generated file.
+  - GREEN: `serve.rs` (logging first; `config::load()` with a refusal logged and exit 1; the tracer provider built
+    before the runtime; the store opened once, lazily, Postgres through `PgPoolOptions::connect_lazy` +
+    `PostgresEventStore::from_pool`; adapted to the probe; the router wrapped by `observability` and `security` outside
+    `build_app`; bound on `config.address()`, the reported URL logged; graceful shutdown on SIGTERM and Ctrl-C, then
+    the provider's shutdown); `rust_entry.py` with Rust's `EntryStore`, merged where `composition.py` reads the table
+    (`entry_stores.py` is at its line budget and is not touched); D5's sentence.
+  - Proven by running, isolated and disposable (nothing already running is touched): from a scratch generated
+    project, `make dev` answers `GET /health` with `{"status":"ok"}` and `GET /ready` with `{"status":"ready"}`
+    (`HEALTH_BODIES`, `READY_PATHS` already say so for Rust); stop the PID this task started, by recorded PID. The
+    `make demo` run is the final gate's (T015).
+  - REFACTOR: none expected; suite green, clippy clean.
+  - Run: `make test TESTS="test_rust_http test_running"`.
+
+- [ ] T011 [US1] **Rule R10 — taking the transport away** (scenario 8). Depends on T010.
+  Files: `tests/test_rust_http.py`, `assets/backing-services/prune.py`,
+  `src/slipwai/project/languages/rust.py`, `src/slipwai/project/languages/cargo.py`,
+  `assets/backing-services/rust/adapters_mod.rs` (or its replacement by `rust.py`'s computation).
+  - RED: on each profile, generate with `axum`, run `./init --http none` in the generated project: no transport
+    file (`src/adapters/driving`, `src/config.rs`, `src/observability.rs`, `src/bin/serve.rs`, `openapi.yaml`), no
+    axum crate in `Cargo.toml` or `Cargo.lock`, no Compose `service`, `src/lib.rs` and `src/adapters/mod.rs` declare
+    only what is left (possibly nothing; `pub mod adapters;` stays unmarked because the store shares it), and `make
+    verify` (cargo) is green; the pruner refuses nothing new; the `OWNED_FILES_PER_WEB_APP` rows for `axum` exist.
+    Observe it fail on the leftover files.
+  - GREEN: `OWNED_FILES['axum']['rust']` with `any: packages/api-client`, `OWNED_FILES_PER_WEB_APP['axum']`
+    (`src/routes`, `tests/routes`), `APP_SERVICE_FEATURES` gains `axum`, `PACKAGE_EDITS['rust']['axum']` names the
+    transport's crates so `_relock_rust` drops them offline through `cargo metadata`,
+    `MARKED_FILES_BY_LANGUAGE['rust']` gains `src/lib.rs`, `src/adapters/mod.rs`, `src/bin/serve.rs`,
+    `src/config.rs`; `declare_modules` writes `config` and `observability` inside an `axum` region of `src/lib.rs`
+    and `src/adapters/mod.rs` from the files present.
+  - REFACTOR: none expected; suite green.
+  - Run: `make test TESTS="test_rust_http test_prune"` (cargo verify per profile is slow; `CARGO_BUILD_JOBS=2`).
+
+- [ ] T012 [US1] **Rule R11 — a browser app beside a Rust service** (scenario 6). Depends on T009 and T011.
+  Files: `tests/test_rust_http.py`, and `src/slipwai/project/openapi.py`, `src/slipwai/project/rules.py`, or
+  `assets/backing-services/prune.py` only if the RED shows a table row is missing.
+  - RED: with `--frontend react-vite --http axum`, `packages/api-client` is generated from the Rust service's
+    `openapi.yaml`, `apps/web/vite.config.ts` proxies `/api` inside the `axum` region, the route that shows the API
+    answering arrives, and the generated `make verify` passes. The behaviour is the generic machinery reached by
+    `DOCUMENTS['axum']` and the per-web-app rows; if the RED is green on arrival, fold the example into T009 or T011
+    (whichever produced the behaviour) and say so, rather than ship a test born green. The matrix's
+    `event-modelling` / `react-vite` row is the native proof (T013).
+  - Run: `make test TESTS="test_rust_http"`.
+
+- [ ] T013 [US1] **Rule R12 — the factory holds Rust to the transport rows** (FR-007 for this slice).
+  Depends on T010, T011 and T012.
+  Files: `tests/test_rust_http.py`, `tests/test_catalog.py`, `tests/test_matrix.py`, `tests/test_readiness.py`,
+  `tests/test_running.py` (plus whatever the sweep below finds, named in the commit), `docs/axes.md`, `README.md`,
+  `docs/backend-obligations.md` (only if a table row has to be named).
+  - RED: `TRANSPORTS['rust'] = 'axum'`; `PARTIAL['rust'] = {"event-store", "http"}` and every test reading it
+    follows; the matrix's maximal row gives each backend only the `auth` and `users` answers it is offered (Rust:
+    `none`); `test_catalog`'s default-project checks take Rust's `auth` and `users` as `none`; `test_readiness`
+    reads `.rs` sources; `test_running` has a Rust row (`axum`, `apps/service/src/bin/serve.rs`, `cargo run --locked
+    --bin serve`); the multi-service case (Rust `axum` beside Go `net-http`: two Compose services, two ports, two
+    `make dev` entries) is asserted at generation. Observe each fail before its flip.
+  - GREEN: the test edits above, plus the docs: `docs/axes.md`'s `--http` row (with `axum` among the per-backend
+    defaults, D2), its "every backend but Rust" sentence, Rust's coverage row and the "what arrives" row with its
+    dependency column; `README.md`'s `--http` list. Sweep `grep -rn "rust" tests/*.py | grep -i "partial\|transport"`
+    for any other test that reads Rust as having no transport.
+  - Guard: the `make starters` before/after diff (every non-Rust tree identical) is recorded in T015, not here.
+  - Run: `make test TESTS="test_rust_http test_catalog test_matrix test_readiness test_running"`.
+
+- [ ] T014 [P] [US1] **Rule R13 — the changelog** (FR-008; D2; D6). Depends on nothing from the other tasks; its
+  wording is checked once T013 is done.
+  Files: `changelog.d/rust-http-axum.md` (new), `changelog.d/rust-backend.md`, `changelog.d/rust-event-store.md`.
+  Not a RED-GREEN increment: a fragment is a document and `tests/test_changelog.py` is its check.
+  - The new fragment's first line is `MINOR`: what `axum` gives a Rust service (routes, hardening, tracing, checked
+    environment, `openapi.yaml`, `serve` binary, `make dev`, `make demo`), that a new Rust project now gets an HTTP
+    service by default while one generated before keeps what it recorded (no `http` key reads as `none`), `--http
+    none` as the way back, and the **Catch-up.** (nothing for an existing project). `VERSION` stays `1.4.0.dev0`.
+  - D6: correct in place the sentences in `rust-backend.md` ("no transport") and `rust-event-store.md` ("Rust still
+    answers no transport …; axum comes next") that would be false at release.
+  - Run: prove `tests/test_changelog.py` in a scratch `git clone --no-tags` of the worktree under
+    `$HOME/.cache/slippy-cruise-tmp/`, not in this checkout (its tag failure here is environmental).
+
+## Design review
+
+No screen in this slice.
+
+## Model mockups
+
+No white box in this slice: no event model, no screen states to write back; `check-model` has nothing to refuse.
+
+## Phase 3: Polish
+
+- [ ] T015 [US1] **Final gate.** Depends on T001–T014. No file is written except what a failure hands back.
+  Run each, report each outcome, and do not commit red or touch a file no manifest names to make it pass:
+  - `make check-locks` clean (nine committed locks, no diff after regeneration).
+  - `make starters` before and after: materialise at the base `40dacad` (a scratch `git worktree`-free export or a
+    `git clone --no-tags` under the cache) and at HEAD; every non-Rust tree is identical; the Rust trees differ only
+    by what this slice adds. Record the diff summary.
+  - The `--http none` byte comparison against `40dacad` on both profiles: identical except `project.json`'s
+    `http: none` (T003's recorded result, re-run on final HEAD).
+  - A generated Rust `axum` project's `make dev` answers `GET /health` (`{"status":"ok"}`) and `GET /ready`
+    (`{"status":"ready"}`); stop the PID started; a scratch `./init --http none && make verify` is green.
+  - `make demo` reports the service healthy within the Compose healthcheck's window (`start_period` 20s, 60 retries
+    at 5s) on a first container build (SC-003), then `make demo-down`. Report the elapsed time. If Docker is not
+    available, say so and hand it back; do not mark SC-003 proven.
+  - The full `make verify` green, run in the background with its log under `$HOME/.cache/` and polled; the one
+    environmental `test_changelog` tag failure is noted and proved green in the `--no-tags` clone; any other failure is
+    real.
+  - Clean up every scratch generation and cargo target directory under `$HOME/.cache/slippy-cruise-tmp/`.
+
+## Dependencies & execution order
+
+- T001 first: it creates the suite and pins both seams green before anything changes.
+- T002 needs T001. T003 needs T002 (its RED is `--http none` after the option exists).
+- T004 (R9) needs T002 and comes **before** the asset rules: T005–T010 write Rust that a generated project compiles
+  with `--locked`, which needs axum's crates in the manifest and a committed lock that holds them. The plan lists R9
+  after R8; this order is the dependency order and the rules themselves are unchanged.
+- T005 → T006 → T007 → T008 → T009 → T010 in that order: each adds a module declared in `rust.py`, a row in
+  `rust_layouts.py`, and (T006) a line in T005's `http/mod.rs`; T009's RED reads T005's routes; T010 wires every
+  module before it.
+- T011 needs T010 (the serve binary and marked regions it prunes). T012 needs T009 and T011. T013 needs T010–T012.
+- T014 needs nothing, but check its wording once T013 is done.
+- T015 last.
+- One task per commit; the fragment (T014) and the docs (T013) ride in the same pull request.
+
+## Parallel opportunities
+
+- **May run alongside:** T014 with any task. Its files, `changelog.d/rust-http-axum.md`, `changelog.d/rust-backend.md`
+  and `changelog.d/rust-event-store.md`, appear in no other task and no RED reads anything another task writes.
+- **May not:** everything else is sequential. T002 to T013 all write `tests/test_rust_http.py`, and most share
+  `catalog.json`, `prune.py`, `rust_layouts.py`, `rust.py` or `cargo.py` (T002/T011 in `prune.py`; T004/T011 in
+  `cargo.py`; T005–T010 in `rust_layouts.py`; T005, T007, T008, T011 in `rust.py`). T004 precedes T005–T010 because
+  their RED builds a generated project against its lock. T009 reads T005's routes. T012 needs T009's document and
+  T011's rows. T013 sweeps files the earlier tasks touch. T015 waits for all.
+- With one delegate for the story, take T001 to T013 in order, T014 beside any of them if a second agent is wanted
+  (it saves little), then T015. No two concurrent tasks write the same file.
+
+## Not working yet (owned by later slices or out of scope)
+
+- No `--auth` or `--users` answer but `none` for Rust: slices `auth` and `users`; `PARTIAL['rust']` still names them.
+- No `/api/flags`, no `ENTRY_WIRING['axum']`, no flagged document, no image, no `aws` or `azure` target: slices `aws`
+  and `azure`. The entry point carries no flag placeholder.
+- Two Rust services' `serve` binaries share a name and a `target/` (D5): run their dev servers one at a time on the
+  host, or together through `make demo`.
+- After `./init --http none` on the standard profile, `tokio`, `serde` and `serde_json` stay declared and
+  `src/adapters/mod.rs` may declare nothing.
+- No exporter, no `EXPORTERS` row, no `check-openapi` recipe for Rust (D4); no `tower-http`, no YAML or regex crate.
+
+## Convergence
+
+(Written by the convergence pass. It also records the T003 and T015 byte comparisons and the `make starters` diff.)

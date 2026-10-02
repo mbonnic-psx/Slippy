@@ -24,6 +24,19 @@
 //!
 //! Exporting happens on a background batch, off the request path, and [`Tracing::shutdown`] reports a failure
 //! rather than returning it. Telemetry that can take the service down with it is worse than no telemetry.
+//!
+//! # The same helpers the other backends export
+//!
+//! Go, TypeScript and Python each export these to a slice, and each has its counterpart here:
+//!
+//! - starting tracing (`StartTracing`, `startTracing`, `start_tracing`) is [`start_tracing`], and stopping it
+//!   (`Shutdown`) is [`Tracing::shutdown`];
+//! - wrapping the transport in a span per request (`Instrument`, the framework's own hook) is [`instrument`];
+//! - the ids an event carries (`TraceIDs`, `traceIds`, `trace_ids`) is [`trace_ids`];
+//! - the trace and span on every log line (`TracingHandler` with its `Handle`, `WithAttrs` and `WithGroup`,
+//!   `traceContextMixin`, `trace_context`) has no function here, for a reason: the request span records `trace_id` and `span_id` as fields and the log layer
+//!   writes the current span with every line, so a line written anywhere inside a request carries both without
+//!   a wrapper around the logger.
 
 use axum::{
     Router,
@@ -142,9 +155,9 @@ const BINARIES: [&str; 2] = ["serve", "migrate"];
 
 /// The subscriber `init_logging` installs, over a writer of its choosing so a test can read what it wrote.
 ///
-/// `level` filters this service's own records — the library's and each of its [`BINARIES`]; everything else — the exporter's connection pool, the HTTP
-/// server's — is held at `warn`, or a `LOG_LEVEL=debug` run drowns in what its dependencies say about
-/// themselves. An unrecognised level is `info` rather than a refusal to start: a typo in a log variable must
+/// `level` filters this service's own records — the library's and each of its `BINARIES`. Everything else — the
+/// exporter's connection pool, the HTTP server's — is held at `warn`, or a `LOG_LEVEL=debug` run drowns in what
+/// its dependencies say about themselves. An unrecognised level is `info` rather than a refusal to start: a typo in a log variable must
 /// never be what stops a deployment. The filter sits on the *log* layer only, so the request span still exists
 /// at `warn` — it is what gives a warning its trace id, and what the exporter ships.
 pub fn subscriber<W>(
@@ -181,6 +194,67 @@ where
         .with(OpenTelemetryLayer::new(tracer))
 }
 
+/// The trace and span in scope, as the ids an event carries: a correlation id and a causation id, each written
+/// as the UUID those types parse.
+pub struct TraceIds {
+    pub correlation: String,
+    pub causation: String,
+}
+
+/// The trace and span in scope, as the ids an event carries — `None` outside a request, where there is
+/// nothing to correlate by and nothing is invented.
+///
+/// # Why this exists
+///
+/// Where this project records events, the port requires a correlation id and an optional causation id on every
+/// one of them — and until there was a trace to take them from, every slice had to invent both. Inventing them
+/// is how a causal tree ends up with everything appearing to have caused itself. The request already has an
+/// identity — the span [`instrument`] opened for it, continuing whatever `traceparent` the caller sent — so
+/// that is what the events it produces are correlated by, and a trace that crossed two services correlates the
+/// events on both sides of it.
+///
+/// # Why they are re-punctuated rather than re-encoded
+///
+/// A correlation id is a UUID, and a W3C trace id is the same 128 bits written without hyphens: putting them
+/// back invents nothing. A span id is 64 bits, half of a UUID, so it goes in the low half with the high half
+/// left zero — reversible, and the zero prefix is what says at a glance that the id came from a span rather
+/// than from a random generator.
+///
+/// ```ignore
+/// if let Some(ids) = observability::trace_ids() {
+///     let correlation = CorrelationId::parse(&ids.correlation)?;
+///     let causation = CausationId::parse(&ids.causation)?;
+/// }
+/// ```
+///
+/// Returned as text rather than as the events module's types, because this module is in projects that record
+/// no events and has no such types to name; `parse` still checks them, because the branded types exist to be
+/// checked once at the edge and this is an edge like any other.
+pub fn trace_ids() -> Option<TraceIds> {
+    let context = tracing::Span::current().context();
+    let span = context.span();
+    let span_context = span.span_context();
+    if !span_context.is_valid() {
+        return None;
+    }
+    Some(TraceIds {
+        correlation: hyphenate(&span_context.trace_id().to_string()),
+        causation: hyphenate(&format!("0000000000000000{}", span_context.span_id())),
+    })
+}
+
+/// 32 hex characters as a UUID reads them: 8-4-4-4-12.
+fn hyphenate(hexadecimal: &str) -> String {
+    format!(
+        "{}-{}-{}-{}-{}",
+        &hexadecimal[0..8],
+        &hexadecimal[8..12],
+        &hexadecimal[12..16],
+        &hexadecimal[16..20],
+        &hexadecimal[20..32]
+    )
+}
+
 /// Wraps a router so every request gets a span, continuing whatever `traceparent` the caller sent.
 ///
 /// Applied by the entry point outside [`crate::adapters::driving::http::build_app`], for the reason the
@@ -207,14 +281,15 @@ async fn request_span(request: Request, next: Next) -> Response {
         "http.request.method" = %method,
         "http.route" = %route,
         trace_id = field::Empty,
+        span_id = field::Empty,
         "http.response.status_code" = field::Empty,
     );
     // A request that carried no valid `traceparent` leaves the span the root of a fresh trace.
     let _ = span.set_parent(parent);
-    span.record(
-        "trace_id",
-        field::display(span.context().span().span_context().trace_id()),
-    );
+    let context = span.context();
+    let span_context = context.span().span_context().clone();
+    span.record("trace_id", field::display(span_context.trace_id()));
+    span.record("span_id", field::display(span_context.span_id()));
     let response = next.run(request).instrument(span.clone()).await;
     span.record("http.response.status_code", response.status().as_u16());
     response
@@ -414,6 +489,103 @@ mod tests {
                 .expect("json");
         assert_eq!(line["fields"]["message"], "handled");
         assert_eq!(line["span"]["trace_id"], "4bf92f3577b34da6a3ce929d0e0e4736");
+    }
+
+    /// What `trace_ids` saw from inside a handler.
+    fn seen_by_a_handler(traceparent: Option<&str>) -> (Option<TraceIds>, Vec<SpanData>, Harness) {
+        let harness = harness("info", "json");
+        let seen = Arc::new(Mutex::new(None));
+        let handler_saw = seen.clone();
+        let router = instrument(Router::new().route(
+            "/seen",
+            get(move || {
+                let handler_saw = handler_saw.clone();
+                async move {
+                    *handler_saw.lock().expect("the lock") = Some(trace_ids());
+                    "ok"
+                }
+            }),
+        ));
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .build()
+            .expect("a runtime");
+        runtime.block_on(request(router, "/seen", traceparent));
+        let ids = seen
+            .lock()
+            .expect("the lock")
+            .take()
+            .expect("the handler ran");
+        let recorded = spans(&harness);
+        (ids, recorded, harness)
+    }
+
+    #[test]
+    fn nothing_invents_an_id_outside_a_request() {
+        let _harness = harness("info", "json");
+
+        assert!(trace_ids().is_none());
+    }
+
+    #[test]
+    fn an_event_is_correlated_by_the_trace_the_caller_sent_in() {
+        let (ids, spans, _harness) = seen_by_a_handler(Some(INCOMING));
+        let ids = ids.expect("inside a request");
+
+        // The caller's trace id, re-punctuated as the UUID a correlation id is: the same 128 bits, so a log
+        // line in the other service and an event here name one transaction.
+        assert_eq!(ids.correlation, "4bf92f35-77b3-4da6-a3ce-929d0e0e4736");
+        // The cause is *this* service's request span and not the caller's, in the low half of a UUID.
+        let span_id = spans[0].span_context.span_id().to_string();
+        assert_eq!(
+            ids.causation,
+            format!("00000000-0000-0000-{}-{}", &span_id[..4], &span_id[4..])
+        );
+        assert_ne!(span_id, "00f067aa0ba902b7");
+    }
+
+    #[test]
+    fn a_request_with_no_traceparent_is_still_correlated_by_its_own_fresh_trace() {
+        let (ids, spans, _harness) = seen_by_a_handler(None);
+        let ids = ids.expect("inside a request");
+
+        let trace = spans[0].span_context.trace_id().to_string();
+        assert_eq!(ids.correlation.replace('-', ""), trace);
+        assert_eq!(ids.correlation.len(), 36);
+    }
+
+    // `CorrelationId::parse` and `CausationId::parse` take a UUID in the form `Uuid::parse_str` does, which is
+    // lower-case hex as 8-4-4-4-12; a factory test holds that they accept these where the project records
+    // events, because this module is in projects that do not have those types.
+    #[test]
+    fn both_ids_are_written_the_way_a_uuid_is() {
+        let (ids, _, _harness) = seen_by_a_handler(Some(INCOMING));
+        let ids = ids.expect("inside a request");
+
+        for id in [&ids.correlation, &ids.causation] {
+            let groups: Vec<usize> = id.split('-').map(str::len).collect();
+            assert_eq!(groups, [8, 4, 4, 4, 12], "{id}");
+            assert!(
+                id.chars()
+                    .all(|c| c == '-' || c.is_ascii_digit() || ('a'..='f').contains(&c)),
+                "{id}"
+            );
+        }
+    }
+
+    #[test]
+    fn every_line_written_during_a_request_carries_its_span_as_well_as_its_trace() {
+        let harness = harness("info", "json");
+
+        tokio::runtime::Builder::new_current_thread()
+            .build()
+            .expect("a runtime")
+            .block_on(request(app(), "/orders/1", Some(INCOMING)));
+
+        let line: serde_json::Value =
+            serde_json::from_str(harness.written.text().lines().next().expect("a line"))
+                .expect("json");
+        let span_id = spans(&harness)[0].span_context.span_id().to_string();
+        assert_eq!(line["span"]["span_id"], span_id);
     }
 
     #[test]

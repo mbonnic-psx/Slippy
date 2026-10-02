@@ -71,7 +71,7 @@ class GeneratedServiceTest(FactoryTestCase):
         self.cargo_test("config::tests", at_least=11)
 
     def test_one_span_per_request_is_held_by_its_own_tests(self) -> None:
-        self.cargo_test("observability::tests", at_least=13)
+        self.cargo_test("observability::tests", at_least=18)
 
     def test_the_published_contract_is_held_to_the_router_by_its_own_test(self) -> None:
         self.cargo_test("adapters::driving::http::openapi", at_least=2)
@@ -111,6 +111,78 @@ class GeneratedServiceTest(FactoryTestCase):
         # Hand-written, as Go's is: the router cannot list its own routes, so nothing writes the file out.
         self.assertNotIn("axum", EXPORTERS)
         self.assertNotIn("check-openapi", (self.repo / "Makefile").read_text())
+
+
+class TraceCorrelationTest(FactoryTestCase):
+    """What a transport brings with it elsewhere: the request's trace as an event's correlation and causation ids."""
+
+    EXPORTS = {
+        "go": ("go/tracing.go", r"^func (?:\([^)]*\) )?([A-Z]\w*)\(", {"TraceIDs": "trace_ids"}),
+        "typescript": ("typescript/tracing.ts", r"^export function (\w+)\(", {"traceIds": "trace_ids"}),
+        "python": ("python/tracing.py", r"^def ([a-z]\w*)\(", {"trace_ids": "trace_ids"}),
+    }
+
+    def test_every_helper_the_other_backends_export_has_a_counterpart_or_a_written_reason(self) -> None:
+        from slipwai.assets import ROOT
+
+        note = "\n".join(
+            line for line in (ROOT / "assets/backing-services/rust/observability.rs").read_text().splitlines()
+            if line.startswith("//!")
+        )
+        for language, (path, pattern, _) in self.EXPORTS.items():
+            exported = re.findall(pattern, (ROOT / "assets/backing-services" / path).read_text(), re.M)
+            self.assertTrue(exported, language)
+            for name in exported:
+                with self.subTest(language=language, helper=name):
+                    self.assertIn(name, note)
+
+    def test_the_ids_are_ones_the_event_types_accept(self) -> None:
+        """Appended to a generated project's module as a test, so the types the events module has — which a
+        project with no store does not — parse what `trace_ids` returns."""
+        with tempfile.TemporaryDirectory() as directory:
+            repo = self.generate(directory, "correlated", "event-modelling", "rust", event_store="sqlite", http="axum")
+            module = repo / "apps/service/src/observability.rs"
+            module.write_text(module.read_text() + """
+#[cfg(test)]
+mod accepted_by_the_events_module {
+    use super::*;
+    use crate::application::ports::events::{CausationId, CorrelationId};
+
+    #[test]
+    fn parse_what_trace_ids_returns() {
+        let provider = SdkTracerProvider::builder().build();
+        let _installed = tracing::subscriber::set_default(subscriber(
+            "info",
+            "json",
+            opentelemetry::trace::TracerProvider::tracer(&provider, "test"),
+            std::io::sink,
+        ));
+        let router = instrument(Router::new().route(
+            "/seen",
+            axum::routing::get(|| async {
+                let ids = trace_ids().expect("inside a request");
+                CorrelationId::parse(&ids.correlation).expect("a correlation id");
+                CausationId::parse(&ids.causation).expect("a causation id");
+                "ok"
+            }),
+        ));
+        tokio::runtime::Builder::new_current_thread().build().expect("a runtime").block_on(async {
+            use tower::ServiceExt;
+            let response = router
+                .oneshot(axum::http::Request::builder().uri("/seen").body(axum::body::Body::empty()).expect("a request"))
+                .await
+                .expect("a response");
+            assert_eq!(response.status(), 200);
+        });
+    }
+}
+""")
+            result = subprocess.run(
+                ["cargo", "test", "--locked", "--lib", "accepted_by_the_events_module"],
+                cwd=repo / "apps/service", env=CARGO_ENVIRONMENT, text=True, capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertRegex(result.stdout, r"test result: ok\. 1 passed")
 
 
 class GeneratedEnvironmentTest(FactoryTestCase):

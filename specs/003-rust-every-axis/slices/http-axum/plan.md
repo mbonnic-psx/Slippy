@@ -306,25 +306,5 @@ None. The one new module exists for the line budget, not for a new abstraction.
 
 ## Blocked
 
-Two questions convergence pass 1 handed back (tasks T019 and T021). They are not this delegate's to decide; the slice
-is otherwise complete, and both are recorded here for the session that delegated it (`/cruise`'s drive-skipper, or a
-person), to land in `decisions.md`.
-
-1. **Scenario 9's exceptions (T019).** At `--http none`, on both profiles, a Rust project differs from what the base
-   `40dacad` generated in `project.json`'s selection (named by the scenario), and also in three places the scenario
-   does not name: the generated `README.md`'s selection line (`- HTTP transport: \`none\``), the shipped
-   `scripts/backing-services.py` (the pruner, one implementation byte-equal to `assets/backing-services/prune.py`,
-   which gains the `axum` rows — every backend's generated copy changes with it), and on event-modelling
-   `Cargo.lock` (the four Rust locks were re-resolved by T022). Every other byte is held by
-   `tests/test_rust_http_none.py`. Options: **(a)** amend scenario 9 to name those three as the record of the answer,
-   the factory's shared script and a re-resolved lock — *recommended*: the README line restates the selection
-   `project.json` records; the pruner cannot be unchanged while it learns an option; a lock refresh is a patch-level
-   move of transitive crates inside this MINOR; · **(b)** keep the scenario's wording and suppress the README line
-   for Rust's `none` — no other backend does, so Rust would read differently from the rest; the other two cannot be
-   avoided at all. Then `changelog.d/rust-http-axum.md`'s sentence that `--http none` "generates exactly what Rust
-   generated before" is corrected to whichever reading is chosen.
-2. **`serde_path_to_error` (T021).** The implementer added `serde_path_to_error = "0.1.20"` to the `axum` region so
-   the 400 body names the field for a wrong-type value, as Go's names `UnmarshalTypeError.Field`. It adds no package
-   to any lock — axum's `json` feature already depends on it. Options: **(a)** keep it, recorded in `research.md`'s
-   crate table — *recommended*: parity with Go's 400 at no lock cost; · **(b)** drop it and answer `field: "(root)"`
-   for a wrong type, keeping the field only for an unknown one.
+None. The two questions convergence pass 1 handed back (T019, T021) were decided by `/cruise` as D8 and D9 in
+`specs/003-rust-every-axis/decisions.md`: scenario 9 amended to name its three differences; `serde_path_to_error` kept.

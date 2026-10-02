@@ -76,3 +76,25 @@
 - **Confidence:** high · **Would reverse if:** the owner wants snapshots treated as releases
 - **Written to:** specs/003-rust-every-axis/slices/http-axum/plan.md, specs/003-rust-every-axis/decisions.md
 - **Status:** standing
+
+## D8 — Convergence: scenario 9 says `--http none` is byte-identical but for `project.json`; three more files differ
+- **Stage:** convergence · **Slice:** http-axum · **When:** 2026-10-02T09:43:00Z · **Iteration:** 4
+- **Question:** At `--http none` the generated README's selection line, the shipped `scripts/backing-services.py` (which gains the `axum` rows in every backend's copy) and, on event-modelling, the re-resolved `Cargo.lock` also differ from the base (T019).
+- **Options:** (a) amend scenario 9 to name the three (recommended by the delegate) · (b) keep the wording and suppress the README line for Rust's `none`, the other two being unavoidable
+- **Decision:** (a). Scenario 9 names the recorded answer (both `project.json` and the README line), the shared pruner script and the re-resolved lock as the differences; every other byte is held by `tests/test_rust_http_none.py`. The fragment's sentence is corrected to match.
+- **Why:** The README line restates the selection the record carries, as it does for every backend; the pruner cannot stay unchanged while it learns an option; a lock refresh moves transitive crates inside a MINOR. (b) would make Rust's README read unlike every other backend's for nothing the person generating gains.
+- **Decided by:** host (stage recommendation)
+- **Confidence:** high · **Would reverse if:** a file outside those three is found to differ at `--http none`
+- **Written to:** specs/003-rust-every-axis/spec.md, changelog.d/rust-http-axum.md, specs/003-rust-every-axis/decisions.md
+- **Status:** standing
+
+## D9 — Convergence: keep `serde_path_to_error` in the axum region?
+- **Stage:** convergence · **Slice:** http-axum · **When:** 2026-10-02T09:43:30Z · **Iteration:** 4
+- **Question:** The implementer added `serde_path_to_error` so a 400 names the field of a wrong-type value, as Go's does (T021); it is a dependency the plan did not list.
+- **Options:** (a) keep it, recorded in `research.md` (recommended by the delegate) · (b) drop it and answer `field: "(root)"` for a wrong type
+- **Decision:** (a). It stays in the `axum` region and is recorded in the slice's crate table.
+- **Why:** Parity with Go's 400 is the bar (the spec's parity rule), and it costs no package in any lock — axum's `json` feature already pulls it in; dropping it would tell the caller less than Go's service tells them.
+- **Decided by:** host (stage recommendation)
+- **Confidence:** high · **Would reverse if:** a lock is found to gain a package from it
+- **Written to:** specs/003-rust-every-axis/slices/http-axum/research.md, specs/003-rust-every-axis/decisions.md
+- **Status:** standing

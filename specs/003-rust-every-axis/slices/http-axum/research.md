@@ -18,6 +18,7 @@ cargo 1.98.0 on this machine, and a throwaway crate built and run under
 | `tracing-subscriber` | 0.3.23 | the JSON and the readable formatters, the level filter |
 | `opentelemetry` / `opentelemetry_sdk` / `opentelemetry-otlp` | 0.33.0 each | the SDK and the OTLP/HTTP exporter — Go's `otel` + `sdk` + `otlptracehttp` |
 | `tracing-opentelemetry` | 0.34.0 | the bridge from a `tracing` span to an OpenTelemetry one |
+| `serde_path_to_error` | 0.1.20 | names the field in a 400 for a wrong-type value, as Go's names `UnmarshalTypeError.Field`; adds no package to any lock — axum's `json` feature already depends on it (D9) |
 | `tower` | 0.5.3 | dev-dependency: `ServiceExt::oneshot`, which dispatches through the real router with no socket |
 | `http-body-util` | 0.1.5 | dev-dependency: reading a response body in an edge test |
 | `tower-http` | 0.7.1 | **not taken** — see *CORS* below |

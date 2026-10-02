@@ -18,7 +18,7 @@ Each router rule is a `#[cfg(test)]` module dispatched through `Router::oneshot`
 **A new Rust project is now generated with this by default; one generated before keeps what it recorded.**
 `axum` is Rust's default answer, as every backend's own transport is its default. A project generated before
 this release recorded no `http` answer, and an unasked axis reads as `none`, so `slipwai migrate` carries it
-forward with no transport rather than adding one. `--http none` generates exactly what Rust generated before,
+forward with no transport rather than adding one. `--http none` generates what Rust generated before — only the recorded answer, the shared pruner script and a re-resolved lock differ —
 and `./init --http none` takes the transport away again — its files, its crates and the Compose service —
 leaving the lock to follow the manifest. The manifest's `tokio`, `serde` and `serde_json` stay declared after
 that, because the event store needs them too. Five more `Cargo.lock` files are committed for the union of

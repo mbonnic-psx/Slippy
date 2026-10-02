@@ -447,7 +447,7 @@ production file in the worktree was changed. Only `CRITICAL` and `HIGH` re-open 
   helper `tracing.go`, `tracing.ts` and `tracing.py` export to a slice** has a Rust counterpart or a written reason in
   `observability.rs`'s module note.
 
-- [ ] T019 [US1] **HIGH — `--http none` is not byte-identical to today's tree** (scenario 9; R2; and the fragment's
+- [x] T019 [US1] **HIGH — `--http none` is not byte-identical to today's tree** (scenario 9; R2; and the fragment's
   "`--http none` generates exactly what Rust generated before", `changelog.d/rust-http-axum.md:21`). Generated at the
   base `40dacad` with no `--http` and at HEAD with `--http none`, both profiles, `diff -r -x .git`:
   `project.json` (expected), plus — avoidable — `apps/service/Cargo.toml` gains an empty `[dev-dependencies]` table
@@ -478,7 +478,7 @@ production file in the worktree was changed. Only `CRITICAL` and `HIGH` re-open 
   whichever form a slice should copy. Sweep: **every way a registrar can mount a route** (`route`, `route_service`,
   `nest`, `merge`) under the wrong verb.
 
-- [ ] T021 [US1] **MEDIUM — a new direct dependency nobody was asked about** (Principle XIV: "a new dependency" is a
+- [x] T021 [US1] **MEDIUM — a new direct dependency nobody was asked about** (Principle XIV: "a new dependency" is a
   stop-and-ask). `serde_path_to_error = "0.1.20"` is in the `axum` region (`src/slipwai/project/languages/cargo.py`,
   generated `Cargo.toml`) and in `PACKAGE_EDITS['rust']['axum']`, but in neither `research.md`'s crate table nor
   `decisions.md` (only commit `0741263`'s message). It adds no package to any lock — axum's `json` feature already

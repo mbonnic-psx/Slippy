@@ -65,8 +65,11 @@ request `GET /health` and `GET /ready`; generate one with `--http none` and see 
    every module the transport adds is declared inside a marked region, and the entry point, the config module,
    `src/lib.rs` and `src/adapters/mod.rs` are listed for Rust in `MARKED_FILES_BY_LANGUAGE`, as Go's are.
 9. **Given** `--http none` on either profile, **When** the project is generated, **Then** its files are
-   byte-identical to what Rust generates today except `project.json`'s selection, which now records `http: none`,
-   and a factory test generates it and runs `make verify`.
+   byte-identical to what Rust generates today except where the answer is recorded or the factory's shared parts
+   learn the option (D8): `project.json`'s selection and the generated `README.md`'s selection line, which now
+   record `http: none`; the shipped `scripts/backing-services.py`, which every backend's copy shares and which gains
+   the `axum` rows; and, on event-modelling, `Cargo.lock`, re-resolved with the locks. A factory test generates it,
+   holds every other byte, and runs `make verify`.
 10. **Given** any Rust selection, **When** its manifest is written, **Then** `tokio` is declared once, with the
     features axum and the store need together, never as a second key in a marked region.
 11. **Given** `--http axum`, **When** the service reads its environment, **Then** it reads the keys Go's transport

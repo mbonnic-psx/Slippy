@@ -398,3 +398,168 @@ No white box in this slice: no event model, no screen states to write back; `che
 ## Convergence
 
 (Written by the convergence pass. It also records the T003 and T015 byte comparisons and the `make starters` diff.)
+
+## Phase 4: Convergence pass 1 — what the slice still owes
+
+Judged at `115e5a7` against `7e4291e..HEAD` (pass 1 of 2). Evidence is from a scratch generation under
+`$HOME/.cache/slippy-cruise-tmp/converge1/` (outside the repository) unless a repository path is named; no
+production file in the worktree was changed. Only `CRITICAL` and `HIGH` re-open the loop.
+
+- [ ] T016 [US1] **HIGH — the 400 body quotes the caller's value when the value contains `, expected `** (R3:
+  "names the field and the rule and never the value"; scenario 3). `schema_failure_for` in
+  `assets/backing-services/rust/http_app.rs:216` rebuilds the rule by splitting serde's *message* on its first
+  `, expected `, and serde's message for `invalid type` quotes the value first. Observed through `Router::oneshot` in a
+  generated `--http axum` project: body `{"quantity":"x, expected SECRET-TOKEN"}` into a `u32` field →
+  `400 {"field":"quantity","message":"must be SECRET-TOKEN\", expected u32"}`. Go's `schemaFailureFor` reads the
+  structured `UnmarshalTypeError.Type` and cannot leak this way.
+  RED: one `#[cfg(test)]` case per serde message shape that carries the caller's input — `invalid type`,
+  `invalid value`, `invalid length`, `unknown variant`, and a custom `de::Error::custom` — each with a value holding
+  `, expected ` and a token, asserting the token is absent from the body.
+  GREEN: the message is never parsed for the value side — the rule comes from what does not depend on input (the
+  text *after the last* `, expected ` is still serde's prose, so prefer the classification plus the field, or the
+  tail after `rsplit_once`, held by the cases). Sweep: **every branch of `schema_failure_for`** is exercised by a case
+  whose value contains each delimiter the branch parses on (`` ` ``, `, expected `, ` at line `).
+
+- [ ] T017 [US1] **HIGH — the entry point's own log lines are filtered out at every level but `warn`**
+  (R8: "bound on `config.address()`, the reported URL logged"; scenario 4). `subscriber` in
+  `assets/backing-services/rust/observability.rs:154-161` lets through only the *library* crate's target
+  (`module_path!()`'s first segment, e.g. `ax_std`) at `LOG_LEVEL`; `src/bin/serve.rs` is a separate crate whose target
+  is `serve`, so its `tracing::info!(…"service listening")` (`serve_main.rs:94`) is dropped. Observed: the generated
+  binary run with `PORT=38517` answered `GET /health` and printed nothing at all; a refusal (`PORT=0`) printed
+  because it is `ERROR`. `make dev` therefore never says where the service is.
+  RED: a case in `observability.rs` writing an `info` record with `target: "serve"` (and the package's other binary,
+  `migrate`, where the store region has it) through `subscriber("info", …)` and asserting it is written; a factory
+  example that starts the generated `serve` on a free port (as `test_make_dev_answers_health_and_ready…` does) and
+  reads the reported URL from its output.
+  GREEN: the filter admits every target this package owns — the library and each of its binaries — at the asked
+  level, dependencies still at `warn`. Sweep: **every `tracing::` call in every generated `src/bin/*.rs`** is at a
+  target the filter admits.
+
+- [ ] T018 [US1] **HIGH — no trace-to-event correlation, which every other backend's transport gives** (spec: "the
+  bar is the other backends"; US1 "everything a transport brings with it elsewhere"). Go's `tracing.go:135`
+  `TraceIDs`, TypeScript's `tracing.ts:145` `traceIds`, and Python's `tracing.py` `trace_ids` turn the request span
+  into the event's correlation and causation ids, each with tests (`TestAnEventIsCorrelatedByTheTraceTheCallerSentIn`,
+  `TestNothingInventsAnIDOutsideARequest`). `assets/backing-services/rust/observability.rs` has no equivalent, while the
+  generated `.env.example` (transport region) tells the reader spans "give every log line and every event a trace
+  id". RED: the two Go cases, ported — the caller's trace id re-punctuated as a correlation UUID, the request span id
+  in the low half of a causation UUID, and nothing outside a request. GREEN: a `trace_ids()` in `observability.rs`
+  returning ids `events.rs` accepts (`CorrelationId`/`CausationId` parse them), documented as Go's is. Sweep: **every
+  helper `tracing.go`, `tracing.ts` and `tracing.py` export to a slice** has a Rust counterpart or a written reason in
+  `observability.rs`'s module note.
+
+- [ ] T019 [US1] **HIGH — `--http none` is not byte-identical to today's tree** (scenario 9; R2; and the fragment's
+  "`--http none` generates exactly what Rust generated before", `changelog.d/rust-http-axum.md:21`). Generated at the
+  base `40dacad` with no `--http` and at HEAD with `--http none`, both profiles, `diff -r -x .git`:
+  `project.json` (expected), plus — avoidable — `apps/service/Cargo.toml` gains an empty `[dev-dependencies]` table
+  with a two-line comment (`assets/languages/rust/app/Cargo.toml:15-18`), and on event-modelling
+  `src/adapters/mod.rs`'s doc comment changed wording (`src/slipwai/project/languages/rust.py:72-73` vs the base
+  asset); and — inherent to recording `http: none` and to a catalog change — `README.md` gains `- HTTP transport:
+  `none`` and `scripts/backing-services.py` (the shipped pruner) gains the `axum` rows. T003's test holds the file
+  set, not the bytes, so none of this was seen.
+  RED: a factory test comparing `--http none` bytes, per profile, to a committed or reconstructed baseline for
+  every file except the ones the decision below names. GREEN: no `[dev-dependencies]` table (nor its comment) when
+  nothing goes in it, and the base's `adapters/mod.rs` wording when there is no `driving`. **Product question,
+  returned rather than decided here:** scenario 9 names only `project.json`; whether the README selection line and
+  the shipped pruner are acceptable differences is a spec amendment for the drive-skipper to record in
+  `decisions.md` (an agent does not edit the spec to pass, Principle XIV). Then correct the fragment's sentence to
+  match. Sweep: **every file under both `--http none` trees**, not only those T001 listed.
+
+- [ ] T020 [US1] **HIGH — a slice route mounted with `Router::route` still tells the caller which verbs exist**
+  (R3: "the same for a known path under the wrong method"; scenario 3). `build_app` strips `Allow` only for routes
+  mounted through the adapter's `route` helper (`http_app.rs:97-99`); axum adds `Allow` after every layer for a plain
+  `Router::route`, and the adapter's own examples teach that form (`http_app.rs:408`, `:426`). Observed: a registrar
+  `router.route("/orders", post(…))`, `GET /orders` → `404 {"error":"notFound"}` **with `allow: POST`**. Go's mux
+  fallback cannot leak this, so the Rust guarantee is by convention where Go's is by construction, and the next
+  slices (`auth`, `users`) add routes.
+  RED: a case mounting a registrar with plain `Router::route`, requesting the wrong verb (and a preflight from an
+  allowed origin to it) through the stack `serve.rs` builds — `instrument(secure(build_app(…)))` — and asserting no
+  `Allow`. GREEN: the header is removed outside the router as a whole (a layer around the finished `Router` as one
+  service, in `build_app` or the entry point), so no mounting style can bring it back; the examples in the tests use
+  whichever form a slice should copy. Sweep: **every way a registrar can mount a route** (`route`, `route_service`,
+  `nest`, `merge`) under the wrong verb.
+
+- [ ] T021 [US1] **MEDIUM — a new direct dependency nobody was asked about** (Principle XIV: "a new dependency" is a
+  stop-and-ask). `serde_path_to_error = "0.1.20"` is in the `axum` region (`src/slipwai/project/languages/cargo.py`,
+  generated `Cargo.toml`) and in `PACKAGE_EDITS['rust']['axum']`, but in neither `research.md`'s crate table nor
+  `decisions.md` (only commit `0741263`'s message). It adds no package to any lock — axum's `json` feature already
+  pulls it (`assets/languages/rust/locks/axum/Cargo.lock`, axum's dependency list). GREEN: the drive-skipper records
+  the decision (keep, or derive the path another way) in `decisions.md`, and `research.md` gains its row with the
+  citation. Sweep: **every crate in both `axum` regions** of the manifest is in `research.md`'s table.
+
+- [ ] T022 [US1] **MEDIUM — four committed locks are stale, so `make check-locks` is not clean** (R9 guard; T015).
+  Re-resolved here with `scripts/regenerate-locks.py`'s own `rust_locks()`: the five `*-axum` locks match; `memory`,
+  `memory-sqlite`, `memory-postgres` and `memory-sqlite-postgres` differ by transitive patch releases (e.g. `js-sys`
+  0.3.105→0.3.106, `wasm-bindgen` 0.2.128→0.2.129, `1.16.1`→`1.16.2`, `1.4.7`→`1.5.1`). GREEN: `make locks` for the
+  Rust variants, committed with the slice (user-visible, covered by the MINOR fragment). Sweep: **every lock variant**
+  `make check-locks` resolves, all ecosystems, clean.
+
+- [ ] T023 [US1] **LOW — the D5 sentence is written for two Rust services whether or not they serve.**
+  `src/slipwai/project/run_skill.py:201` counts `service.language == "rust"`, where R8 says "two Rust services with a
+  transport". GREEN: count Rust services whose selection has the transport; a case with one Rust `axum` and one Rust
+  `none` service gets no sentence. Sweep: **every condition in `run_skill.py`** that names a language also asks
+  whether the service serves, where serving is what it describes.
+
+T015 (the final gate) is still open and is not repeated here: the `make starters` before/after diff, `make demo`
+inside SC-003's window (Docker 29.6.1 is available on this machine), the full `make verify`, and the scratch clean-up.
+
+### Draft verdict — not converged
+
+**Not converged: five HIGH findings (T016–T020) re-open the loop; T021–T022 are MEDIUM, T023 LOW, and T015 is
+still open.** By level:
+
+- **Domain:** none generated or touched. The slice adds no entity, port or use case.
+- **Use case (`/ready` through the probe):** holds. `serve.rs` adapts the opened store to the adapter's own
+  `ReadinessProbe` through `head()` (`src/slipwai/project/rust_entry.py`, `StoreProbe`), the adapter imports no port,
+  and `None` on the standard profile answers ready (`http_app.rs:133-160`; cases at `:343-384`, green in a generated
+  project, 46/46 lib tests). Postgres opens lazily. Not proven: the probe against a live failing store is the
+  integration suite's, which this transport does not add (catalog `integration-suite: false`).
+- **Delivery adapter:** routes, the JSON 404, the 503 body, `Cache-Control: no-store`, security headers on every
+  answer including 404s, a 204 preflight with `Max-Age: 600`, `Vary: Origin`, and span names `GET /ready`,
+  `GET unmatched`, `OPTIONS /ready` were all observed through the stack `serve.rs` builds. The config refusals match
+  Go's one for one (`config.rs:86-113` vs `config.go:106-132`). Not holding: the 400 can quote a value (T016), the
+  served process logs no URL (T017), there is no trace-to-event correlation (T018), and a plainly mounted route leaks
+  `Allow` (T020).
+- **Published contract:** holds. `openapi.yaml` describes `/health` and `/ready` (200/503); its test fails when a
+  path is renamed (seen: `GET /ready is served and openapi.yaml does not describe it`); `DOCUMENTS['axum']` and
+  `API_CONTRACTS['axum']` exist with no exporter. With `--frontend react-vite --http axum --event-store memory`, on
+  event-modelling, `packages/api-client` builds from `apps/service/openapi.yaml`, `vite.config.ts` proxies `/api`
+  inside the `axum` region, and the generated `make install && make verify` passed: "verify: all gates passed", in 2
+  minutes.
+- **Factory:** the catalog and `prune.py` agree (`catalog.json` `axum` option and `default.http.rust`;
+  `prune.py` `FEATURES`, `AXES`, `OWNED_FILES`, `OWNED_FILES_PER_WEB_APP`, `APP_SERVICE_FEATURES`, `PACKAGE_EDITS`,
+  `MARKED_FILES_BY_LANGUAGE`). Nothing branches on the option's name; `cargo.served()` asks the feature. The suite
+  rows FR-007 names for this slice are in place: `TRANSPORTS`, `PARTIAL['rust'] = {event-store, http}`, the matrix
+  rows' `offered(...)`, `test_readiness` `.rs`, and `test_running`'s Rust row. The docs and README name `axum`, and
+  the D6 amendments read true. `--http none` against the base is not what scenario 9 says (T019), and four locks are
+  stale (T022). The factory suites for this slice (`test_rust_http*`, `test_catalog`, `test_axes`, `test_readiness`,
+  `test_running`, `test_pruning`): 72 tests, OK, in 16 minutes at `115e5a7` — green, and none of them reaches T016–T020. `make starters` was not run here (T015).
+
+**Constitution, principle by principle:**
+- **I — answers keep meaning:** holds for the record. A Rust record with no `http` key migrates to no transport
+  (`tests/test_rust_http.py:112`). The catalog change is additive (`catalog.json:16`, the `axum` option), and the
+  fragment claims MINOR (`changelog.d/rust-http-axum.md:1`) against `VERSION` `1.4.0.dev0`.
+  `tests/test_changelog.py` passed, 13 tests with 1 skipped, in a `--no-tags` clone at `115e5a7`. "Every combination
+  passes its own gate" is proven here for the event-modelling/react-vite/memory row and the per-store builds
+  (`tests/test_rust_http_entry.py:95`), not for the whole matrix (T015). The `--http none` "today's tree" claim is
+  not met (T019).
+- **II — re-running is safe:** `./init --http none` only subtracts (`tests/test_rust_http_prune.py:34`, `:59`). The
+  slice adds no new writing command, so no second-run test is owed.
+- **III — simplicity:** holds. There is no `tower-http`, YAML or regex crate (`http_security.rs:4-9`,
+  `http_openapi.rs:3-11`), and `project/rust_entry.py` exists only because of the line budget. The one crate beyond
+  research is T021.
+- **VII — observability (applied to the long-running process the slice generates):** structured JSON logs
+  (`observability.rs:165-175`) and a trace id on each line inside a request (`observability.rs:201-214`) hold. The
+  process's own start-up line is lost (T017), and events are not correlated by trace (T018).
+- **VIII — versioning:** MINOR fragment, `VERSION` unchanged, `catalog.json` additive, and no `schemaVersion` move.
+- **IX — security:** holds for the factory itself: no credential is logged or written by slipwai. In the generated
+  service, the 400 leak (T016) breaks the plan's own security line. The `DATABASE_URL` refusal echoing the value
+  (`config.rs:143-146`) and `/ready` logging the driver's error (`http_app.rs:151`) match Go's `config.go:131-132`
+  and `http_app.go:147` exactly. That is the parity bar, so neither is owed here; both are a cross-backend question.
+- **X — trunk:** one PR for the slice. Commit `f9eed3b` deliberately left three suites red until later tasks, inside
+  the same PR. This is recorded, not re-opened: history is not rewritten.
+- **XIV — agent change, same bar:** the spec and constitution were not edited by the implementer (`git diff
+  7e4291e..HEAD` touches no `spec.md`). The unasked dependency is T021, and scenario 9's wording is returned as a
+  product question (T019).
+
+Recorded for the verdict, as T003 asked: the `--http none` byte comparison is above (T019). The `make starters`
+diff is still T015's.

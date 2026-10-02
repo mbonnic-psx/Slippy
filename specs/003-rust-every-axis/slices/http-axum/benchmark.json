@@ -301,6 +301,30 @@
         "split": 0,
         "driver": "cruise"
       }
+    },
+    {
+      "stage": "converge",
+      "started": "2026-10-02T06:27:09Z",
+      "planned": "converge: strong → host model — `strong` maps to the host model",
+      "tasks": {
+        "start": {
+          "open": 1,
+          "done": 14
+        }
+      },
+      "cursor": {
+        "source": "claude",
+        "session": "34c23c3f-a6fd-47c6-8d95-22eca789c141",
+        "files": {
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141.jsonl": 808061
+        },
+        "subagents": {
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-a805963fcefa0e87e.jsonl": 394764,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-ac26938642bd37838.jsonl": 853757,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-ac733950123fbd8a4.jsonl": 3012699,
+          "/home/mbonnic/.claude/projects/-home-mbonnic-Slippy/34c23c3f-a6fd-47c6-8d95-22eca789c141/subagents/agent-afc9675d92c905626.jsonl": 1458142
+        }
+      }
     }
   ]
 }

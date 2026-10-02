@@ -267,22 +267,31 @@ def rust_locks() -> dict[Path, str]:
 
     Resolved in a throwaway workspace whose one member, named with the placeholder the factory replaces,
     asks for every crate the union needs — `sqlx` once, with every store's features, which is exactly what
-    Cargo unifies two services on two stores into. `cargo generate-lockfile` is the resolution; nothing here
-    edits a lock by hand.
+    Cargo unifies two services on two stores into, and the transport's crates and the router's test crates
+    when any service serves. `cargo generate-lockfile` is the resolution; nothing here edits a lock by hand.
     """
     wanted: dict[Path, str] = {}
     store_sets = [
         stores for size in range(len(cargo.STORES) + 1) for stores in itertools.combinations(cargo.STORES, size)
     ]
-    for stores in store_sets:
-        variant = "-".join(["memory", *stores])
-        crates = "".join(f"{name} = {spec}\n" for name, spec in cargo.EVENT_STORE_CRATES.items())
+    # Every store set, with and without the transport, and the transport alone: `memory` is the event store's
+    # own always-on adapter, so "no store" is the one row that is not a variant of it.
+    unions = [(True, stores, served) for stores in store_sets for served in (False, True)] + [(False, (), True)]
+    for stored, stores, served in unions:
+        variant = "-".join([*(["memory", *stores] if stored else []), *([cargo.TRANSPORT] if served else [])])
+        answers = {"event-store": "memory"} if stored else {}
+        answers |= {"http": "axum"} if served else {}
+        selection = Selection(answers)
+        crates = "".join(f"{name} = {spec}\n" for name, spec in sorted(_union_crates(selection).items()))
         if stores:
             features = sorted({feature for store in stores for feature in cargo.SQLX_FEATURES[store]})
             listed = ", ".join(f'"{feature}"' for feature in features)
             crates += (
                 f'sqlx = {{ version = "{cargo.SQLX_VERSION}", default-features = false, features = [{listed}] }}\n'
             )
+        dev = "".join(
+            f"{name} = {spec}\n" for name, spec in sorted(cargo.TRANSPORT_DEV_CRATES.items() if served else [])
+        )
         with tempfile.TemporaryDirectory() as staging:
             workspace = Path(staging)
             (workspace / "Cargo.toml").write_text('[workspace]\nresolver = "3"\nmembers = ["member"]\n')
@@ -290,13 +299,25 @@ def rust_locks() -> dict[Path, str]:
             (workspace / "member/src/lib.rs").write_text("")
             (workspace / "member/Cargo.toml").write_text(
                 f'[package]\nname = "{cargo.PLACEHOLDER}"\nversion = "0.1.0"\nedition = "2024"\n\n'
-                f"[dependencies]\n{crates}"
+                f"[dependencies]\n{crates}\n[dev-dependencies]\n{dev}"
             )
             result = subprocess.run(["cargo", "generate-lockfile"], cwd=workspace, capture_output=True, text=True)
             if result.returncode != 0:
                 raise SystemExit(f"`cargo generate-lockfile` failed for the {variant} lock:\n{result.stderr}")
             wanted[cargo.LOCKS / variant / "Cargo.lock"] = (workspace / "Cargo.lock").read_text()
     return wanted
+
+
+def _union_crates(selection: Selection) -> dict[str, str]:
+    """The crates a union asks for outside `sqlx`, with `tokio` once and carrying both answers' features."""
+    crates: dict[str, str] = {}
+    if cargo.stored(selection):
+        crates |= cargo.EVENT_STORE_CRATES
+    if cargo.served(selection):
+        crates |= cargo.TRANSPORT_CRATES | {name: cargo.EVENT_STORE_CRATES[name] for name in cargo.SHARED_CRATES}
+    if "tokio" in crates:
+        crates["tokio"] = cargo.tokio(selection)
+    return crates
 
 
 def targets() -> dict[Path, str]:

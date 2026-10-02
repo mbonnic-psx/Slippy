@@ -136,7 +136,7 @@ class RustWithoutATransportTest(FactoryTestCase):
 
 
 class RustIsAskedTheHttpQuestionTest(FactoryTestCase):
-    """R1: Rust answers `none` or `axum` like every backend answers its own transport, and is offered `axum` by default."""
+    """R1: Rust answers `none` or `axum`, as every backend answers its own transport, and defaults to `axum`."""
 
     def test_rust_is_offered_none_and_axum_and_defaults_to_axum(self) -> None:
         self.assertEqual(axis_options("http", "rust", "none"), ["none", "axum"])

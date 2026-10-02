@@ -1,0 +1,81 @@
+"""Rust's row of what each backend's entry point writes for each event-store answer.
+
+A module of its own because `entry_stores.py` is at the line budget `scripts/check-structure.py` holds a module
+to; the shape — `EntryStore` — is that module's, and `composition.py` reads this row beside the others.
+
+Rust has no `*_OR_MEMORY` tail and no `nil`: the in-memory store is a binding made *above* the store's marked
+region, and the region begins by dropping it before it binds the real one. That is the one spelling that is
+warning-free in both states the pruner leaves behind — rustc warns on an assignment nobody reads and on a
+binding shadowed before it is used, and the gate runs clippy with `-D warnings` — so a project generated with
+SQLite and one pruned to the in-memory store both build clean.
+
+No import sits inside a marked region: the formatter sorts a block of `use` lines and would carry a marker
+comment to wherever its line sorted. The store's own types are named by their path where they are used, inside
+the region, and every import is one the entry point uses whatever the pruner leaves.
+"""
+from __future__ import annotations
+
+from .entry_stores import STORED, EntryStore, marked
+
+# The one block of imports, per answer, in the order the formatter writes them.
+NO_STORE_IMPORTS = """use delivery_starter::adapters::driving::http::{build_app, readiness, security};
+use delivery_starter::{config, observability};
+"""
+STORE_IMPORTS = """use delivery_starter::adapters::driven::event_store_memory::InMemoryEventStore;
+use delivery_starter::adapters::driving::http::{
+    ProbeFuture, ReadinessProbe, build_app, readiness, security,
+};
+use delivery_starter::application::ports::events::EventStore;
+use delivery_starter::{config, observability};
+
+/// What `/ready` asks of the event store, in the shape the HTTP adapter declares: the last global position in
+/// the log, or zero when it is empty. A store that cannot answer it cannot serve a request either. Declared
+/// here, because this is the one place that knows both the port and the adapter — the adapter imports no port.
+struct StoreProbe<S>(S);
+
+impl<S: EventStore + 'static> ReadinessProbe for StoreProbe<S> {
+    fn check(&self) -> ProbeFuture<'_> {
+        Box::pin(async move { self.0.head().await.map(drop).map_err(Into::into) })
+    }
+}
+
+type Store = std::sync::Arc<dyn ReadinessProbe>;
+"""
+OPEN_HEAD = """    // The event store this project answered the event-store question with, opened once, here, and handed to
+    // whatever needs it. Nothing else in this service constructs one.
+    //
+    // The marked block is the answer; delete it — which is what `./init --event-store memory` does — and the
+    // in-memory store it starts as is what is left. Both states are valid at once, which is what a prune needs,
+    // because pruning only ever subtracts.
+    let store: Store = std::sync::Arc::new(StoreProbe(InMemoryEventStore::new()));
+"""
+SQLITE = (
+    "    drop(store);\n"
+    "    let store: Store = std::sync::Arc::new(StoreProbe(\n"
+    "        delivery_starter::adapters::driven::event_store_sqlite::SqliteEventStore::open(\n"
+    "            &settings.event_store_path,\n"
+    "        )\n"
+    "        .await?,\n"
+    "    ));"
+)
+POSTGRES = (
+    "    // The pool connects lazily, so this opens no socket while the process is starting: an unreachable\n"
+    "    // database shows up as /ready answering 503, which is what it is. A bad connection string is a\n"
+    "    // different thing and does stop the process, because nothing about it will get better on its own.\n"
+    "    drop(store);\n"
+    "    let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy(&settings.database_url)?;\n"
+    "    let store: Store = std::sync::Arc::new(StoreProbe(\n"
+    "        delivery_starter::adapters::driven::event_store_postgres::PostgresEventStore::from_pool(\n"
+    "            pool,\n"
+    "            delivery_starter::application::ports::events::default_tags_of(),\n"
+    "        ),\n"
+    "    ));"
+)
+
+RUST = EntryStore(
+    entry="src/bin/serve.rs",
+    imports={"none": NO_STORE_IMPORTS, **dict.fromkeys(STORED, STORE_IMPORTS)},
+    open={None: OPEN_HEAD, "sqlite": OPEN_HEAD + marked(SQLITE, indent="    "), "postgres": OPEN_HEAD + marked(POSTGRES, indent="    ")},
+    argument="Some(store)",
+    absent="None",
+)

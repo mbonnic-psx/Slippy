@@ -43,6 +43,8 @@ RUST_WRITE_SIDE: dict[str, dict[str, str]] = {
         "src/config.rs": "config.rs",
         # The SDK's wiring, under the transport: a span per request is what only a transport produces.
         "src/observability.rs": "observability.rs",
+        # The one file with no test: it reads the environment, builds the router, binds and shuts down.
+        "src/bin/serve.rs": "serve_main.rs",
     },
 }
 

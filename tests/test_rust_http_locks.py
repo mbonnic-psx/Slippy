@@ -146,3 +146,11 @@ class RustManifestAndLocksTest(FactoryTestCase):
         self.assertNotIn("axum", direct_names(text, "quiet"))
         # The union lock carries the transport's packages once, for the member that asked.
         self.assertEqual(text.count('name = "axum"\n'), 1)
+
+    def test_the_fragment_s_catch_up_says_migrate_moves_a_rust_lock_and_how_a_conflict_is_resolved(self) -> None:
+        fragment = (ROOT / "changelog.d/rust-http-axum.md").read_text()
+        catch_up = fragment.split("**Catch-up.**", 1)[1]
+
+        self.assertIn("slipwai migrate", catch_up)
+        self.assertIn("Cargo.lock", catch_up)
+        self.assertIn("re-lock", catch_up)

@@ -24,5 +24,8 @@ leaving the lock to follow the manifest. The manifest's `tokio`, `serde` and `se
 that, because the event store needs them too. Five more `Cargo.lock` files are committed for the union of
 stores and transport across a workspace, so `--locked` builds offline.
 
-**Catch-up.** Nothing for an existing project: this only adds what a new Rust service is generated with. To
-give an existing Rust service a transport, answer `--http axum` on a fresh generation and carry its files over.
+**Catch-up.** Nothing is asked of an existing project's code: this only adds what a new Rust service is generated
+with. `slipwai migrate` does move a Rust project's `Cargo.lock`, to the newer transitive patch versions the
+committed locks were re-resolved to; where that conflicts with a lock you changed, re-lock (`cargo update`, then
+commit `Cargo.lock`) and take the result. To give an existing Rust service a transport, answer `--http axum` on a
+fresh generation and carry its files over.

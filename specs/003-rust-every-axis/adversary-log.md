@@ -16,10 +16,10 @@ Findings:
 
 | # | Severity | Finding | Triage | State |
 |---|---|---|---|---|
-| F1 | HIGH | A project named after a crate the manifest declares (`axum`, `tower`, `tracing`, `opentelemetry`, `tokio`, `serde`), a keyword (`self`, `type`, `crate`) or `core` generates and does not compile (`rust.py` `crate_name` guards only `test`/`std`/`alloc`/`proc_macro`); `tokio`/`core` already failed at the base through `migrate.rs` | confirmed | open |
-| R1 | MEDIUM | SIGTERM with one silent or half-open connection never ends the process: `with_graceful_shutdown` has no deadline (`serve_main.rs`); Go's `Shutdown` is bounded at 10s (`serve_main.go`) | confirmed | open |
-| R2 | MEDIUM | No header-read timeout: a client sending part of a request line holds the connection indefinitely (slowloris); Go sets `ReadHeaderTimeout: 5s` | confirmed | open |
-| R3 | LOW | The request method goes verbatim into the span name and `http.request.method` (`observability.rs`); a 3000-byte method is exported as written. OpenTelemetry's HTTP conventions map an unknown method to `_OTHER` | confirmed | open |
+| F1 | HIGH | A project named after a crate the manifest declares (`axum`, `tower`, `tracing`, `opentelemetry`, `tokio`, `serde`), a keyword (`self`, `type`, `crate`) or `core` generates and does not compile (`rust.py` `crate_name` guards only `test`/`std`/`alloc`/`proc_macro`); `tokio`/`core` already failed at the base through `migrate.rs` | confirmed | fixed 5625f1e |
+| R1 | MEDIUM | SIGTERM with one silent or half-open connection never ends the process: `with_graceful_shutdown` has no deadline (`serve_main.rs`); Go's `Shutdown` is bounded at 10s (`serve_main.go`) | confirmed | fixed 9ee4e0f |
+| R2 | MEDIUM | No header-read timeout: a client sending part of a request line holds the connection indefinitely (slowloris); Go sets `ReadHeaderTimeout: 5s` | confirmed | fixed a4c65ba |
+| R3 | LOW | The request method goes verbatim into the span name and `http.request.method` (`observability.rs`); a 3000-byte method is exported as written. OpenTelemetry's HTTP conventions map an unknown method to `_OTHER` | confirmed | fixed af08f31 |
 | F2 | MEDIUM | `scripts/backing-services.py --http <x>` applies one answer to every service of a mixed project, Go's included, and the next `migrate` installs a transport into a worker; present at the base for TypeScript+Go | confirmed, predates the slice (D10) | open |
 | F3 | LOW | `--http none` offline with an empty cargo cache leaves a stale lock (`_relock_rust` runs `cargo metadata`); the same path at the base when a store is removed | confirmed, predates the slice (D10) | open |
 | F4 | LOW | `--http none` leaves `tokio` `net`/`signal`, `serde_json` and an empty `[dev-dependencies]` | duplicate of T025, T034 | open |

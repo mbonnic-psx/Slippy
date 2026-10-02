@@ -2,16 +2,24 @@
 manifest the survey cannot parse is still recognised. The row reads one fact from the manifest — whether it declares
 a workspace — because that decides whether check, clippy and test are told to cover every member. Beside the
 manifest it reads one configuration fact for the audit: a cargo-deny configuration file (`deny.toml`, `.deny.toml`
-or `.cargo/deny.toml`) in the candidate's own directory, and for the mutation `.cargo/mutants.toml` there."""
+or `.cargo/deny.toml`) in the candidate's own directory, and for the mutation `.cargo/mutants.toml` there. It reads the
+toolchain the repository pins from `rust-toolchain` or `rust-toolchain.toml` as rustup does (D19): the nearest
+directory holding either that it can read, from the candidate's up to the repository root, decides (D24)."""
 from __future__ import annotations
 
+import os
 import re
+import stat
+import tomllib
 from collections.abc import Callable
 from pathlib import Path
 
+from ..bounded_read import MAX_READ
 from .common import Detected, complete, in_dir, prefixed, read
 
 Reader = Callable[[Path], str]
+# A reader that can say "could not be read as text" (`None`) apart from "read, and empty" (`""`).
+TextReader = Callable[[Path], str | None]
 
 # A `[workspace]` or `[workspace.<x>]` table header at the start of a line: a workspace root. Not `workspace = true`
 # in a dependency, `package.workspace = "…"` or a comment, which are a member pointing at a root, and not a
@@ -67,6 +75,91 @@ def optional_tools(root: Path, directory: str, flag: str) -> dict[str, str | Non
     }
 
 
+# In the order rustup prefers them within one directory: the legacy file wins.
+TOOLCHAIN_FILES = ("rust-toolchain", "rust-toolchain.toml")
+
+
+def pinned_channel(text: str) -> str:
+    """The `toolchain.channel` of a TOML text, as written; empty where there is no usable one. A leading byte order
+    mark is removed first: rustup reads past it (R19), and `tomllib` does not."""
+    try:
+        toolchain = tomllib.loads(text.removeprefix("\ufeff")).get("toolchain")
+    except tomllib.TOMLDecodeError:
+        return ""
+    if not isinstance(toolchain, dict) or "path" in toolchain:  # a path is a place on somebody's machine
+        return ""
+    channel = toolchain.get("channel")
+    return channel if isinstance(channel, str) else ""
+
+
+def legacy_channel(text: str) -> str:
+    """A `rust-toolchain` as rustup reads it: exactly one line is the channel, stripped and nothing else removed;
+    more than one is TOML, so `pinned_channel` reads it; none is no pin."""
+    lines = text.split("\n")
+    if lines[-1] == "":
+        lines.pop()
+    if not lines:
+        return ""
+    return lines[0].strip() if len(lines) == 1 else pinned_channel(text)
+
+
+# What rustup will install by name, and so what a workflow's `toolchain:` input can safely carry (D23): a channel
+# holding a newline, a space, a quote or a replacement character is nothing rustup reads, and is not recorded.
+TOOLCHAIN_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+
+
+def readable_text(path: Path, limit: int = MAX_READ) -> str | None:
+    """The file's text; `None` where it cannot be read as UTF-8 text — missing, a dangling link, not a regular file
+    (never blocked on: issue #13), unreadable, not valid UTF-8; empty where it is larger than `limit`, as
+    `bounded_read.read` has it, which is a file that was read and names nothing."""
+    try:
+        descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_NONBLOCK", 0))
+    except OSError:
+        return None
+    try:
+        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+            return None
+        with os.fdopen(descriptor, "rb", closefd=False) as handle:
+            data = handle.read(limit + 1)
+    except OSError:
+        return None
+    finally:
+        os.close(descriptor)
+    if len(data) > limit:
+        return ""
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+
+
+def stays_inside(root: Path, path: Path) -> bool:
+    """Whether `path`, links followed, resolves inside the repository root (D26): a toolchain file that links out of
+    the checked-out tree is passed over, as an unreadable one is, so nothing of the adopting machine is recorded."""
+    try:
+        return path.resolve().is_relative_to(root.resolve())
+    except (OSError, RuntimeError):
+        return False
+
+
+def rust_toolchain(root: Path, directory: str, reader: TextReader = readable_text) -> str:
+    """The toolchain channel the candidate pins, as rustup would find it: from the candidate's directory up to and
+    including the repository root, never above, the nearest directory holding a toolchain file it can read decides —
+    even one that names no channel — and a name that cannot be read as text (D24), or whose link resolves outside
+    the repository (D26), is passed over, to the other name in its directory and then upward. No file read on the
+    way up is no pin."""
+    here = root / directory
+    while True:
+        for name in TOOLCHAIN_FILES:
+            text = reader(here / name) if stays_inside(root, here / name) else None
+            if text is not None:
+                channel = legacy_channel(text) if name == "rust-toolchain" else pinned_channel(text)
+                return channel if TOOLCHAIN_NAME.fullmatch(channel) else ""
+        if here == root or root not in here.parents:
+            return ""
+        here = here.parent
+
+
 def cargo(root: Path, directory: str) -> Detected | None:
     if not (root / directory / "Cargo.toml").is_file():
         return None
@@ -83,5 +176,5 @@ def cargo(root: Path, directory: str) -> Detected | None:
             test=in_dir(directory, f"cargo test{flag}"),
             **optional_tools(root, directory, flag),
         ),
-        {"kind": "rust", "version": ""},
+        {"kind": "rust", "version": rust_toolchain(root, directory)},
     )

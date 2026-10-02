@@ -1,0 +1,16 @@
+== case tg9-ci
+-- setup: mkdir -p src; printf "[package]\nname = \"ledger\"\nversion = \"0.1.0\"\nedition = \"2021\"\n" > Cargo.toml; echo "pub fn f() {}" > src/lib.rs; printf '[toolchain]\nchannel = "1.85"\n' > rust-toolchain.toml; mkdir -p .github/workflows; printf 'name: ci\non: [push]\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - run: cargo test\n' > .github/workflows/ci.yml
+adopt exit: 0
+deployable tg9-ci: path=. language=rust toolchain={"kind": "rust", "version": "1.85", "ecosystem": "cargo"}
+-- survey.md candidate lines:
+- `.` — cargo, rust, from `Cargo.toml`, rust 1.85; what it is for, nothing here says
+- `.github/workflows`
+- `README`: no
+-- workflows written:
+ .github/workflows/verify-delivery.yml              |   17 +
+--- .github/workflows/verify-delivery.yml
+15:      - uses: actions/checkout@v6
+16:      - run: make -f delivery/Makefile install
+17:      - run: make -f delivery/Makefile verify
+-- toolchain keys:
+['ecosystem', 'kind', 'version']

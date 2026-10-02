@@ -41,7 +41,7 @@ class CargoSurveyTest(unittest.TestCase):
             for target in ("integration", "adversarial", "audit", "mutation"):
                 self.assertIn(target, crate.commands)
                 self.assertIsNone(crate.commands[target], f"{target} is a written no")
-            self.assertEqual(crate.toolchain, {"kind": "rust", "version": ""}, "a pin in the tree is a later slice's")
+            self.assertEqual(crate.toolchain, {"kind": "rust", "version": "1.79.0"})
             self.assertIsNone(crate.packaging)
             self.assertIn("rust", found.languages)
             self.assertIsNone(found.roots[0].role, "nothing beside the crate says what it is for")

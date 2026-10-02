@@ -31,7 +31,15 @@ attended adoption has them before `--confirm`), whether or not it configures `ca
 `deny.toml` above the candidate (cargo-deny reads it; the survey does not look), an offline advisories run, and a
 diff scope for mutation (`--in-diff`).
 
-What stays out, and comes later: a toolchain pin read from `rust-toolchain.toml` and Rust set up in the adopted CI.
+The toolchain a Rust repository pins is recorded as the candidate's Rust version, read as rustup reads it:
+`rust-toolchain` or `rust-toolchain.toml`, looked for from the candidate's directory up to the repository root, the
+nearest directory holding either deciding (the legacy file first, and a `rust-toolchain` of more than one line read
+as TOML; a file rustup cannot read is passed over, as is one that links outside the repository, which is not read, and a byte order mark is read past), with the channel recorded
+as written — `1.85`, `stable`, `nightly-2025-01-01`. Where nothing usable is
+pinned (no file, an empty or invalid one, a `path` toolchain, a channel that is not a toolchain name) the version
+is empty and nothing is reported as an error, and `rust-version` in `Cargo.toml` is not a pin.
+
+What stays out, and comes later: Rust set up in the adopted CI.
 Nor are `members`, `exclude` and `default-members` read, or an inline `workspace = { … }` table: a workspace is
 a `[workspace]` or `[workspace.<x>]` table header at the start of a line, and every `Cargo.toml` below one is its
 member, so a crate the root excludes that declares no workspace of its own is owned and never proposed, however the
@@ -64,3 +72,6 @@ commands by `slipwai adopt --refresh`, as it is any detected command; one whose 
 you decide`) and left as written, so add `commands.audit` and `commands.mutation` to `project.json` by hand and run
 `slipwai adopt --refresh` so the Makefile follows. Neither `migrate` nor `adopt --refresh` rewrites the `.gitignore`
 block, so add `mutants.out/` and `mutants.out.old/` to it by hand in a repository adopted earlier.
+A repository adopted with a snapshot before the toolchain pin was read has its detected, empty Rust version
+refreshed to the pin by `slipwai adopt --refresh`; one the maintainer confirmed or overrode is reported as a
+disagreement (`toolchain.version was confirmed as …`) and left as written, so edit it in `project.json` by hand.

@@ -25,7 +25,9 @@ safe for an agent to attempt.
 read, it says so by name, lists the manifests it does read, and stops before asking a question ([`src/slipwai/survey.py`](../src/slipwai/survey.py),
 with the package [`ecosystems/`](../src/slipwai/ecosystems/__init__.py) as the table of what it can recognise): every directory
 that builds — Node, Python, Go, Maven, Gradle, Ant, .NET, PHP, Ruby, Rust (Cargo, tried last), by the manifest that
-starts the build — with its language, the toolchain pin the tree carries, and the command its own tools run for each
+starts the build — with its language, the toolchain pin the tree carries (a Rust pin is read from `rust-toolchain`
+or `rust-toolchain.toml`, from the candidate's directory up to the repository root), and the command its own tools
+run for each
 of the eight Make targets a service owes (`install lint typecheck test integration adversarial audit mutation`). A
 workspace root (npm, Maven, Gradle, .NET, Cargo) owns its members and is proposed once, except that a Cargo workspace
 nested below another is a candidate of its own. A Cargo workspace root owns the crates below it even where another

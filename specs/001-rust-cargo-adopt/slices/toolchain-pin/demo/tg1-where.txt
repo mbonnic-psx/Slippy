@@ -1,0 +1,37 @@
+== case root-above-sub
+-- setup: mkdir -p crates/a/src; printf "[package]\nname = \"a\"\nversion = \"0.1.0\"\nedition = \"2021\"\n" > crates/a/Cargo.toml; echo "pub fn f() {}" > crates/a/src/lib.rs; printf '[toolchain]\nchannel = "1.85"\n' > rust-toolchain.toml
+adopt exit: 0
+deployable a: path=crates/a language=rust toolchain={"kind": "rust", "version": "1.85", "ecosystem": "cargo"}
+-- survey.md candidate lines:
+- `crates/a` — cargo, rust, from `crates/a/Cargo.toml`, rust 1.85; what it is for, nothing here says
+- `README`: no
+== case tauri
+-- setup: mkdir -p src-tauri/src src; printf '{"name":"app","version":"0.1.0","scripts":{"test":"echo ok"}}\n' > package.json; printf '[package]\nname = "app"\nversion = "0.1.0"\nedition = "2021"\n' > src-tauri/Cargo.toml; echo 'fn main() {}' > src-tauri/src/main.rs; echo 'console.log(1)' > src/main.js; printf '[toolchain]\nchannel = "1.82"\n' > rust-toolchain.toml
+adopt exit: 0
+deployable tauri: path=. language=javascript toolchain={"kind": "node", "version": "", "ecosystem": "node"}
+deployable src-tauri: path=src-tauri language=rust toolchain={"kind": "rust", "version": "1.82", "ecosystem": "cargo"}
+-- survey.md candidate lines:
+- `.` — node, javascript, from `package.json`; what it is for, nothing here says
+- `src-tauri` — cargo, rust, from `src-tauri/Cargo.toml`, rust 1.82; what it is for, nothing here says
+- `README`: no
+== case nearer-empty-stops
+-- setup: mkdir -p crates/a/src; printf "[package]\nname = \"a\"\nversion = \"0.1.0\"\nedition = \"2021\"\n" > crates/a/Cargo.toml; echo "pub fn f() {}" > crates/a/src/lib.rs; printf '[toolchain]\nchannel = "1.85"\n' > rust-toolchain.toml; printf '[toolchain]\ncomponents = ["clippy"]\n' > crates/a/rust-toolchain.toml
+adopt exit: 0
+deployable a: path=crates/a language=rust toolchain={"kind": "rust", "version": "", "ecosystem": "cargo"}
+-- survey.md candidate lines:
+- `crates/a` — cargo, rust, from `crates/a/Cargo.toml`; what it is for, nothing here says
+- `README`: no
+== case nearer-wins
+-- setup: mkdir -p crates/a/src; printf "[package]\nname = \"a\"\nversion = \"0.1.0\"\nedition = \"2021\"\n" > crates/a/Cargo.toml; echo "pub fn f() {}" > crates/a/src/lib.rs; printf '[toolchain]\nchannel = "1.85"\n' > rust-toolchain.toml; printf '1.79\n' > crates/a/rust-toolchain
+adopt exit: 0
+deployable a: path=crates/a language=rust toolchain={"kind": "rust", "version": "1.79", "ecosystem": "cargo"}
+-- survey.md candidate lines:
+- `crates/a` — cargo, rust, from `crates/a/Cargo.toml`, rust 1.79; what it is for, nothing here says
+- `README`: no
+== case above-root
+-- setup: mkdir -p inner; cd inner; git init -q; mkdir -p crates/a/src; printf "[package]\nname = \"a\"\nversion = \"0.1.0\"\nedition = \"2021\"\n" > crates/a/Cargo.toml; echo "pub fn f() {}" > crates/a/src/lib.rs; cd ..; printf '[toolchain]\nchannel = "1.85"\n' > rust-toolchain.toml; cd inner
+adopt exit: 0
+deployable a: path=crates/a language=rust toolchain={"kind": "rust", "version": "", "ecosystem": "cargo"}
+-- survey.md candidate lines:
+- `crates/a` — cargo, rust, from `crates/a/Cargo.toml`; what it is for, nothing here says
+- `README`: no

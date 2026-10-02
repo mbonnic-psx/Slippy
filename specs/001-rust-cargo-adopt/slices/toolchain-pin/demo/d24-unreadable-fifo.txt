@@ -1,0 +1,30 @@
+---------- 1 mbonnic mbonnic 5 Oct  1 16:54 rust-toolchain
+== case unreadable-legacy
+ M rust-toolchain
+-- setup: mkdir -p src; printf "[package]\nname = \"ledger\"\nversion = \"0.1.0\"\nedition = \"2021\"\n" > Cargo.toml; echo "pub fn f() {}" > src/lib.rs; printf "[toolchain]\nchannel = \"1.85\"\n" > rust-toolchain.toml; printf '1.70\n' > rust-toolchain
+adopt exit: 2
+slipwai adopt: error: this repository has uncommitted changes; commit or stash them first, so that the adoption is the only thing this command leaves behind and `git reset --hard HEAD^` undoes exactly that
+Traceback (most recent call last):
+  File "<stdin>", line 2, in <module>
+FileNotFoundError: [Errno 2] No such file or directory: 'project.json'
+-- survey.md candidate lines:
+grep: delivery/survey/survey.md: No such file or directory
+prw-rw-r-- 1 mbonnic mbonnic 0 Oct  1 16:54 rust-toolchain
+== case fifo-legacy
+-- setup: mkdir -p src; printf "[package]\nname = \"ledger\"\nversion = \"0.1.0\"\nedition = \"2021\"\n" > Cargo.toml; echo "pub fn f() {}" > src/lib.rs; printf "[toolchain]\nchannel = \"1.85\"\n" > rust-toolchain.toml;
+adopt exit: 0
+deployable fifo-legacy: path=. language=rust toolchain={"kind": "rust", "version": "1.85", "ecosystem": "cargo"}
+-- survey.md candidate lines:
+- `.` — cargo, rust, from `Cargo.toml`, rust 1.85; what it is for, nothing here says
+- `README`: no
+---------- 1 mbonnic mbonnic 29 Oct  1 16:54 rust-toolchain.toml
+== case unreadable-only
+ M rust-toolchain.toml
+-- setup: mkdir -p src; printf "[package]\nname = \"ledger\"\nversion = \"0.1.0\"\nedition = \"2021\"\n" > Cargo.toml; echo "pub fn f() {}" > src/lib.rs; printf "[toolchain]\nchannel = \"1.85\"\n" > rust-toolchain.toml;
+adopt exit: 2
+slipwai adopt: error: this repository has uncommitted changes; commit or stash them first, so that the adoption is the only thing this command leaves behind and `git reset --hard HEAD^` undoes exactly that
+Traceback (most recent call last):
+  File "<stdin>", line 2, in <module>
+FileNotFoundError: [Errno 2] No such file or directory: 'project.json'
+-- survey.md candidate lines:
+grep: delivery/survey/survey.md: No such file or directory

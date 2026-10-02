@@ -121,14 +121,19 @@ def declare_modules(files: dict[str, str]) -> str:
     return files["src/lib.rs"].replace(f"{MODULES}\n", lines)
 
 
+# The sysroot's crates a package of the same name collides with (`core` builds and is left alone). Compared with `-`
+# read as `_`, which is how cargo spells a package as a crate.
+SYSROOT_CRATES = frozenset({"test", "std", "alloc", "proc_macro"})
+
+
 def crate_name(project_name: str, service: App) -> str:
     """This service's package name: the project's for the first service, `<project>-<service>` after.
 
-    A package name may not start with a digit, which a project name may; such a name is prefixed so the
-    workspace still builds.
+    A package name may not start with a digit, which a project name may, and a crate called `test` or `std`
+    collides with the sysroot's own; such a name is prefixed so the workspace still builds.
     """
     name = service_qualifier(project_name, service).lower()
-    return f"app-{name}" if name[:1].isdigit() else name
+    return f"app-{name}" if name[:1].isdigit() or name.replace("-", "_") in SYSROOT_CRATES else name
 
 
 def name_service(project_name: str, service: App, files: dict[str, str]) -> dict[str, str]:

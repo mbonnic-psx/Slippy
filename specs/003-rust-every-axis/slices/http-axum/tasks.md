@@ -774,3 +774,10 @@ T015 stays open for the `make starters` diff and a clean `make check-locks` on a
 - Not this feature: bare `slipwai generate` from a scratch directory proposes the factory checkout's parent as the
   output parent rather than the current directory — an existing CLI behaviour, every backend alike; for an issue
   of its own. After `./init --http none` `make demo` remains and fails with no `docker-compose.yml`, as Go's does.
+
+## Phase 4 — adversary fixes (iteration 4; findings in `specs/003-rust-every-axis/adversary-log.md`)
+
+- [ ] T035 [US1] **HIGH F1 — a project or service name that is a declared crate, a keyword or `core` must still compile.** RED: a factory test generating Rust `--http axum` services named `axum`, `tokio`, `tower`, `self`, `type`, `core` and asserting the crate name used in `src/bin/serve.rs`/`migrate.rs` is not that name. GREEN: `crate_name` (`src/slipwai/project/languages/rust.py`) prefixes every name in the sweep — the sysroot crates (`core` added), every Rust keyword (strict and reserved), and every crate any Rust manifest region can declare (derived from the manifest/crate tables, not a hand list) — as `test` already becomes `app-test`.
+- [ ] T036 [US1] **MEDIUM R1 — shutdown is bounded.** RED: an entry test (or generated-project test) showing the serve loop's graceful shutdown has a deadline. GREEN: `serve_main.rs` bounds the drain at 10s, as Go's `Shutdown`, then exits and still flushes tracing.
+- [ ] T037 [US1] **MEDIUM R2 — a header-read timeout of 5s,** as Go's `ReadHeaderTimeout`. GREEN in `serve_main.rs` (hyper-util's server builder `header_read_timeout`, or the equivalent axum 0.8 exposes — cite the version read), crates only from what the committed locks already hold where possible; a new crate is recorded in `research.md`.
+- [ ] T038 [US1] **LOW R3 — the span name and `http.request.method` never carry an unknown method:** the nine standard methods kept, anything else `_OTHER` (OpenTelemetry HTTP semantic conventions), in `observability.rs`, with a test.

@@ -98,3 +98,14 @@
 - **Confidence:** high · **Would reverse if:** a lock is found to gain a package from it
 - **Written to:** specs/003-rust-every-axis/slices/http-axum/research.md, specs/003-rust-every-axis/decisions.md
 - **Status:** standing
+
+## D10 — Adversary: two pruner flaws the pass found predate the slice; fix them here?
+- **Stage:** adversary · **Slice:** http-axum · **When:** 2026-10-02T10:23:00Z · **Iteration:** 4
+- **Question:** F2 (`backing-services.py --http <x>` rewrites every service of a mixed project) and F3 (re-locking offline needs a populated cargo cache) reproduce at the base for other backends and other axes; are they this slice's work?
+- **Options:** fix both here · leave both open in the log, named in the PR, for a fix of their own that every backend shares (recommended) · fix F2 for Rust only
+- **Decision:** Leave both open, not fixed in this slice. They are named in the PR and the slice's tasks as the factory's own, to be taken as their own change; the four findings this slice introduced or widened (F1, R1, R2, R3) are fixed here through failing tests.
+- **Why:** The parity bar says Rust gets what every backend gets, and no more; a per-service `--http` in the shared pruner changes every backend's generated script and is a change of its own, which fixing for Rust alone would make Rust's pruner differ from the rest. Neither is CRITICAL, so neither pre-empts the next slice.
+- **Decided by:** host (stage recommendation)
+- **Confidence:** medium · **Would reverse if:** the owner wants mixed-project pruning fixed before Rust's transport ships
+- **Written to:** specs/003-rust-every-axis/adversary-log.md, specs/003-rust-every-axis/decisions.md
+- **Status:** standing

@@ -19,6 +19,7 @@ cargo 1.98.0 on this machine, and a throwaway crate built and run under
 | `opentelemetry` / `opentelemetry_sdk` / `opentelemetry-otlp` | 0.33.0 each | the SDK and the OTLP/HTTP exporter — Go's `otel` + `sdk` + `otlptracehttp` |
 | `tracing-opentelemetry` | 0.34.0 | the bridge from a `tracing` span to an OpenTelemetry one |
 | `serde_path_to_error` | 0.1.20 | names the field in a 400 for a wrong-type value, as Go's names `UnmarshalTypeError.Field`; adds no package to any lock — axum's `json` feature already depends on it (D9) |
+| `hyper` / `hyper-util` | 1.11.1 / 0.1.21 | the entry point's own accept loop (adversary R2): `axum::serve`'s connection builder sets no timer (`axum-0.8.9/src/serve/mod.rs`, `handle_connection`) and hyper's `header_read_timeout` needs one (`hyper-1.11.1/src/server/conn/http1.rs`), so a 5s header-read timeout means building the connection here, with `hyper_util::rt::TokioTimer` and `server::graceful::GracefulShutdown`. Both are already in every axum lock (axum depends on them); only the member's edge list gains two lines, and no package is added (no `h2`: http1 only) |
 | `tower` | 0.5.3 | dev-dependency: `ServiceExt::oneshot`, which dispatches through the real router with no socket |
 | `http-body-util` | 0.1.5 | dev-dependency: reading a response body in an edge test |
 | `tower-http` | 0.7.1 | **not taken** — see *CORS* below |

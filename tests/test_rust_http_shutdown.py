@@ -68,3 +68,23 @@ class RunningServiceTest(FactoryTestCase):
                 except subprocess.TimeoutExpired:
                     self.fail(f"the process was still running {DRAIN_SECONDS + MARGIN}s after SIGTERM")
                 self.assertLess(time.monotonic() - started, DRAIN_SECONDS + MARGIN)
+
+    def test_a_connection_that_never_finishes_its_headers_is_closed_by_the_server(self) -> None:
+        """Slowloris: part of a request line, then silence. Closed after the header-read timeout, with the process
+        still serving — and a request sent whole, on a connection beside it, is still answered."""
+        with tempfile.TemporaryDirectory() as directory:
+            server, port = self.start(directory)
+            with socket.create_connection(("127.0.0.1", port), timeout=2) as stalled:
+                stalled.sendall(b"GET /health HT")
+                stalled.settimeout(HEADER_SECONDS + MARGIN)
+                started = time.monotonic()
+                try:
+                    closed = stalled.recv(1024)
+                except TimeoutError:
+                    self.fail(f"the connection was still open {HEADER_SECONDS + MARGIN}s after a partial request")
+                self.assertLess(time.monotonic() - started, HEADER_SECONDS + MARGIN)
+                self.assertNotIn(b"200", closed)
+            with socket.create_connection(("127.0.0.1", port), timeout=2) as whole:
+                whole.sendall(b"GET /health HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n")
+                self.assertIn(b'{"status":"ok"}', whole.makefile("rb").read())
+            self.assertIsNone(server.poll())

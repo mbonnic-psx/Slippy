@@ -123,7 +123,7 @@ __STORE_OPEN__
         }
     };
     tokio::select! {
-        served = axum::serve(listener, app).with_graceful_shutdown(draining) => served?,
+        served = serve(listener, app, draining) => served?,
         () = deadline => tracing::warn!(
             seconds = DRAIN_TIMEOUT.as_secs(),
             "connections still open at the shutdown deadline were dropped"
@@ -165,4 +165,52 @@ fn variable(name: &str, fallback: &str) -> String {
         Ok(value) if !value.is_empty() => value,
         _ => fallback.to_owned(),
     }
+}
+
+/// How long a client has to finish sending its request's headers, as Go's `ReadHeaderTimeout` is 5s: a connection
+/// that sent half a request line and went quiet is closed rather than held for ever.
+const HEADER_READ_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
+
+/// `axum::serve`, written out, for the one thing it cannot be asked: its connection builder is given no timer
+/// (`axum-0.8.9/src/serve/mod.rs`, `handle_connection`), and hyper's header-read timeout only runs with one
+/// (`hyper-1.11.1/src/server/conn/http1.rs`, `Builder::header_read_timeout`). Accepts until `stop` resolves,
+/// then lets every connection finish what it is serving and returns once they have.
+async fn serve(
+    listener: tokio::net::TcpListener,
+    app: axum::Router,
+    stop: impl std::future::Future<Output = ()>,
+) -> std::io::Result<()> {
+    let connections = hyper_util::server::graceful::GracefulShutdown::new();
+    let mut stop = std::pin::pin!(stop);
+    loop {
+        let stream = tokio::select! {
+            accepted = listener.accept() => match accepted {
+                Ok((stream, _)) => stream,
+                Err(error) => {
+                    // Out of descriptors or a connection reset before it was accepted: neither is a reason
+                    // to stop serving, and a loop with no pause would spin on the first.
+                    tracing::warn!(%error, "a connection could not be accepted");
+                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                    continue;
+                }
+            },
+            () = &mut stop => break,
+        };
+        let mut builder = hyper::server::conn::http1::Builder::new();
+        builder
+            .timer(hyper_util::rt::TokioTimer::new())
+            .header_read_timeout(HEADER_READ_TIMEOUT);
+        let connection = builder.serve_connection(
+            hyper_util::rt::TokioIo::new(stream),
+            hyper_util::service::TowerToHyperService::new(app.clone()),
+        );
+        let connection = connections.watch(connection);
+        tokio::spawn(async move {
+            // A connection that ends in an error — a peer that left, a header that never came — is not the
+            // service's failure.
+            let _ = connection.await;
+        });
+    }
+    connections.shutdown().await;
+    Ok(())
 }

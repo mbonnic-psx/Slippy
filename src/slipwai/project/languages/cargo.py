@@ -32,9 +32,13 @@ EVENT_STORE_CRATES = {
 # address the checked environment accepts. `tokio`, `serde` and `serde_json` are not here: the store needs
 # them too, so they are written outside the region whenever either is present, and taking the transport away
 # leaves them. `matched-path` is what lets a span be named for the route that matched rather than the path.
+# `hyper` and `hyper-util` are the server `axum::serve` hides: its connection builder sets no timer, so it cannot
+# be given a header-read timeout, and the entry point runs its own accept loop over them (both already in the lock).
 TRANSPORT = "axum"
 TRANSPORT_CRATES = {
     "axum": '{ version = "0.8.9", default-features = false, features = ["http1", "json", "matched-path", "query", "tokio"] }',
+    "hyper": '{ version = "1.11.1", default-features = false, features = ["http1", "server"] }',
+    "hyper-util": '{ version = "0.1.21", default-features = false, features = ["http1", "server-graceful", "service", "tokio"] }',
     "opentelemetry": '"0.33.0"',
     "opentelemetry-otlp": '{ version = "0.33.0", default-features = false, features = ["http-proto", "reqwest-blocking-client", "reqwest-rustls", "trace"] }',
     "opentelemetry_sdk": '"0.33.0"',

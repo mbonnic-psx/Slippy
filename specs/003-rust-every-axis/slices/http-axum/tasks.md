@@ -563,3 +563,146 @@ still open.** By level:
 
 Recorded for the verdict, as T003 asked: the `--http none` byte comparison is above (T019). The `make starters`
 diff is still T015's.
+
+## Phase 4: Convergence pass 2 — what is still open, graded, none re-opening
+
+Judged at `97fcaa4` against `7e4291e..HEAD` (pass 2 of 2, the confirming pass). Each pass-1 finding was re-run
+rather than read. The probes ran in scratch generations under `$HOME/.cache/slippy-cruise-tmp/converge2/`, and no
+production file in the worktree was changed.
+
+- [ ] T024 **MEDIUM — `make check-locks` cannot be clean from this slice: the four uv locks have drifted
+  upstream** (R9: "`make check-locks` is clean before the PR"). `scripts/regenerate-locks.py`'s own resolvers were
+  run read-only. `rust_locks()` gave 9 variants, none stale, and `go_module_files()` gave 6, none stale. But
+  `python_locks()` reports `assets/languages/python/locks/uv.lock`, `uv-fastapi.lock`, `uv-postgres.lock` and
+  `uv-fastapi-postgres.lock` stale. This slice has not touched them (`git diff 7e4291e..HEAD --
+  assets/languages/python` is empty, and the last change was `8ac6145`, 2026-09-17). The npm leg is the host's
+  re-run at the base. Handed back, not graded HIGH: refreshing Python locks inside a Rust slice is another
+  ecosystem's change in this PR (`AGENTS.md`: one PR per slice). Either they are refreshed on `main` in a PR of
+  their own, or R9's guard is recorded as the Rust variants'.
+- [ ] T025 **LOW — pruning the transport leaves an empty `[dev-dependencies]` table under a comment that is no
+  longer true.** Since `2229f57`, the table's header and comment are written by
+  `src/slipwai/project/languages/cargo.py:127-138` outside the `axum` region. So `./init --http none` on an
+  `axum` project, standard profile, leaves `# … ./init --http none takes them out …` and `[dev-dependencies]` with
+  nothing under it. A `--http none` generation has neither. The project still builds, and R10 asks for no byte
+  equality between the two routes. GREEN: the header goes inside the region, or the pruner drops a table it
+  emptied. The case is an `axum` → `none` prune with no `[dev-dependencies]` line left.
+- [ ] T026 **LOW — T023's guard does not pin the condition it is named for.**
+  `tests/test_rust_http_entry.py:196` uses two services, so the `several` gate masks
+  `src/slipwai/project/run_skill.py:201`. A Rust `axum` + Rust `none` + Go `net-http` project is the unmasked
+  case. Run here, it gave a *Several services* section and no shared-target sentence, because of the filter at
+  `run_skill.py:89`. GREEN: that three-service case added to the test, so a mutation of line 89 or 201 is caught.
+
+## Convergence
+
+**Verdict at `97fcaa4`: converged at the loop's bound.** No CRITICAL or HIGH finding is open. T016, T017, T018,
+T020, T022 and T023 were each re-run and are closed. T019's first half (the avoidable `Cargo.toml` and
+`adapters/mod.rs` bytes) is closed too. Two things stay open: T019's second half and T021, handed back as product
+questions (below), and T024 (MEDIUM), T025 and T026 (LOW), appended above. None of the open items is CRITICAL,
+so none re-opens the loop past its bound. T015, the after-acceptance gate, is still open as before: the
+`make starters` diff, `make demo`, the full `make verify` and the scratch clean-up. This pass did not run it.
+
+**Each pass-1 finding, re-run:**
+- **T016 closed.** A scratch `tests/probe.rs` in a generated event-modelling `--http axum` project sent 16
+  hostile bodies through `sealed(instrument(secure(build_app(…))))` with `oneshot`. The fields were nested
+  (`line.quantity`), sequence (`lines[0].quantity`), map value (`counts.1`), unit enum, internally tagged enum,
+  tuple too short and too long, integer out of range, root of the wrong type, a trailing second value, and a
+  truncated body. Each value held `, expected `, a backtick or ` at line `. Every one was a 400 with no
+  `SECRET-TOKEN` in the body. Example: `{"quantity":"x, expected SECRET-TOKEN"}` gave `must be u32`. Sweep, every
+  branch of `schema_failure_for` (`assets/backing-services/rust/http_app.rs:230-278`): unknown field, missing
+  field, the four `wanted_by` prefixes, and the `Error::custom` fallback. The generated project's own cases
+  (`http_app.rs:574` onwards) pass in its `cargo test`.
+- **T017 closed.** The generated `serve` was run on port 38617. At `LOG_LEVEL=info` and at `debug` it printed
+  `{"level":"INFO","fields":{"message":"service listening","url":"http://localhost:38617",…},"target":"serve"}`.
+  At `warn` it printed nothing, which is correct. `GET /health` answered 200. Sweep: every `tracing::` call in
+  `src/bin/*.rs` across the standard, memory and postgres generations is in `serve.rs`. `migrate.rs` (postgres)
+  only uses `println!`/`eprintln!`. Both binaries are in `BINARIES` (`observability.rs:154`). The factory test
+  that sweeps this (`tests/test_rust_http_entry.py:125`) and the `make dev` test (`:143`) are green.
+- **T018 closed.** Through the full stack, a handler called `observability::trace_ids()` with `traceparent:
+  00-4bf92f35…-00f067aa0ba902b7-01` and got correlation `4bf92f35-77b3-4da6-a3ce-929d0e0e4736` and causation
+  `00000000-0000-0000-129c-902567c302a6`, which is this service's span and not the caller's. Both parsed through
+  the generated `CorrelationId::parse` and `CausationId::parse`. Outside the request the call returned `None`.
+  Sweep: `observability.rs:28` onwards names a counterpart for every helper exported by `tracing.go`,
+  `tracing.ts` and `tracing.py`. The log-line handlers have none, with the reason given there, and
+  `tests/test_rust_http_service.py:125` holds that.
+- **T019 first half closed; the rest is handed back.** At `40dacad` (`git archive`) and at HEAD with
+  `--http none`, I generated both profiles and ran `diff -rq` over every file. **Standard** differs only in
+  `project.json` and `README.md`. **Event-modelling** (default store `postgres`) differs in `project.json`,
+  `README.md`, `scripts/backing-services.py` and `Cargo.lock` (`js-sys` 0.3.105→0.3.106 and the like, from
+  T022). `apps/service/Cargo.toml` and `src/adapters/mod.rs` are now byte-identical. This matches
+  `tests/test_rust_http_none.py`'s `NAMED_AND_PENDING` and `RE_RESOLVED` exactly.
+- **T020 closed.** Through the stack `serve.rs` builds (`serve_main.rs:90`), I tried six mounting forms:
+  `route`, `route_service`, `nest`, `nest_service`, `merge`, and a method router whose own fallback answers 405.
+  Each was sent `GET`, `DELETE`, `PUT` and `HEAD`, and each answer was `404 {"error":"notFound"}` with the four
+  security headers and no `Allow`. A preflight from an allowed origin, and an `OPTIONS` with no `Origin`, carried
+  no `Allow` either. `POST /health` and `POST /ready` got 404 with no `Allow`, and the right verbs still answered.
+  On the running binary, `curl -X POST /health` gave `404` with no `Allow`. The code is `http::sealed`
+  (`http_app.rs:124`) and `without_hints` (`:94`).
+- **T022 closed for what this slice owns.** `rust_locks()` resolved read-only and all 9 committed Rust locks
+  equal it. `go_module_files()` gave 6, all equal. uv is T024, and npm is the host's re-run. I did not run
+  `make check-locks`, as briefed.
+- **T023 closed (it never reproduced).** `run_skill.py:89` filters `services` to those with a transport, so
+  line 201 counts only serving services. The guard is green, and the unmasked three-service case (T026) shows the
+  same.
+
+**New since pass 1, judged:** nothing the fixes added is HIGH or CRITICAL. `without_hints` turns *every* 405,
+including one a handler writes, into the contract's 404. That is what R3 promises. `sealed` wraps the span, so
+span names are unchanged (the `observability` tests are green). The `span_id` on each line carries no input.
+`test_rust_http_baseline.py` is data generated from `git archive 40dacad`, as its docstring says. The one
+regression a fix brought is T025, and it is LOW. Commit `d6cd7c8` lint-fixes test lines from the commits before
+it. That is recorded under X/XIV and not re-opened, the same as pass 1's `f9eed3b`.
+
+**Suites:** `test_rust_http`, `test_rust_http_locks`, `test_rust_http_service`, `test_rust_http_entry`,
+`test_rust_http_prune`, `test_rust_http_none`, `test_catalog`, `test_axes`, `test_readiness`, `test_running` and
+`test_pruning` ran 78 tests, OK, in 1114 s at `97fcaa4`.
+
+**By level:**
+- **Domain:** none generated or touched.
+- **Use case (`/ready` through the probe):** unchanged since pass 1 and holds (`http_app.rs:162`). The suites
+  are green.
+- **Delivery adapter:** this level now holds where pass 1 found it did not. The 400 quotes no value (T016), a
+  wrong verb leaks nothing for any mounting form (T020), the process says where it listens (T017), and events
+  can be correlated by trace (T018). Not proven: a live failing store behind `/ready`, as in pass 1.
+- **Screen:** none. The react-vite proxy and api-client row is as pass 1 recorded, and nothing since touches it.
+- **Published contract:** `openapi.yaml` is unchanged. A wrong verb now always answers the `NotFound` schema the
+  document already describes.
+- **Factory:** the catalog and pruner tables are unchanged since pass 1. The generator writes `--http none` as
+  before, apart from the files named and pending (T019). Locks: Rust and Go are clean, uv has drifted (T024).
+
+**Constitution, principle by principle, at the final code:**
+- **I — answers keep meaning:** `--http none` is byte-equal to `40dacad` except the named files. Evidence:
+  `tests/test_rust_http_none.py` with `test_rust_http_baseline.py`, plus my independent `diff -rq` above.
+  Inputs: `src/slipwai/project/languages/rust.py:77,99` and `languages/cargo.py:127-138`. A record with no `http`
+  key migrates with no transport (`tests/test_rust_http.py:112`, green). Whether the README line and the shipped
+  pruner are acceptable differences is still a question (handed back, 1).
+- **II — re-running is safe:** `./init --http none` still only subtracts, and the gate is green after it
+  (`tests/test_rust_http_prune.py:34`, green). T025 is what that subtraction leaves behind.
+- **III — simplicity:** the fixes add no crate. `sealed` is axum's `Router` and `middleware::map_response` only
+  (`http_app.rs:124`), and `trace_ids` is a re-punctuation (`observability.rs:233`). The only crate beyond
+  research is still `serde_path_to_error` (handed back, 2).
+- **VII — observability (the long-running process the slice generates):** logs are structured JSON with
+  `trace_id` and `span_id` on every line inside a request (`observability.rs:284,292`). The entry point's own
+  lines are admitted (`:154`). The correlation identifier events take is `trace_ids()` (`:233`). The heartbeat is
+  `/health` and `/ready` (`http_app.rs:162`). Alerting on it belongs to a production target, and this slice adds
+  none.
+- **VIII — versioning:** MINOR (`changelog.d/rust-http-axum.md:1`), `VERSION` `1.4.0.dev0`, and the catalog
+  change is additive (`catalog.json:16`, `:408`). No `schemaVersion` move. The fragment's
+  "`--http none` generates exactly what Rust generated before" (`:21`) is still untrue until question 1 is
+  decided.
+- **IX — security:** a 400 never quotes a value (`http_app.rs:230-278`, cases from `:574`, probe above). The
+  `DATABASE_URL` refusal and the `/ready` log keep Go's parity, as pass 1 recorded (`config.rs:112`). The
+  factory logs and writes no credential.
+- **X — trunk:** one PR for the slice. `d6cd7c8` restores lint for the commits before it, in the same PR.
+- **XIV — agent change, same bar:** `git diff 7e4291e..HEAD` touches no `spec.md`, `decisions.md` or
+  constitution. The two decisions outside the implementer's constraints are handed back, not taken.
+
+**Handed back, open (`plan.md` `## Blocked`, line 307).** Both are stated accurately in substance. Two
+corrections for whoever decides:
+1. *Scenario 9's exceptions (T019).* The pruner difference is **event-modelling only**: a standard project ships
+   no `scripts/backing-services.py`. The block's "on both profiles … and also in" reads as if it applied to both.
+   Standard differs in `project.json` and `README.md` alone. Options (a) and (b) are otherwise as stated, and
+   the fragment sentence (`changelog.d/rust-http-axum.md:21`) follows the choice.
+2. *`serde_path_to_error` (T021).* "Adds no package to any lock" is true. `serde_path_to_error` is a dependency
+   of axum in `assets/languages/rust/locks/axum/Cargo.lock` and appears only in the five `*-axum` locks. Option
+   (b) costs more than it says. Without the path, an unknown field and a missing field lose their parent too
+   (`line.x` becomes `x`), and a wrong type in a nested field becomes `(root)`. So it is a loss of the field
+   path for every nested failure, not only for a wrong type.

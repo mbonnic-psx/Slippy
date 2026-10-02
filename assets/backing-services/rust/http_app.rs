@@ -84,11 +84,23 @@ pub fn build_app(registrars: Vec<Registrar>) -> Router {
     router
         .fallback(not_found)
         .method_not_allowed_fallback(not_found)
-        .layer(middleware::map_response(without_allow))
+        .layer(middleware::map_response(without_hints))
 }
 
-/// Mounts a route the way this module does, which is the one thing a slice's registrar should use in place
-/// of `Router::route`.
+/// What [`sealed`] does to every answer: `Allow` goes, and so does a bare 405, which says the same thing in a
+/// status — that the path exists under another verb. A route mounted as a service (`route_service`,
+/// `nest_service`) is answered by its own method router, which never reaches the router-level fallback
+/// [`build_app`] sets, so the 404 the contract promises is written here for it.
+async fn without_hints(response: Response) -> Response {
+    if response.status() == StatusCode::METHOD_NOT_ALLOWED {
+        return not_found().await;
+    }
+    without_allow(response).await
+}
+
+/// Mounts a route so that [`build_app`] alone answers a wrong verb with the 404 and no `Allow` — which a
+/// registrar may use, but does not have to: the entry point seals the finished stack with [`sealed`], and that
+/// holds for a plain `Router::route`, `nest` and `merge` too.
 ///
 /// axum attaches an `Allow` header naming the verbs a path does take to its answer for any other verb, and
 /// attaches it *after* every layer has run — so it is the one thing [`build_app`]'s layer cannot take back
@@ -96,6 +108,23 @@ pub fn build_app(registrars: Vec<Registrar>) -> Router {
 /// first, and the 404 above says nothing about the path.
 pub fn route(router: Router, path: &str, methods: MethodRouter) -> Router {
     router.route_service(path, methods.fallback(not_found))
+}
+
+/// The finished stack as one service, with every answer it gives stripped of `Allow` — whichever way a
+/// registrar mounted the route that gave it.
+///
+/// axum adds `Allow` to its answer for a verb a path does not take, inside the method router and after every
+/// layer around that route has run. [`build_app`] can take it back from routes mounted through [`route`], and
+/// from nothing else; a layer on the [`Router`] sits inside the route, so a plain `Router::route`, a nested
+/// router or a merged one would each bring it back. What can take it back from all of them is a layer outside
+/// the router as a whole, which is what this is: the router, as the one fallback of an outer router that has
+/// no routes of its own to add the header to, with the strip layered around that. The entry point applies
+/// it last, outside the request span and the security wrapper, so the guarantee holds by construction and not
+/// by the next slice remembering which helper to mount with.
+pub fn sealed(router: Router) -> Router {
+    Router::new()
+        .fallback_service(router)
+        .layer(middleware::map_response(without_allow))
 }
 
 async fn without_allow(mut response: Response) -> Response {
@@ -671,5 +700,101 @@ mod tests {
 
         assert_eq!(failure["field"], "b");
         assert_eq!(failure["message"], "is required");
+    }
+
+    // The stack the entry point builds, around whatever a slice's registrar mounted: the routes, the browser
+    // wrapper, the request span, and the seal over all of it.
+    fn stack(register: impl FnOnce(Router) -> Router + 'static) -> Router {
+        let registrar: Registrar = Box::new(register);
+        sealed(crate::observability::instrument(security::secure(
+            build_app(vec![registrar]),
+            vec!["https://app.example".to_owned()],
+        )))
+    }
+
+    async fn created() -> &'static str {
+        "created"
+    }
+
+    // axum attaches `Allow` to its answer for a verb a path does not take, after every layer around the route
+    // has run — so a layer on the router cannot take it back, and which form a registrar mounted the route
+    // with decides whether it was there. The guarantee is therefore asked of every form.
+    type Mounting = (
+        &'static str,
+        &'static str,
+        Box<dyn FnOnce(Router) -> Router>,
+    );
+
+    fn mountings() -> Vec<Mounting> {
+        vec![
+            (
+                "route",
+                "/orders",
+                Box::new(|r| r.route("/orders", post(created))),
+            ),
+            (
+                "route_service",
+                "/orders",
+                Box::new(|r| r.route_service("/orders", post(created))),
+            ),
+            (
+                "nest",
+                "/v1/orders",
+                Box::new(|r| r.nest("/v1", Router::new().route("/orders", post(created)))),
+            ),
+            (
+                "nest_service",
+                "/v1/orders",
+                Box::new(|r| r.nest_service("/v1", Router::new().route("/orders", post(created)))),
+            ),
+            (
+                "merge",
+                "/orders",
+                Box::new(|r| r.merge(Router::new().route("/orders", post(created)))),
+            ),
+            (
+                "this module's route",
+                "/orders",
+                Box::new(|r| route(r, "/orders", post(created))),
+            ),
+        ]
+    }
+
+    #[tokio::test]
+    async fn no_way_of_mounting_a_route_tells_the_caller_which_verbs_it_takes() {
+        for (how, path, register) in mountings() {
+            let (status, headers, body) = fetch(stack(register), path).await;
+
+            assert_eq!(status, StatusCode::NOT_FOUND, "{how}");
+            assert_eq!(body, r#"{"error":"notFound"}"#, "{how}");
+            assert!(!headers.contains_key("allow"), "{how}: {headers:?}");
+        }
+    }
+
+    #[tokio::test]
+    async fn a_preflight_to_a_mounted_route_does_not_list_its_verbs_either() {
+        for (how, path, register) in mountings() {
+            let request = Request::builder()
+                .method(Method::OPTIONS)
+                .uri(path)
+                .header("origin", "https://app.example")
+                .header("access-control-request-method", "POST")
+                .body(Body::empty())
+                .expect("a request");
+            let response = stack(register).oneshot(request).await.expect("a response");
+
+            assert!(!response.headers().contains_key("allow"), "{how}");
+        }
+    }
+
+    #[tokio::test]
+    async fn the_verb_a_route_does_take_still_answers() {
+        for (how, path, register) in mountings() {
+            let (status, headers, body) = send(stack(register), Method::POST, path, "").await;
+
+            assert_eq!(status, StatusCode::OK, "{how}");
+            assert_eq!(body, "created", "{how}");
+            assert!(!headers.contains_key("allow"), "{how}");
+        }
     }
 }

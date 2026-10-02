@@ -83,10 +83,14 @@ __STORE_OPEN__
     // and `security::secure` carries the headers a browser is told to enforce and the answer to whether this
     // origin may ask at all. The router a test drives is the routes and nothing else — instrumentation a test
     // has to install proves nothing — and a preflight is a question no route has an answer to.
-    let app = observability::instrument(http::security::secure(
+    //
+    // And sealed last, around all of it: axum tells a caller which verbs a path takes, from inside the method
+    // router and after every layer, and only a wrapper around the whole router takes that back for every way a
+    // slice can mount a route.
+    let app = http::sealed(observability::instrument(http::security::secure(
         http::build_app(vec![http::readiness(__STORE_ARGUMENT__)]),
         settings.cors_allowed_origins.clone(),
-    ));
+    )));
 
     let listener = tokio::net::TcpListener::bind(settings.address()).await?;
     // `PUBLIC_BASE_URL` rather than the bound address, because behind a proxy or a tunnel the two differ and

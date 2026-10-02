@@ -13,6 +13,7 @@ import socket
 import subprocess
 import tempfile
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -74,6 +75,17 @@ class EntryPointTest(FactoryTestCase):
                         self.assertNotIn(name, source)
                     self.assertNotIn("__STORE_", source)
                     self.assertNotIn("__", source.replace("__init__", ""), "a placeholder was left behind")
+
+    def test_the_entry_point_seals_the_whole_stack_whatever_the_store(self) -> None:
+        """`Allow` is taken back outside everything — the span, the browser wrapper, every route — or a route a
+        slice mounts a way the adapter did not foresee gives it back."""
+        with tempfile.TemporaryDirectory() as directory:
+            for profile, store in ANSWERS:
+                with self.subTest(store=store):
+                    self.assertIn(
+                        "http::sealed(observability::instrument(http::security::secure(",
+                        entry(self.generate_answered(directory, profile, store)),
+                    )
 
     def test_the_entry_point_takes_no_flag_wiring_of_its_own_yet(self) -> None:
         from slipwai.project.flag_route import ENTRY_WIRING
@@ -151,6 +163,12 @@ class EntryPointTest(FactoryTestCase):
                 self.assertEqual(body, '{"status":"ok"}')
                 with urllib.request.urlopen(f"http://127.0.0.1:{port}/ready", timeout=5) as response:
                     self.assertEqual(response.read().decode(), '{"status":"ready"}')
+                # A known path under the wrong verb is the 404 every other path gets, with no `Allow` to say it exists.
+                wrong_verb = urllib.request.Request(f"http://127.0.0.1:{port}/health", data=b"", method="POST")
+                with self.assertRaises(urllib.error.HTTPError) as refused:
+                    urllib.request.urlopen(wrong_verb, timeout=5)
+                self.assertEqual(refused.exception.code, 404)
+                self.assertIsNone(refused.exception.headers.get("Allow"))
                 # `make dev` is how somebody finds where the service is: the entry point's own line says so,
                 # at the level `make dev` runs at (the default), and is not filtered out as a binary's.
                 self.assertIn(f"http://localhost:{port}", output.read_text())

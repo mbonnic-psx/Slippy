@@ -34,6 +34,10 @@ RUST_WRITE_SIDE: dict[str, dict[str, str]] = {
         "src/adapters/driving/http/mod.rs": "http_app.rs",
         # What a browser meets before any route does: an outer wrapper, applied by the entry point.
         "src/adapters/driving/http/security.rs": "http_security.rs",
+        # The contract the routes make, published as a file — no generator, for the reason Go's has none: an
+        # axum router cannot list its own routes. `openapi.rs` is what holds the two together.
+        "src/adapters/driving/http/openapi.rs": "http_openapi.rs",
+        "openapi.yaml": "openapi.yaml",
         # The environment's one struct, read and checked before anything binds. A module of its own because
         # `src/bin/serve.rs` is the one file with no test, and checking the environment is a rule.
         "src/config.rs": "config.rs",

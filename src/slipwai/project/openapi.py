@@ -11,7 +11,8 @@ is the only place a breaking change is cheap to notice.
 
 Not every transport has one to export. Go's document is hand-written — there is no generator on that
 backend and buying one would cost the dependency it exists without — and `openapi_test.go` in the adapter's
-own package is what holds it to the routes the mux serves, so it needs no recipe here. Quarkus and Spring
+own package is what holds it to the routes the mux serves, so it needs no recipe here. Rust's is hand-written
+for the same reason, and its `openapi.rs` test reads the router's source for the same purpose. Quarkus and Spring
 publish theirs from their own extensions. `export_command` answers for only the transports the factory can
 write the file for, so a transport absent from it gets no recipe rather than a broken one.
 """
@@ -32,6 +33,7 @@ DOCUMENTS: dict[str, str] = {
     "fastify": "openapi.json",
     "fastapi": "openapi.json",
     "net-http": "openapi.yaml",
+    "axum": "openapi.yaml",
 }
 
 # The workspace package the browser app's typed client lives in. One name, spelled here, because the

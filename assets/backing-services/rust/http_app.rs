@@ -15,7 +15,9 @@
 //!
 //! "Parses untrusted input" is a type's job here and not a handler's. There is no framework compiling a
 //! schema, so the request and response types ARE the schema: [`ApiJson`] refuses a body carrying a field
-//! the type does not name (a type that derives `Deserialize` says `#[serde(deny_unknown_fields)]`).
+//! the type does not name (a type that derives `Deserialize` says `#[serde(deny_unknown_fields)]`), and the
+//! contract those types make is written down in `openapi.yaml` beside the service, which a test in this
+//! module's `openapi` sibling holds to the routes below.
 //!
 //! This module imports no port: the event store is the composition root's to open, and a project on the
 //! standard profile has none. What `/ready` asks is declared here as [`ReadinessProbe`], and the entry
@@ -34,6 +36,8 @@ use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 use std::{future::Future, pin::Pin, sync::Arc};
 
+#[cfg(test)]
+mod openapi;
 pub mod security;
 
 /// What a slice's routes are mounted with: a function over the router, so this module never grows a list of

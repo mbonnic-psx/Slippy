@@ -17,6 +17,9 @@ from pathlib import Path
 
 from support import FactoryTestCase
 
+from slipwai.project.openapi import DOCUMENTS, EXPORTERS
+from slipwai.project.rules import API_CONTRACTS
+
 CARGO_ENVIRONMENT = {**os.environ, "CARGO_BUILD_JOBS": "2"}
 
 
@@ -69,6 +72,45 @@ class GeneratedServiceTest(FactoryTestCase):
 
     def test_one_span_per_request_is_held_by_its_own_tests(self) -> None:
         self.cargo_test("observability::tests", at_least=12)
+
+    def test_the_published_contract_is_held_to_the_router_by_its_own_test(self) -> None:
+        self.cargo_test("adapters::driving::http::openapi", at_least=2)
+
+    def test_a_route_the_document_does_not_describe_fails_that_test(self) -> None:
+        """A guard has teeth only if it can be seen to bite: rename a path in the document and the test objects."""
+        document = self.repo / "apps/service/openapi.yaml"
+        original = document.read_text()
+        try:
+            document.write_text(original.replace("\n  /ready:\n", "\n  /readyz:\n"))
+            result = subprocess.run(
+                ["cargo", "test", "--locked", "--lib", "adapters::driving::http::openapi"],
+                cwd=self.repo / "apps/service", env=CARGO_ENVIRONMENT, text=True, capture_output=True,
+            )
+        finally:
+            document.write_text(original)
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        self.assertIn("GET /ready is served and openapi.yaml does not describe it", result.stdout + result.stderr)
+
+    def test_the_document_describes_what_is_served_and_nothing_this_slice_does_not(self) -> None:
+        document = (self.repo / "apps/service/openapi.yaml").read_text()
+
+        for path in ("/health", "/ready"):
+            self.assertIn(f"\n  {path}:\n", document)
+        for status in ('"200"', '"503"'):
+            self.assertIn(f"        {status}:\n", document)
+        for schema in ("Health", "Ready", "Unready", "SchemaFailure", "NotFound"):
+            self.assertIn(f"\n    {schema}:\n", document)
+        # The flags route arrives with the first production target, so a document that described it would
+        # promise a path nothing serves.
+        self.assertNotIn("/api/flags", document)
+        self.assertNotIn("Flags:", document)
+
+    def test_the_document_is_published_by_name_and_has_no_exporter_or_recipe(self) -> None:
+        self.assertEqual(DOCUMENTS["axum"], "openapi.yaml")
+        self.assertIn("axum", API_CONTRACTS)
+        # Hand-written, as Go's is: the router cannot list its own routes, so nothing writes the file out.
+        self.assertNotIn("axum", EXPORTERS)
+        self.assertNotIn("check-openapi", (self.repo / "Makefile").read_text())
 
 
 class GeneratedEnvironmentTest(FactoryTestCase):

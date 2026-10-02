@@ -64,6 +64,46 @@ class GeneratedServiceTest(FactoryTestCase):
     def test_what_a_browser_meets_first_is_held_by_the_wrapper_s_own_tests(self) -> None:
         self.cargo_test("adapters::driving::http::security", at_least=7)
 
+    def test_the_checked_environment_is_held_by_its_own_tests(self) -> None:
+        self.cargo_test("config::tests", at_least=11)
+
+
+class GeneratedEnvironmentTest(FactoryTestCase):
+    """R5: `.env.example` carries the transport's keys, and each store's in its own region — all of them read."""
+
+    TRANSPORT_KEYS = ("PORT", "PUBLIC_BASE_URL", "CORS_ALLOWED_ORIGINS", "OTEL_EXPORTER_OTLP_ENDPOINT")
+
+    def keys_of(self, repo: Path) -> set[str]:
+        return set(re.findall(r"^([A-Z][A-Z_]+)=", (repo / ".env.example").read_text(), re.M))
+
+    def test_each_answer_carries_its_own_keys_and_the_transport_s(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            answers = (("sqlite", "EVENT_STORE_PATH", "DATABASE_URL"), ("postgres", "DATABASE_URL", "EVENT_STORE_PATH"))
+            for store, own, other in answers:
+                repo = self.generate(
+                    directory, f"env-{store}", "event-modelling", "rust", event_store=store, http="axum"
+                )
+                keys = self.keys_of(repo)
+                with self.subTest(store=store):
+                    self.assertTrue(set(self.TRANSPORT_KEYS) <= keys, keys)
+                    self.assertIn(own, keys)
+                    self.assertNotIn(other, keys)
+
+    def test_a_service_with_a_transport_and_no_store_has_an_environment_template_too(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = self.generate(directory, "env-standard", "standard", "rust", http="axum")
+
+            self.assertTrue(set(self.TRANSPORT_KEYS) <= self.keys_of(repo))
+
+    def test_every_key_the_template_documents_is_one_the_loader_reads(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = self.generate(directory, "env-read", "event-modelling", "rust", event_store="postgres", http="axum")
+            loader = (repo / "apps/service/src/config.rs").read_text()
+
+            for key in self.keys_of(repo) - {"NODE_ENV", "POSTGRES_PORT"}:
+                with self.subTest(key=key):
+                    self.assertIn(f'"{key}"', loader)
+
 
 if __name__ == "__main__":
     unittest.main()
